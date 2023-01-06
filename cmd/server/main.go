@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
-	"mock-server-backend/internal/brokers"
+	"mock-server/internal/brokers"
 	"time"
 
 	filename "github.com/onrik/logrus/filename"

@@ -1,4 +1,4 @@
-module mock-server-backend
+module mock-server
 
 go 1.19
 
