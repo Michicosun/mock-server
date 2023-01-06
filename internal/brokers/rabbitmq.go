@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	amqp "github.com/rabbitmq/amqp091-go"
-	log "github.com/sirupsen/logrus"
+	zlog "github.com/rs/zerolog/log"
 )
 
 // RabbitMQ secret
@@ -58,7 +58,7 @@ func (t *rabbitMQTask) connect_and_prepare() error {
 		}
 	}
 
-	log.Info("using secret: ", t.secret_id)
+	zlog.Info().Msgf("using secret: %s", t.secret_id)
 
 	conn, err := amqp.Dial(rabbit_s.GetConnectionString())
 	if err != nil {
@@ -129,7 +129,7 @@ func (t *rabbitMQReadTask) read(ctx context.Context) error {
 		case <-ctx.Done():
 			return nil
 		case msg := <-msgs:
-			log.Info("read msg: ", string(msg.Body))
+			zlog.Info().Msgf("read msg: %s", string(msg.Body))
 			t.msgs = append(t.msgs, msg)
 		}
 	}
@@ -155,7 +155,7 @@ type rabbitMQWriteTask struct {
 }
 
 func (t *rabbitMQWriteTask) write(ctx context.Context) error {
-	log.Info("preparing to write ", len(t.msgs), " msgs")
+	zlog.Info().Msgf("preparing to write %d msgs", len(t.msgs))
 
 	for _, msg := range t.msgs {
 		err := t.ch.PublishWithContext(ctx,

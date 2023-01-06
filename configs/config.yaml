@@ -1,0 +1,15 @@
+logs:
+    consoleLoggingEnabled: true
+    fileLoggingEnabled: true
+    directory: "/tmp/mock-server-logs"
+    filename: "log"
+    maxSize: 500
+    maxBackups: 5
+    maxAge: 30
+
+pool:
+    r_workers: 50
+    w_workers: 50
+    read_timeout: 10s
+    write_timeout: 10s
+    disable_task: 5s

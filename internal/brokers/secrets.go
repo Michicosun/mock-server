@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync"
 
-	log "github.com/sirupsen/logrus"
+	zlog "github.com/rs/zerolog/log"
 )
 
 var SecretBox = bSecretBox{
@@ -76,6 +76,6 @@ func (sb *bSecretBox) SetSecret(s Secret) (SecretId, error) {
 
 	// update db
 
-	log.Info("secret with id: ", s.GetSecretId(), " set")
+	zlog.Info().Msgf("successfully setup secret: %s", s.GetSecretId())
 	return s.GetSecretId(), nil
 }

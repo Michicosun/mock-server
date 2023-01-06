@@ -5,7 +5,9 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/sirupsen/logrus"
+	"mock-server/internal/configs"
+
+	zlog "github.com/rs/zerolog/log"
 )
 
 var BrokerPool = &bPool{}
@@ -26,17 +28,9 @@ type qWriteTask interface {
 	write(ctx context.Context) error
 }
 
-type BPoolConfig struct {
-	R_workers     int
-	W_workers     int
-	Read_timeout  time.Duration
-	Write_timeout time.Duration
-	Disable_task  time.Duration
-}
-
 var onlyOnce sync.Once
 
-func (p *bPool) Init(ctx context.Context, cfg BPoolConfig) {
+func (p *bPool) Init(ctx context.Context, cfg *configs.PoolConfig) {
 	onlyOnce.Do(func() {
 		p.cfg = cfg
 		p.read_tasks = make(chan qReadTask, cfg.R_workers*2)
@@ -46,7 +40,7 @@ func (p *bPool) Init(ctx context.Context, cfg BPoolConfig) {
 }
 
 type bPool struct {
-	cfg         BPoolConfig
+	cfg         *configs.PoolConfig
 	read_tasks  chan qReadTask
 	write_tasks chan qWriteTask
 	ctx         context.Context
@@ -62,17 +56,17 @@ func (p *bPool) SubmitWriteTask(task qWriteTask) {
 }
 
 func (p *bPool) Wait() {
-	log.Info("pool: wait called")
+	zlog.Info().Msg("pool: wait called")
 	p.wg.Wait()
-	log.Info("all workers joined")
+	zlog.Info().Msg("all workers joined")
 }
 
 func (p *bPool) Start() {
-	for i := 0; i < p.cfg.R_workers; i += 1 {
+	for i := uint32(0); i < p.cfg.R_workers; i += 1 {
 		p.wg.Add(1)
 		go p.r_worker_routine()
 	}
-	for i := 0; i < p.cfg.W_workers; i += 1 {
+	for i := uint32(0); i < p.cfg.W_workers; i += 1 {
 		p.wg.Add(1)
 		go p.w_worker_routine()
 	}
@@ -89,13 +83,13 @@ func qread(ctx context.Context, task qReadTask) error {
 	for {
 		err := task.read(ctx)
 		if ctx.Err() != nil {
-			log.Debug(ctx.Err())
+			zlog.Debug().Err(ctx.Err())
 			// push to esb
 			// write to db
 			return nil
 		}
 		if err != nil {
-			log.Error(err)
+			zlog.Error().Err(err)
 			return err
 		}
 	}
@@ -105,7 +99,7 @@ func (p *bPool) r_worker_routine() {
 	for {
 		select {
 		case <-p.ctx.Done():
-			log.Debug("r_worker Done")
+			zlog.Debug().Msg("r_worker Done")
 			p.wg.Done()
 			return
 		case task := <-p.read_tasks:
@@ -114,7 +108,7 @@ func (p *bPool) r_worker_routine() {
 			cancel()
 
 			if err != nil {
-				log.Error(err.Error())
+				zlog.Error().Err(err)
 			}
 
 			go func() {
@@ -122,7 +116,7 @@ func (p *bPool) r_worker_routine() {
 				case <-p.ctx.Done():
 					return
 				case <-time.After(p.cfg.Disable_task):
-					log.Info("reschedule reading from queue", task)
+					zlog.Info().Msgf("reschedule reading from queue %v", task)
 					p.read_tasks <- task
 				}
 			}()
@@ -140,12 +134,12 @@ func qwrite(ctx context.Context, task qWriteTask) error {
 
 	err = task.write(ctx)
 	if err != nil {
-		log.Error(err)
+		zlog.Error().Err(err)
 		return err
 	}
 
 	// write to db
-	log.Info("wrote msg, task: ", task)
+	zlog.Info().Msgf("wrote msg, task: %v", task)
 	return nil
 }
 
@@ -153,7 +147,7 @@ func (p *bPool) w_worker_routine() {
 	for {
 		select {
 		case <-p.ctx.Done():
-			log.Debug("w_worker Done")
+			zlog.Debug().Msg("w_worker Done")
 			p.wg.Done()
 			return
 		case task := <-p.write_tasks:
@@ -162,7 +156,7 @@ func (p *bPool) w_worker_routine() {
 			cancel()
 
 			if err != nil {
-				log.Error(err.Error())
+				zlog.Error().Err(err)
 			}
 		}
 	}

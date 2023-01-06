@@ -4,41 +4,36 @@ import (
 	"context"
 	"fmt"
 	"mock-server/internal/brokers"
+	"mock-server/internal/configs"
+	"mock-server/internal/logger"
+	"os"
 	"time"
 
-	filename "github.com/onrik/logrus/filename"
-	log "github.com/sirupsen/logrus"
+	zlog "github.com/rs/zerolog/log"
 )
 
-func init_logger() {
-	Formatter := new(log.TextFormatter)
-	Formatter.TimestampFormat = "Jan _2 15:04:05.000000000"
-	Formatter.FullTimestamp = true
-	Formatter.ForceColors = true
-
-	hook := filename.NewHook()
-	hook.Field = "source"
-	log.AddHook(hook)
-	log.SetFormatter(Formatter)
-	log.SetLevel(log.InfoLevel)
-}
+const DefaultConfigPath = "/configs/config.yaml"
 
 func main() {
-	init_logger()
+	config_path := os.Getenv("CONFIG_PATH")
+	if config_path == "" {
+		config_path = DefaultConfigPath
+	}
 
+	// load config
+	configs.LoadConfig(config_path)
+
+	// init logger
+	logger.Init(configs.GetLogConfig())
+
+	// create root context
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	log.Info("starting...")
+	zlog.Info().Msg("starting...")
 
-	brokers.BrokerPool.Init(ctx, brokers.BPoolConfig{
-		R_workers:     50,
-		W_workers:     50,
-		Read_timeout:  10 * time.Second,
-		Write_timeout: 10 * time.Second,
-		Disable_task:  5 * time.Second,
-	})
-
+	// broker example
+	brokers.BrokerPool.Init(ctx, configs.GetPoolConfig())
 	brokers.BrokerPool.Start()
 
 	secret_id, _ := brokers.SecretBox.SetSecret(&brokers.RabbitMQSecret{
@@ -61,8 +56,8 @@ func main() {
 
 	conn.Read().Submit()
 
-	log.Info("start reading")
-	<-time.After(20 * time.Second)
+	zlog.Info().Msg("start reading")
+	<-time.After(30 * time.Second)
 
 	cancel()
 
