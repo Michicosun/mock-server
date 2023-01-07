@@ -17,8 +17,8 @@ type taskId uuid.UUID
 
 type qTask interface {
 	connect_and_prepare() error
-	set_uuid(id uuid.UUID)
-	uuid() uuid.UUID
+	set_uuid(id taskId)
+	uuid() taskId
 	close()
 }
 
@@ -53,12 +53,12 @@ type bPool struct {
 }
 
 func (p *bPool) SubmitReadTask(task qReadTask) {
-	task.set_uuid(uuid.New())
+	task.set_uuid(taskId(uuid.New()))
 	p.read_tasks <- task
 }
 
 func (p *bPool) SubmitWriteTask(task qWriteTask) {
-	task.set_uuid(uuid.New())
+	task.set_uuid(taskId(uuid.New()))
 	p.write_tasks <- task
 }
 
@@ -90,7 +90,6 @@ func qread(ctx context.Context, task qReadTask) error {
 
 	err = task.read(ctx)
 	if err != nil {
-		zlog.Error().Err(err).Msgf("read task: %s", task.uuid())
 		return err
 	}
 
@@ -114,7 +113,7 @@ func (p *bPool) r_worker_routine() {
 			cancel()
 
 			if err != nil {
-				zlog.Error().Err(err)
+				zlog.Error().Err(err).Msgf("read task: %s", task.uuid())
 			}
 
 			go func() {
@@ -141,7 +140,6 @@ func qwrite(ctx context.Context, task qWriteTask) error {
 
 	err = task.write(ctx)
 	if err != nil {
-		zlog.Error().Err(err).Msgf("write task: %s", task.uuid())
 		return err
 	}
 
@@ -163,7 +161,7 @@ func (p *bPool) w_worker_routine() {
 			cancel()
 
 			if err != nil {
-				zlog.Error().Err(err)
+				zlog.Error().Err(err).Msgf("write task: %s", task.uuid())
 			}
 		}
 	}
