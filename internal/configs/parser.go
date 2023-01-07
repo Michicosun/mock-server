@@ -38,7 +38,6 @@ func LoadConfig(cfg_path string) {
 		panic(err)
 	}
 
-	fmt.Println("=== Using Config ===")
 	s, _ := json.MarshalIndent(config, "", "\t")
-	fmt.Println(string(s))
+	fmt.Println("Config", string(s))
 }
