@@ -13,8 +13,6 @@ import (
 
 var BrokerPool = &bPool{}
 
-type taskId uuid.UUID
-
 type qTask interface {
 	connect_and_prepare() error
 	set_uuid(id uuid.UUID)
@@ -90,7 +88,6 @@ func qread(ctx context.Context, task qReadTask) error {
 
 	err = task.read(ctx)
 	if err != nil {
-		zlog.Error().Err(err).Msgf("read task: %s", task.uuid())
 		return err
 	}
 
@@ -114,7 +111,7 @@ func (p *bPool) r_worker_routine() {
 			cancel()
 
 			if err != nil {
-				zlog.Error().Err(err)
+				zlog.Error().Err(err).Msgf("read task: %s", task.uuid())
 			}
 
 			go func() {
@@ -141,7 +138,6 @@ func qwrite(ctx context.Context, task qWriteTask) error {
 
 	err = task.write(ctx)
 	if err != nil {
-		zlog.Error().Err(err).Msgf("write task: %s", task.uuid())
 		return err
 	}
 
@@ -163,7 +159,7 @@ func (p *bPool) w_worker_routine() {
 			cancel()
 
 			if err != nil {
-				zlog.Error().Err(err)
+				zlog.Error().Err(err).Msgf("write task: %s", task.uuid())
 			}
 		}
 	}
