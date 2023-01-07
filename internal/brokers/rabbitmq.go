@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/google/uuid"
 	amqp "github.com/rabbitmq/amqp091-go"
 	zlog "github.com/rs/zerolog/log"
 )
@@ -42,6 +43,16 @@ type rabbitMQTask struct {
 	conn *amqp.Connection
 	ch   *amqp.Channel
 	q    *amqp.Queue
+
+	task_id uuid.UUID
+}
+
+func (t *rabbitMQTask) set_uuid(id uuid.UUID) {
+	t.task_id = id
+}
+
+func (t *rabbitMQTask) uuid() uuid.UUID {
+	return t.task_id
 }
 
 func (t *rabbitMQTask) connect_and_prepare() error {

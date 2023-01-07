@@ -7,13 +7,18 @@ import (
 
 	"mock-server/internal/configs"
 
+	"github.com/google/uuid"
 	zlog "github.com/rs/zerolog/log"
 )
 
 var BrokerPool = &bPool{}
 
+type taskId uuid.UUID
+
 type qTask interface {
 	connect_and_prepare() error
+	set_uuid(id uuid.UUID)
+	uuid() uuid.UUID
 	close()
 }
 
@@ -48,10 +53,12 @@ type bPool struct {
 }
 
 func (p *bPool) SubmitReadTask(task qReadTask) {
+	task.set_uuid(uuid.New())
 	p.read_tasks <- task
 }
 
 func (p *bPool) SubmitWriteTask(task qWriteTask) {
+	task.set_uuid(uuid.New())
 	p.write_tasks <- task
 }
 
@@ -73,6 +80,7 @@ func (p *bPool) Start() {
 }
 
 func qread(ctx context.Context, task qReadTask) error {
+	zlog.Info().Msgf("starting read task: %s", task.uuid())
 	err := task.connect_and_prepare()
 	if err != nil {
 		return err
@@ -80,19 +88,17 @@ func qread(ctx context.Context, task qReadTask) error {
 
 	defer task.close()
 
-	for {
-		err := task.read(ctx)
-		if ctx.Err() != nil {
-			zlog.Debug().Err(ctx.Err())
-			// push to esb
-			// write to db
-			return nil
-		}
-		if err != nil {
-			zlog.Error().Err(err)
-			return err
-		}
+	err = task.read(ctx)
+	if err != nil {
+		zlog.Error().Err(err).Msgf("read task: %s", task.uuid())
+		return err
 	}
+
+	// push to esb
+	// write to db
+
+	zlog.Info().Msgf("completed read task: %s, ctx error: %e", task.uuid(), ctx.Err())
+	return nil
 }
 
 func (p *bPool) r_worker_routine() {
@@ -116,7 +122,7 @@ func (p *bPool) r_worker_routine() {
 				case <-p.ctx.Done():
 					return
 				case <-time.After(p.cfg.Disable_task):
-					zlog.Info().Msgf("reschedule reading from queue %v", task)
+					zlog.Info().Msgf("reschedule reading from queue %s", task.uuid())
 					p.read_tasks <- task
 				}
 			}()
@@ -125,6 +131,7 @@ func (p *bPool) r_worker_routine() {
 }
 
 func qwrite(ctx context.Context, task qWriteTask) error {
+	zlog.Info().Msgf("starting write task: %s", task.uuid())
 	err := task.connect_and_prepare()
 	if err != nil {
 		return err
@@ -134,12 +141,12 @@ func qwrite(ctx context.Context, task qWriteTask) error {
 
 	err = task.write(ctx)
 	if err != nil {
-		zlog.Error().Err(err)
+		zlog.Error().Err(err).Msgf("write task: %s", task.uuid())
 		return err
 	}
 
 	// write to db
-	zlog.Info().Msgf("wrote msg, task: %v", task)
+	zlog.Info().Msgf("completed write task: %s, ctx error: %e", task.uuid(), ctx.Err())
 	return nil
 }
 
