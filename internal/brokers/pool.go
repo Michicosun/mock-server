@@ -13,12 +13,10 @@ import (
 
 var BrokerPool = &bPool{}
 
-type taskId uuid.UUID
-
 type qTask interface {
 	connect_and_prepare() error
-	set_uuid(id taskId)
-	uuid() taskId
+	set_uuid(id uuid.UUID)
+	uuid() uuid.UUID
 	close()
 }
 
@@ -53,12 +51,12 @@ type bPool struct {
 }
 
 func (p *bPool) SubmitReadTask(task qReadTask) {
-	task.set_uuid(taskId(uuid.New()))
+	task.set_uuid(uuid.New())
 	p.read_tasks <- task
 }
 
 func (p *bPool) SubmitWriteTask(task qWriteTask) {
-	task.set_uuid(taskId(uuid.New()))
+	task.set_uuid(uuid.New())
 	p.write_tasks <- task
 }
 
