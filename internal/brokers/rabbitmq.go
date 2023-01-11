@@ -4,31 +4,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"mock-server/internal/configs"
 
 	"github.com/google/uuid"
 	amqp "github.com/rabbitmq/amqp091-go"
 	zlog "github.com/rs/zerolog/log"
 )
 
-// RabbitMQ secret
-type RabbitMQSecret struct {
-	Username string
-	Password string
-	Host     string
-	Port     int
-	Queue    string
-}
-
-func (s *RabbitMQSecret) GetSecretId() SecretId {
-	return SecretId(fmt.Sprintf("amqp://%s:%d/?queue=%s", s.Host, s.Port, s.Queue))
-}
-
-func (s *RabbitMQSecret) GetConnectionString() string {
-	return fmt.Sprintf("amqp://%s:%s@%s:%d/", s.Username, s.Password, s.Host, s.Port)
-}
-
 // RabbitMQ base task
 type RabbitMQQueueConfig struct {
+	Queue      string
 	Durable    bool
 	AutoDelete bool
 	Exclusive  bool
@@ -37,8 +22,7 @@ type RabbitMQQueueConfig struct {
 }
 
 type rabbitMQTask struct {
-	secret_id SecretId
-	qcfg      *RabbitMQQueueConfig
+	qcfg *RabbitMQQueueConfig
 
 	conn *amqp.Connection
 	ch   *amqp.Channel
@@ -55,23 +39,19 @@ func (t *rabbitMQTask) uuid() uuid.UUID {
 	return t.task_id
 }
 
+func getConnectionString(s *configs.RabbitMQConnectionConfig) string {
+	return fmt.Sprintf("amqp://%s:%s@%s:%d/", s.Username, s.Password, s.Host, s.Port)
+}
+
 func (t *rabbitMQTask) connect_and_prepare() error {
-	s, err := SecretBox.GetSecret(t.secret_id)
+	zlog.Info().Msgf("trying setup connection to rabbitmq")
+
+	s, err := configs.GetRabbitMQConnectionConfig()
 	if err != nil {
 		return err
 	}
 
-	rabbit_s, ok := s.(*RabbitMQSecret)
-	if !ok {
-		return &WrongSecretError{
-			id:   t.secret_id,
-			desc: "secret not for RabbitMQ connection",
-		}
-	}
-
-	zlog.Info().Msgf("using secret: %s", t.secret_id)
-
-	conn, err := amqp.Dial(rabbit_s.GetConnectionString())
+	conn, err := amqp.Dial(getConnectionString(s))
 	if err != nil {
 		return err
 	}
@@ -84,7 +64,7 @@ func (t *rabbitMQTask) connect_and_prepare() error {
 	t.ch = ch
 
 	q, err := ch.QueueDeclare(
-		rabbit_s.Queue,
+		t.qcfg.Queue,
 		t.qcfg.Durable,
 		t.qcfg.AutoDelete,
 		t.qcfg.Exclusive,
@@ -189,10 +169,10 @@ func (t *rabbitMQWriteTask) write(ctx context.Context) error {
 
 // sugar
 
-func NewRabbitMQConnection(secret_id SecretId) *rabbitMQTask {
-	return &rabbitMQTask{
-		secret_id: secret_id,
+func newRabbitMQConnection(queue string) rabbitMQTask {
+	return rabbitMQTask{
 		qcfg: &RabbitMQQueueConfig{
+			Queue:      queue,
 			Durable:    false,
 			AutoDelete: false,
 			Exclusive:  false,
@@ -202,9 +182,9 @@ func NewRabbitMQConnection(secret_id SecretId) *rabbitMQTask {
 	}
 }
 
-func (t *rabbitMQTask) Read() *rabbitMQReadTask {
+func NewRabbitMQReadTask(queue string) *rabbitMQReadTask {
 	return &rabbitMQReadTask{
-		rabbitMQTask: *t,
+		rabbitMQTask: newRabbitMQConnection(queue),
 		rcfg: &RabbitMQReadConfig{
 			Consumer:  "",
 			AutoAck:   true,
@@ -216,16 +196,16 @@ func (t *rabbitMQTask) Read() *rabbitMQReadTask {
 	}
 }
 
-func (t *rabbitMQTask) Write(msgs [][]byte) *rabbitMQWriteTask {
+func NewRabbitMQWriteTask(queue string) *rabbitMQWriteTask {
 	return &rabbitMQWriteTask{
-		rabbitMQTask: *t,
+		rabbitMQTask: newRabbitMQConnection(queue),
 		wcfg: &RabbitMQWriteConfig{
 			Exchange:    "",
 			Mandatory:   false,
 			Immediate:   false,
 			ContentType: "text/plain",
 		},
-		msgs: msgs,
+		msgs: [][]byte{},
 	}
 }
 
@@ -244,10 +224,11 @@ func (t *rabbitMQWriteTask) SetWriteConfig(cfg RabbitMQWriteConfig) *rabbitMQWri
 	return t
 }
 
-func (t *rabbitMQReadTask) Submit() {
+func (t *rabbitMQReadTask) Read() {
 	BrokerPool.SubmitReadTask(t)
 }
 
-func (t *rabbitMQWriteTask) Submit() {
+func (t *rabbitMQWriteTask) Write(msgs [][]byte) {
+	t.msgs = msgs
 	BrokerPool.SubmitWriteTask(t)
 }

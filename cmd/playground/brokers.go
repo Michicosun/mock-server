@@ -2,10 +2,12 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"mock-server/internal/brokers"
 	"mock-server/internal/configs"
 	"mock-server/internal/logger"
 	"os"
+	"time"
 
 	zlog "github.com/rs/zerolog/log"
 )
@@ -24,24 +26,28 @@ func main() {
 	// init logger
 	logger.Init(configs.GetLogConfig())
 
-	zlog.Info().Msg("starting...")
-
 	// create root context
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// complete database prepare scripts
-	// TODO
-	////////////////////////////////////
+	zlog.Info().Msg("starting...")
 
-	// startup broker pool
+	// broker example
 	brokers.BrokerPool.Init(ctx, configs.GetPoolConfig())
 	brokers.BrokerPool.Start()
 
-	// configure router
-	// startup httpserver
-	// TODO
-	////////////////////////////////////
+	brokers.NewRabbitMQWriteTask("test-mock-queue").Write([][]byte{
+		[]byte(fmt.Sprintf("%d", 40)),
+		[]byte(fmt.Sprintf("%d", 41)),
+		[]byte(fmt.Sprintf("%d", 42)),
+	})
+
+	<-time.After(1 * time.Second)
+
+	brokers.NewRabbitMQReadTask("test-mock-queue").Read()
+
+	zlog.Info().Msg("start reading")
+	<-time.After(3 * time.Second)
 
 	cancel()
 
