@@ -11,8 +11,9 @@ import (
 )
 
 type ServiceConfig struct {
-	Logs LogConfig  `yaml:"logs"`
-	Pool PoolConfig `yaml:"pool"`
+	Logs    LogConfig         `yaml:"logs"`
+	Pool    PoolConfig        `yaml:"pool"`
+	Brokers BrokerConnections `yaml:"brokers"`
 }
 
 var config ServiceConfig

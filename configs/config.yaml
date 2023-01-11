@@ -13,3 +13,10 @@ pool:
     read_timeout: 10s
     write_timeout: 10s
     disable_task: 5s
+
+brokers:
+    rabbitmq:
+        host: "localhost"
+        port: 5672
+        username: "guest"
+        password: "guest"
