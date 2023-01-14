@@ -82,7 +82,7 @@ func (p *bPool) Errors() <-chan QueueError {
 }
 
 func (p *bPool) StopEventually(id QueueId) {
-	zlog.Info().Str("task", string(id)).Msg("stopping")
+	zlog.Info().Str("task", string(id)).Msg("stopped rescheduling")
 	p.running_ids.Remove(id)
 }
 
