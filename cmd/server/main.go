@@ -45,5 +45,5 @@ func main() {
 
 	cancel()
 
-	brokers.BrokerPool.Wait()
+	brokers.BrokerPool.Stop()
 }

@@ -37,7 +37,7 @@ func getConnectionString(s *configs.RabbitMQConnectionConfig) string {
 }
 
 func (t *rabbitMQTask) connect_and_prepare() error {
-	zlog.Info().Msgf("trying setup connection to rabbitmq")
+	zlog.Info().Str("task", string(t.queue_id())).Msg("setting up connection to rabbitmq")
 
 	s, err := configs.GetRabbitMQConnectionConfig()
 	if err != nil {
@@ -69,6 +69,7 @@ func (t *rabbitMQTask) connect_and_prepare() error {
 	}
 	t.q = &q
 
+	zlog.Info().Str("task", string(t.queue_id())).Msg("connection established")
 	return nil
 }
 
@@ -117,7 +118,7 @@ func (t *rabbitMQReadTask) read(ctx context.Context) error {
 		case <-ctx.Done():
 			return nil
 		case msg := <-msgs:
-			zlog.Info().Msgf("read msg: %s", string(msg.Body))
+			zlog.Info().Str("task", string(t.queue_id())).Bytes("msg", msg.Body).Msg("read msg")
 			t.msgs = append(t.msgs, msg)
 		}
 	}
@@ -147,7 +148,7 @@ func (t *rabbitMQWriteTask) queue_id() QueueId {
 }
 
 func (t *rabbitMQWriteTask) write(ctx context.Context) error {
-	zlog.Info().Msgf("preparing to write %d msgs", len(t.msgs))
+	zlog.Info().Str("task", string(t.queue_id())).Int("msgs_cnt", len(t.msgs)).Msg("preparing to write")
 
 	for _, msg := range t.msgs {
 		err := t.ch.PublishWithContext(ctx,

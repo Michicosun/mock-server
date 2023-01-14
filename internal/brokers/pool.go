@@ -32,11 +32,17 @@ type qWriteTask interface {
 	write(ctx context.Context) error
 }
 
+type QueueError struct {
+	queue_id QueueId
+	err      error
+}
+
 type bPool struct {
 	constructor sync.Once
 	cfg         *configs.PoolConfig
 	read_tasks  chan qReadTask
 	write_tasks chan qWriteTask
+	errors      chan QueueError
 	ctx         context.Context
 	wg          sync.WaitGroup
 	running_ids util.SyncSet[QueueId]
@@ -47,14 +53,16 @@ func (p *bPool) Init(ctx context.Context, cfg *configs.PoolConfig) {
 		p.cfg = cfg
 		p.read_tasks = make(chan qReadTask, cfg.R_workers*2)
 		p.write_tasks = make(chan qWriteTask, cfg.W_workers*2)
+		p.errors = make(chan QueueError, 100)
 		p.ctx = ctx
 		p.running_ids = util.NewSyncSet[QueueId]()
 	})
 }
 
-func (p *bPool) Wait() {
-	zlog.Info().Msg("pool: wait called")
+func (p *bPool) Stop() {
+	zlog.Info().Msg("pool: stop called")
 	p.wg.Wait()
+	close(p.errors)
 	zlog.Info().Msg("all workers joined")
 }
 
@@ -69,8 +77,12 @@ func (p *bPool) Start() {
 	}
 }
 
+func (p *bPool) Errors() <-chan QueueError {
+	return p.errors
+}
+
 func (p *bPool) StopEventually(id QueueId) {
-	zlog.Info().Msgf("stopping task: %s", id)
+	zlog.Info().Str("task", string(id)).Msg("stopping")
 	p.running_ids.Remove(id)
 }
 
@@ -85,8 +97,22 @@ func (p *bPool) submitWriteTask(task qWriteTask) QueueId {
 	return task.queue_id()
 }
 
+func (p *bPool) add_error(id QueueId, err error) {
+	zlog.Error().Str("task", string(id)).Err(err).Msg("task failed")
+	qerr := QueueError{
+		queue_id: id,
+		err:      err,
+	}
+	select {
+	case p.errors <- qerr:
+		zlog.Info().Str("task", string(id)).Msg("error submited")
+	default:
+		zlog.Info().Str("task", string(id)).Msg("failed to submit error")
+	}
+}
+
 func qread(ctx context.Context, task qReadTask) error {
-	zlog.Info().Msgf("starting read task: %s", task.queue_id())
+	zlog.Info().Str("task", string(task.queue_id())).Msg("started")
 	if err := task.connect_and_prepare(); err != nil {
 		return err
 	}
@@ -100,7 +126,7 @@ func qread(ctx context.Context, task qReadTask) error {
 	// push to esb
 	// write to db
 
-	zlog.Info().Msgf("completed read task: %s, ctx error: %e", task.queue_id(), ctx.Err())
+	zlog.Info().Str("task", string(task.queue_id())).Err(ctx.Err()).Msg("finished")
 	return nil
 }
 
@@ -114,7 +140,7 @@ func (p *bPool) r_worker_routine() {
 		case task := <-p.read_tasks:
 			task_ctx, cancel := context.WithTimeout(p.ctx, p.cfg.Read_timeout)
 			if err := qread(task_ctx, task); err != nil {
-				zlog.Error().Err(err).Msgf("read task: %s", task.queue_id())
+				p.add_error(task.queue_id(), err)
 			}
 			cancel()
 
@@ -127,7 +153,7 @@ func (p *bPool) r_worker_routine() {
 				case <-p.ctx.Done():
 					return
 				case <-time.After(p.cfg.Disable_task):
-					zlog.Info().Msgf("reschedule reading from queue %s", task.queue_id())
+					zlog.Info().Str("task", string(task.queue_id())).Msg("rescheduled")
 					p.read_tasks <- task
 				}
 			}()
@@ -136,7 +162,7 @@ func (p *bPool) r_worker_routine() {
 }
 
 func qwrite(ctx context.Context, task qWriteTask) error {
-	zlog.Info().Msgf("starting write task: %s", task.queue_id())
+	zlog.Info().Str("task", string(task.queue_id())).Msg("started")
 	if err := task.connect_and_prepare(); err != nil {
 		return err
 	}
@@ -148,7 +174,7 @@ func qwrite(ctx context.Context, task qWriteTask) error {
 	}
 
 	// write to db
-	zlog.Info().Msgf("completed write task: %s, ctx error: %e", task.queue_id(), ctx.Err())
+	zlog.Info().Str("task", string(task.queue_id())).Err(ctx.Err()).Msg("finished")
 	return nil
 }
 
@@ -162,7 +188,7 @@ func (p *bPool) w_worker_routine() {
 		case task := <-p.write_tasks:
 			task_ctx, cancel := context.WithTimeout(p.ctx, p.cfg.Write_timeout)
 			if err := qwrite(task_ctx, task); err != nil {
-				zlog.Error().Err(err).Msgf("write task: %s", task.queue_id())
+				p.add_error(task.queue_id(), err)
 			}
 			cancel()
 		}

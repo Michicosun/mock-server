@@ -51,9 +51,13 @@ func main() {
 
 	brokers.BrokerPool.StopEventually(id)
 
-	<-time.After(20 * time.Second)
+	<-time.After(10 * time.Second)
 
 	cancel()
 
-	brokers.BrokerPool.Wait()
+	brokers.BrokerPool.Stop()
+
+	for x := range brokers.BrokerPool.Errors() {
+		fmt.Println(x)
+	}
 }
