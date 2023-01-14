@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"mock-server/internal/configs"
 
-	"github.com/google/uuid"
 	amqp "github.com/rabbitmq/amqp091-go"
 	zlog "github.com/rs/zerolog/log"
 )
@@ -27,16 +26,10 @@ type rabbitMQTask struct {
 	conn *amqp.Connection
 	ch   *amqp.Channel
 	q    *amqp.Queue
-
-	task_id uuid.UUID
 }
 
-func (t *rabbitMQTask) set_uuid(id uuid.UUID) {
-	t.task_id = id
-}
-
-func (t *rabbitMQTask) uuid() uuid.UUID {
-	return t.task_id
+func (t *rabbitMQTask) queue_id() QueueId {
+	return QueueId(fmt.Sprintf("rabbitmq:%s", t.qcfg.Queue))
 }
 
 func getConnectionString(s *configs.RabbitMQConnectionConfig) string {
@@ -101,6 +94,10 @@ type rabbitMQReadTask struct {
 	msgs []amqp.Delivery
 }
 
+func (t *rabbitMQReadTask) queue_id() QueueId {
+	return QueueId(fmt.Sprintf("%s:read", t.rabbitMQTask.queue_id()))
+}
+
 func (t *rabbitMQReadTask) read(ctx context.Context) error {
 	msgs, err := t.ch.Consume(
 		t.q.Name,
@@ -143,6 +140,10 @@ type rabbitMQWriteTask struct {
 	wcfg *RabbitMQWriteConfig
 
 	msgs [][]byte
+}
+
+func (t *rabbitMQWriteTask) queue_id() QueueId {
+	return QueueId(fmt.Sprintf("%s:write", t.rabbitMQTask.queue_id()))
 }
 
 func (t *rabbitMQWriteTask) write(ctx context.Context) error {
@@ -224,11 +225,11 @@ func (t *rabbitMQWriteTask) SetWriteConfig(cfg RabbitMQWriteConfig) *rabbitMQWri
 	return t
 }
 
-func (t *rabbitMQReadTask) Read() uuid.UUID {
+func (t *rabbitMQReadTask) Read() QueueId {
 	return BrokerPool.submitReadTask(t)
 }
 
-func (t *rabbitMQWriteTask) Write(msgs [][]byte) uuid.UUID {
+func (t *rabbitMQWriteTask) Write(msgs [][]byte) QueueId {
 	t.msgs = msgs
 	return BrokerPool.submitWriteTask(t)
 }
