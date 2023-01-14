@@ -36,7 +36,7 @@ func main() {
 	brokers.BrokerPool.Init(ctx, configs.GetPoolConfig())
 	brokers.BrokerPool.Start()
 
-	brokers.NewRabbitMQWriteTask("test-mock-queue").Write([][]byte{
+	brokers.BrokerPool.NewRabbitMQWriteTask("test-mock-queue").Write([][]byte{
 		[]byte(fmt.Sprintf("%d", 40)),
 		[]byte(fmt.Sprintf("%d", 41)),
 		[]byte(fmt.Sprintf("%d", 42)),
@@ -44,10 +44,14 @@ func main() {
 
 	<-time.After(1 * time.Second)
 
-	brokers.NewRabbitMQReadTask("test-mock-queue").Read()
+	id := brokers.BrokerPool.NewRabbitMQReadTask("test-mock-queue").Read()
 
 	zlog.Info().Msg("start reading")
-	<-time.After(3 * time.Second)
+	<-time.After(5 * time.Second)
+
+	brokers.BrokerPool.StopEventually(id)
+
+	<-time.After(20 * time.Second)
 
 	cancel()
 

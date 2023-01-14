@@ -182,7 +182,7 @@ func newRabbitMQConnection(queue string) rabbitMQTask {
 	}
 }
 
-func NewRabbitMQReadTask(queue string) *rabbitMQReadTask {
+func (p *bPool) NewRabbitMQReadTask(queue string) *rabbitMQReadTask {
 	return &rabbitMQReadTask{
 		rabbitMQTask: newRabbitMQConnection(queue),
 		rcfg: &RabbitMQReadConfig{
@@ -196,7 +196,7 @@ func NewRabbitMQReadTask(queue string) *rabbitMQReadTask {
 	}
 }
 
-func NewRabbitMQWriteTask(queue string) *rabbitMQWriteTask {
+func (p *bPool) NewRabbitMQWriteTask(queue string) *rabbitMQWriteTask {
 	return &rabbitMQWriteTask{
 		rabbitMQTask: newRabbitMQConnection(queue),
 		wcfg: &RabbitMQWriteConfig{
@@ -224,11 +224,11 @@ func (t *rabbitMQWriteTask) SetWriteConfig(cfg RabbitMQWriteConfig) *rabbitMQWri
 	return t
 }
 
-func (t *rabbitMQReadTask) Read() {
-	BrokerPool.SubmitReadTask(t)
+func (t *rabbitMQReadTask) Read() uuid.UUID {
+	return BrokerPool.submitReadTask(t)
 }
 
-func (t *rabbitMQWriteTask) Write(msgs [][]byte) {
+func (t *rabbitMQWriteTask) Write(msgs [][]byte) uuid.UUID {
 	t.msgs = msgs
-	BrokerPool.SubmitWriteTask(t)
+	return BrokerPool.submitWriteTask(t)
 }

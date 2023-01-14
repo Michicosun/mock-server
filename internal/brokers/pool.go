@@ -13,6 +13,8 @@ import (
 
 var BrokerPool = &bPool{}
 
+var onlyOnce sync.Once
+
 type qTask interface {
 	connect_and_prepare() error
 	set_uuid(id uuid.UUID)
@@ -31,7 +33,14 @@ type qWriteTask interface {
 	write(ctx context.Context) error
 }
 
-var onlyOnce sync.Once
+type bPool struct {
+	cfg         *configs.PoolConfig
+	read_tasks  chan qReadTask
+	write_tasks chan qWriteTask
+	ctx         context.Context
+	wg          sync.WaitGroup
+	running_ids syncSet
+}
 
 func (p *bPool) Init(ctx context.Context, cfg *configs.PoolConfig) {
 	onlyOnce.Do(func() {
@@ -39,25 +48,10 @@ func (p *bPool) Init(ctx context.Context, cfg *configs.PoolConfig) {
 		p.read_tasks = make(chan qReadTask, cfg.R_workers*2)
 		p.write_tasks = make(chan qWriteTask, cfg.W_workers*2)
 		p.ctx = ctx
+		p.running_ids = syncSet{
+			set: make(map[uuid.UUID]struct{}),
+		}
 	})
-}
-
-type bPool struct {
-	cfg         *configs.PoolConfig
-	read_tasks  chan qReadTask
-	write_tasks chan qWriteTask
-	ctx         context.Context
-	wg          sync.WaitGroup
-}
-
-func (p *bPool) SubmitReadTask(task qReadTask) {
-	task.set_uuid(uuid.New())
-	p.read_tasks <- task
-}
-
-func (p *bPool) SubmitWriteTask(task qWriteTask) {
-	task.set_uuid(uuid.New())
-	p.write_tasks <- task
 }
 
 func (p *bPool) Wait() {
@@ -75,6 +69,24 @@ func (p *bPool) Start() {
 		p.wg.Add(1)
 		go p.w_worker_routine()
 	}
+}
+
+func (p *bPool) StopEventually(id uuid.UUID) {
+	zlog.Info().Msgf("stopping task: %s", id)
+	p.running_ids.remove(id)
+}
+
+func (p *bPool) submitReadTask(task qReadTask) uuid.UUID {
+	task.set_uuid(uuid.New())
+	p.running_ids.add(task.uuid())
+	p.read_tasks <- task
+	return task.uuid()
+}
+
+func (p *bPool) submitWriteTask(task qWriteTask) uuid.UUID {
+	task.set_uuid(uuid.New())
+	p.write_tasks <- task
+	return task.uuid()
 }
 
 func qread(ctx context.Context, task qReadTask) error {
@@ -112,6 +124,10 @@ func (p *bPool) r_worker_routine() {
 
 			if err != nil {
 				zlog.Error().Err(err).Msgf("read task: %s", task.uuid())
+			}
+
+			if !p.running_ids.contains(task.uuid()) {
+				continue
 			}
 
 			go func() {
