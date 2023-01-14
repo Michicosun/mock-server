@@ -29,24 +29,23 @@ type BrokerConnections struct {
 var rabbitmq_init sync.Once
 
 func RabbitMQConnectionConfigInit() {
-	host := os.Getenv("RABBITMQ_HOST")
-	if host != "" {
+	host, ok := os.LookupEnv("RABBITMQ_HOST")
+	if ok {
 		config.Brokers.Rabbitmq.Host = host
 	}
 
-	s := os.Getenv("RABBITMQ_PORT")
-	port, err := strconv.Atoi(s)
-	if err == nil {
+	s, ok := os.LookupEnv("RABBITMQ_PORT")
+	if port, err := strconv.Atoi(s); ok && err != nil {
 		config.Brokers.Rabbitmq.Port = port
 	}
 
-	username := os.Getenv("RABBITMQ_USERNAME")
-	if username != "" {
+	username, ok := os.LookupEnv("RABBITMQ_USERNAME")
+	if ok {
 		config.Brokers.Rabbitmq.Username = username
 	}
 
-	password := os.Getenv("RABBITMQ_PASSWORD")
-	if password != "" {
+	password, ok := os.LookupEnv("RABBITMQ_PASSWORD")
+	if ok {
 		config.Brokers.Rabbitmq.Password = password
 	}
 }

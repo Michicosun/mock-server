@@ -33,8 +33,7 @@ func LoadConfig(cfg_path string) {
 		panic(err)
 	}
 
-	err = yaml.Unmarshal(yamlFile, &config)
-	if err != nil {
+	if err = yaml.Unmarshal(yamlFile, &config); err != nil {
 		zlog.Err(err).Msg("Unmarshal config failed")
 		panic(err)
 	}

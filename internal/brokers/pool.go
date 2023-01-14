@@ -13,8 +13,6 @@ import (
 
 var BrokerPool = &bPool{}
 
-var onlyOnce sync.Once
-
 type qTask interface {
 	connect_and_prepare() error
 	set_uuid(id uuid.UUID)
@@ -34,6 +32,7 @@ type qWriteTask interface {
 }
 
 type bPool struct {
+	constructor sync.Once
 	cfg         *configs.PoolConfig
 	read_tasks  chan qReadTask
 	write_tasks chan qWriteTask
@@ -43,7 +42,7 @@ type bPool struct {
 }
 
 func (p *bPool) Init(ctx context.Context, cfg *configs.PoolConfig) {
-	onlyOnce.Do(func() {
+	p.constructor.Do(func() {
 		p.cfg = cfg
 		p.read_tasks = make(chan qReadTask, cfg.R_workers*2)
 		p.write_tasks = make(chan qWriteTask, cfg.W_workers*2)
@@ -91,15 +90,13 @@ func (p *bPool) submitWriteTask(task qWriteTask) uuid.UUID {
 
 func qread(ctx context.Context, task qReadTask) error {
 	zlog.Info().Msgf("starting read task: %s", task.uuid())
-	err := task.connect_and_prepare()
-	if err != nil {
+	if err := task.connect_and_prepare(); err != nil {
 		return err
 	}
 
 	defer task.close()
 
-	err = task.read(ctx)
-	if err != nil {
+	if err := task.read(ctx); err != nil {
 		return err
 	}
 
@@ -119,12 +116,10 @@ func (p *bPool) r_worker_routine() {
 			return
 		case task := <-p.read_tasks:
 			task_ctx, cancel := context.WithTimeout(p.ctx, p.cfg.Read_timeout)
-			err := qread(task_ctx, task)
-			cancel()
-
-			if err != nil {
+			if err := qread(task_ctx, task); err != nil {
 				zlog.Error().Err(err).Msgf("read task: %s", task.uuid())
 			}
+			cancel()
 
 			if !p.running_ids.contains(task.uuid()) {
 				continue
@@ -145,15 +140,13 @@ func (p *bPool) r_worker_routine() {
 
 func qwrite(ctx context.Context, task qWriteTask) error {
 	zlog.Info().Msgf("starting write task: %s", task.uuid())
-	err := task.connect_and_prepare()
-	if err != nil {
+	if err := task.connect_and_prepare(); err != nil {
 		return err
 	}
 
 	defer task.close()
 
-	err = task.write(ctx)
-	if err != nil {
+	if err := task.write(ctx); err != nil {
 		return err
 	}
 
@@ -171,12 +164,10 @@ func (p *bPool) w_worker_routine() {
 			return
 		case task := <-p.write_tasks:
 			task_ctx, cancel := context.WithTimeout(p.ctx, p.cfg.Write_timeout)
-			err := qwrite(task_ctx, task)
-			cancel()
-
-			if err != nil {
+			if err := qwrite(task_ctx, task); err != nil {
 				zlog.Error().Err(err).Msgf("write task: %s", task.uuid())
 			}
+			cancel()
 		}
 	}
 }
