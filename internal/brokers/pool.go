@@ -6,17 +6,18 @@ import (
 	"time"
 
 	"mock-server/internal/configs"
+	"mock-server/internal/util"
 
-	"github.com/google/uuid"
 	zlog "github.com/rs/zerolog/log"
 )
 
 var BrokerPool = &bPool{}
 
+type QueueId string
+
 type qTask interface {
 	connect_and_prepare() error
-	set_uuid(id uuid.UUID)
-	uuid() uuid.UUID
+	queue_id() QueueId
 	close()
 }
 
@@ -31,38 +32,37 @@ type qWriteTask interface {
 	write(ctx context.Context) error
 }
 
-var onlyOnce sync.Once
-
-func (p *bPool) Init(ctx context.Context, cfg *configs.PoolConfig) {
-	onlyOnce.Do(func() {
-		p.cfg = cfg
-		p.read_tasks = make(chan qReadTask, cfg.R_workers*2)
-		p.write_tasks = make(chan qWriteTask, cfg.W_workers*2)
-		p.ctx = ctx
-	})
+type QueueError struct {
+	queue_id QueueId
+	err      error
 }
 
 type bPool struct {
+	constructor sync.Once
 	cfg         *configs.PoolConfig
 	read_tasks  chan qReadTask
 	write_tasks chan qWriteTask
+	errors      chan QueueError
 	ctx         context.Context
 	wg          sync.WaitGroup
+	running_ids util.SyncSet[QueueId]
 }
 
-func (p *bPool) SubmitReadTask(task qReadTask) {
-	task.set_uuid(uuid.New())
-	p.read_tasks <- task
+func (p *bPool) Init(ctx context.Context, cfg *configs.PoolConfig) {
+	p.constructor.Do(func() {
+		p.cfg = cfg
+		p.read_tasks = make(chan qReadTask, cfg.R_workers*2)
+		p.write_tasks = make(chan qWriteTask, cfg.W_workers*2)
+		p.errors = make(chan QueueError, 100)
+		p.ctx = ctx
+		p.running_ids = util.NewSyncSet[QueueId]()
+	})
 }
 
-func (p *bPool) SubmitWriteTask(task qWriteTask) {
-	task.set_uuid(uuid.New())
-	p.write_tasks <- task
-}
-
-func (p *bPool) Wait() {
-	zlog.Info().Msg("pool: wait called")
+func (p *bPool) Stop() {
+	zlog.Info().Msg("pool: stop called")
 	p.wg.Wait()
+	close(p.errors)
 	zlog.Info().Msg("all workers joined")
 }
 
@@ -77,24 +77,56 @@ func (p *bPool) Start() {
 	}
 }
 
+func (p *bPool) Errors() <-chan QueueError {
+	return p.errors
+}
+
+func (p *bPool) StopEventually(id QueueId) {
+	zlog.Info().Str("task", string(id)).Msg("stopped rescheduling")
+	p.running_ids.Remove(id)
+}
+
+func (p *bPool) submitReadTask(task qReadTask) QueueId {
+	p.running_ids.Add(task.queue_id())
+	p.read_tasks <- task
+	return task.queue_id()
+}
+
+func (p *bPool) submitWriteTask(task qWriteTask) QueueId {
+	p.write_tasks <- task
+	return task.queue_id()
+}
+
+func (p *bPool) add_error(id QueueId, err error) {
+	zlog.Error().Str("task", string(id)).Err(err).Msg("task failed")
+	qerr := QueueError{
+		queue_id: id,
+		err:      err,
+	}
+	select {
+	case p.errors <- qerr:
+		zlog.Info().Str("task", string(id)).Msg("error submited")
+	default:
+		zlog.Info().Str("task", string(id)).Msg("failed to submit error")
+	}
+}
+
 func qread(ctx context.Context, task qReadTask) error {
-	zlog.Info().Msgf("starting read task: %s", task.uuid())
-	err := task.connect_and_prepare()
-	if err != nil {
+	zlog.Info().Str("task", string(task.queue_id())).Msg("started")
+	if err := task.connect_and_prepare(); err != nil {
 		return err
 	}
 
 	defer task.close()
 
-	err = task.read(ctx)
-	if err != nil {
+	if err := task.read(ctx); err != nil {
 		return err
 	}
 
 	// push to esb
 	// write to db
 
-	zlog.Info().Msgf("completed read task: %s, ctx error: %e", task.uuid(), ctx.Err())
+	zlog.Info().Str("task", string(task.queue_id())).Err(ctx.Err()).Msg("finished")
 	return nil
 }
 
@@ -107,11 +139,13 @@ func (p *bPool) r_worker_routine() {
 			return
 		case task := <-p.read_tasks:
 			task_ctx, cancel := context.WithTimeout(p.ctx, p.cfg.Read_timeout)
-			err := qread(task_ctx, task)
+			if err := qread(task_ctx, task); err != nil {
+				p.add_error(task.queue_id(), err)
+			}
 			cancel()
 
-			if err != nil {
-				zlog.Error().Err(err).Msgf("read task: %s", task.uuid())
+			if !p.running_ids.Contains(task.queue_id()) {
+				continue
 			}
 
 			go func() {
@@ -119,7 +153,7 @@ func (p *bPool) r_worker_routine() {
 				case <-p.ctx.Done():
 					return
 				case <-time.After(p.cfg.Disable_task):
-					zlog.Info().Msgf("reschedule reading from queue %s", task.uuid())
+					zlog.Info().Str("task", string(task.queue_id())).Msg("rescheduled")
 					p.read_tasks <- task
 				}
 			}()
@@ -128,21 +162,19 @@ func (p *bPool) r_worker_routine() {
 }
 
 func qwrite(ctx context.Context, task qWriteTask) error {
-	zlog.Info().Msgf("starting write task: %s", task.uuid())
-	err := task.connect_and_prepare()
-	if err != nil {
+	zlog.Info().Str("task", string(task.queue_id())).Msg("started")
+	if err := task.connect_and_prepare(); err != nil {
 		return err
 	}
 
 	defer task.close()
 
-	err = task.write(ctx)
-	if err != nil {
+	if err := task.write(ctx); err != nil {
 		return err
 	}
 
 	// write to db
-	zlog.Info().Msgf("completed write task: %s, ctx error: %e", task.uuid(), ctx.Err())
+	zlog.Info().Str("task", string(task.queue_id())).Err(ctx.Err()).Msg("finished")
 	return nil
 }
 
@@ -155,12 +187,10 @@ func (p *bPool) w_worker_routine() {
 			return
 		case task := <-p.write_tasks:
 			task_ctx, cancel := context.WithTimeout(p.ctx, p.cfg.Write_timeout)
-			err := qwrite(task_ctx, task)
-			cancel()
-
-			if err != nil {
-				zlog.Error().Err(err).Msgf("write task: %s", task.uuid())
+			if err := qwrite(task_ctx, task); err != nil {
+				p.add_error(task.queue_id(), err)
 			}
+			cancel()
 		}
 	}
 }

@@ -4,31 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"mock-server/internal/configs"
 
-	"github.com/google/uuid"
 	amqp "github.com/rabbitmq/amqp091-go"
 	zlog "github.com/rs/zerolog/log"
 )
 
-// RabbitMQ secret
-type RabbitMQSecret struct {
-	Username string
-	Password string
-	Host     string
-	Port     int
-	Queue    string
-}
-
-func (s *RabbitMQSecret) GetSecretId() SecretId {
-	return SecretId(fmt.Sprintf("amqp://%s:%d/?queue=%s", s.Host, s.Port, s.Queue))
-}
-
-func (s *RabbitMQSecret) GetConnectionString() string {
-	return fmt.Sprintf("amqp://%s:%s@%s:%d/", s.Username, s.Password, s.Host, s.Port)
-}
-
 // RabbitMQ base task
 type RabbitMQQueueConfig struct {
+	Queue      string
 	Durable    bool
 	AutoDelete bool
 	Exclusive  bool
@@ -37,41 +21,30 @@ type RabbitMQQueueConfig struct {
 }
 
 type rabbitMQTask struct {
-	secret_id SecretId
-	qcfg      *RabbitMQQueueConfig
+	qcfg *RabbitMQQueueConfig
 
 	conn *amqp.Connection
 	ch   *amqp.Channel
 	q    *amqp.Queue
-
-	task_id uuid.UUID
 }
 
-func (t *rabbitMQTask) set_uuid(id uuid.UUID) {
-	t.task_id = id
+func (t *rabbitMQTask) queue_id() QueueId {
+	return QueueId(fmt.Sprintf("rabbitmq:%s", t.qcfg.Queue))
 }
 
-func (t *rabbitMQTask) uuid() uuid.UUID {
-	return t.task_id
+func getConnectionString(s *configs.RabbitMQConnectionConfig) string {
+	return fmt.Sprintf("amqp://%s:%s@%s:%d/", s.Username, s.Password, s.Host, s.Port)
 }
 
 func (t *rabbitMQTask) connect_and_prepare() error {
-	s, err := SecretBox.GetSecret(t.secret_id)
+	zlog.Info().Str("task", string(t.queue_id())).Msg("setting up connection to rabbitmq")
+
+	s, err := configs.GetRabbitMQConnectionConfig()
 	if err != nil {
 		return err
 	}
 
-	rabbit_s, ok := s.(*RabbitMQSecret)
-	if !ok {
-		return &WrongSecretError{
-			id:   t.secret_id,
-			desc: "secret not for RabbitMQ connection",
-		}
-	}
-
-	zlog.Info().Msgf("using secret: %s", t.secret_id)
-
-	conn, err := amqp.Dial(rabbit_s.GetConnectionString())
+	conn, err := amqp.Dial(getConnectionString(s))
 	if err != nil {
 		return err
 	}
@@ -84,7 +57,7 @@ func (t *rabbitMQTask) connect_and_prepare() error {
 	t.ch = ch
 
 	q, err := ch.QueueDeclare(
-		rabbit_s.Queue,
+		t.qcfg.Queue,
 		t.qcfg.Durable,
 		t.qcfg.AutoDelete,
 		t.qcfg.Exclusive,
@@ -96,6 +69,7 @@ func (t *rabbitMQTask) connect_and_prepare() error {
 	}
 	t.q = &q
 
+	zlog.Info().Str("task", string(t.queue_id())).Msg("connection established")
 	return nil
 }
 
@@ -121,6 +95,10 @@ type rabbitMQReadTask struct {
 	msgs []amqp.Delivery
 }
 
+func (t *rabbitMQReadTask) queue_id() QueueId {
+	return QueueId(fmt.Sprintf("%s:read", t.rabbitMQTask.queue_id()))
+}
+
 func (t *rabbitMQReadTask) read(ctx context.Context) error {
 	msgs, err := t.ch.Consume(
 		t.q.Name,
@@ -140,7 +118,7 @@ func (t *rabbitMQReadTask) read(ctx context.Context) error {
 		case <-ctx.Done():
 			return nil
 		case msg := <-msgs:
-			zlog.Info().Msgf("read msg: %s", string(msg.Body))
+			zlog.Info().Str("task", string(t.queue_id())).Bytes("msg", msg.Body).Msg("read msg")
 			t.msgs = append(t.msgs, msg)
 		}
 	}
@@ -165,8 +143,12 @@ type rabbitMQWriteTask struct {
 	msgs [][]byte
 }
 
+func (t *rabbitMQWriteTask) queue_id() QueueId {
+	return QueueId(fmt.Sprintf("%s:write", t.rabbitMQTask.queue_id()))
+}
+
 func (t *rabbitMQWriteTask) write(ctx context.Context) error {
-	zlog.Info().Msgf("preparing to write %d msgs", len(t.msgs))
+	zlog.Info().Str("task", string(t.queue_id())).Int("msgs_cnt", len(t.msgs)).Msg("preparing to write")
 
 	for _, msg := range t.msgs {
 		err := t.ch.PublishWithContext(ctx,
@@ -189,10 +171,10 @@ func (t *rabbitMQWriteTask) write(ctx context.Context) error {
 
 // sugar
 
-func NewRabbitMQConnection(secret_id SecretId) *rabbitMQTask {
-	return &rabbitMQTask{
-		secret_id: secret_id,
+func newRabbitMQConnection(queue string) rabbitMQTask {
+	return rabbitMQTask{
 		qcfg: &RabbitMQQueueConfig{
+			Queue:      queue,
 			Durable:    false,
 			AutoDelete: false,
 			Exclusive:  false,
@@ -202,9 +184,9 @@ func NewRabbitMQConnection(secret_id SecretId) *rabbitMQTask {
 	}
 }
 
-func (t *rabbitMQTask) Read() *rabbitMQReadTask {
+func (p *bPool) NewRabbitMQReadTask(queue string) *rabbitMQReadTask {
 	return &rabbitMQReadTask{
-		rabbitMQTask: *t,
+		rabbitMQTask: newRabbitMQConnection(queue),
 		rcfg: &RabbitMQReadConfig{
 			Consumer:  "",
 			AutoAck:   true,
@@ -216,16 +198,16 @@ func (t *rabbitMQTask) Read() *rabbitMQReadTask {
 	}
 }
 
-func (t *rabbitMQTask) Write(msgs [][]byte) *rabbitMQWriteTask {
+func (p *bPool) NewRabbitMQWriteTask(queue string) *rabbitMQWriteTask {
 	return &rabbitMQWriteTask{
-		rabbitMQTask: *t,
+		rabbitMQTask: newRabbitMQConnection(queue),
 		wcfg: &RabbitMQWriteConfig{
 			Exchange:    "",
 			Mandatory:   false,
 			Immediate:   false,
 			ContentType: "text/plain",
 		},
-		msgs: msgs,
+		msgs: [][]byte{},
 	}
 }
 
@@ -244,10 +226,11 @@ func (t *rabbitMQWriteTask) SetWriteConfig(cfg RabbitMQWriteConfig) *rabbitMQWri
 	return t
 }
 
-func (t *rabbitMQReadTask) Submit() {
-	BrokerPool.SubmitReadTask(t)
+func (t *rabbitMQReadTask) Read() QueueId {
+	return BrokerPool.submitReadTask(t)
 }
 
-func (t *rabbitMQWriteTask) Submit() {
-	BrokerPool.SubmitWriteTask(t)
+func (t *rabbitMQWriteTask) Write(msgs [][]byte) QueueId {
+	t.msgs = msgs
+	return BrokerPool.submitWriteTask(t)
 }

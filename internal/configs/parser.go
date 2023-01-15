@@ -11,8 +11,9 @@ import (
 )
 
 type ServiceConfig struct {
-	Logs LogConfig  `yaml:"logs"`
-	Pool PoolConfig `yaml:"pool"`
+	Logs    LogConfig         `yaml:"logs"`
+	Pool    PoolConfig        `yaml:"pool"`
+	Brokers BrokerConnections `yaml:"brokers"`
 }
 
 var config ServiceConfig
@@ -32,8 +33,7 @@ func LoadConfig(cfg_path string) {
 		panic(err)
 	}
 
-	err = yaml.Unmarshal(yamlFile, &config)
-	if err != nil {
+	if err = yaml.Unmarshal(yamlFile, &config); err != nil {
 		zlog.Err(err).Msg("Unmarshal config failed")
 		panic(err)
 	}
