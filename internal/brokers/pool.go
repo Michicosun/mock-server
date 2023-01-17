@@ -140,39 +140,32 @@ func qread(ctx context.Context, task qReadTask) error {
 
 func (p *bPool) r_worker_routine() {
 	for {
-		select {
-		case <-p.ctx.Done():
+		elem := p.read_tasks.Get()
+		if elem.IsNone() {
 			zlog.Debug().Msg("r_worker Done")
 			p.wg.Done()
 			return
-		default:
-			elem := p.read_tasks.Get()
-			if elem.IsNone() {
-				zlog.Debug().Msg("r_worker Done")
-				p.wg.Done()
-				return
-			}
-			task := elem.Unwrap()
-			task_ctx, cancel := context.WithTimeout(p.ctx, p.cfg.Read_timeout)
-			if err := qread(task_ctx, task); err != nil {
-				p.add_error(task.queue_id(), err)
-			}
-			cancel()
-
-			if !p.running_ids.Contains(task.queue_id()) {
-				continue
-			}
-
-			go func() {
-				select {
-				case <-p.ctx.Done():
-					return
-				case <-time.After(p.cfg.Disable_task + time.Duration(rand.Intn(MAX_TIME_SHIFT)) + time.Millisecond):
-					zlog.Info().Str("task", string(task.queue_id())).Msg("rescheduled")
-					p.read_tasks.Put(task)
-				}
-			}()
 		}
+		task := elem.Unwrap()
+		task_ctx, cancel := context.WithTimeout(p.ctx, p.cfg.Read_timeout)
+		if err := qread(task_ctx, task); err != nil {
+			p.add_error(task.queue_id(), err)
+		}
+		cancel()
+
+		if !p.running_ids.Contains(task.queue_id()) {
+			continue
+		}
+
+		go func() {
+			select {
+			case <-p.ctx.Done():
+				return
+			case <-time.After(p.cfg.Disable_task + time.Duration(rand.Intn(MAX_TIME_SHIFT)) + time.Millisecond):
+				zlog.Info().Str("task", string(task.queue_id())).Msg("rescheduled")
+				p.read_tasks.Put(task)
+			}
+		}()
 	}
 }
 
@@ -195,24 +188,17 @@ func qwrite(ctx context.Context, task qWriteTask) error {
 
 func (p *bPool) w_worker_routine() {
 	for {
-		select {
-		case <-p.ctx.Done():
+		elem := p.write_tasks.Get()
+		if elem.IsNone() {
 			zlog.Debug().Msg("w_worker Done")
 			p.wg.Done()
 			return
-		default:
-			elem := p.write_tasks.Get()
-			if elem.IsNone() {
-				zlog.Debug().Msg("w_worker Done")
-				p.wg.Done()
-				return
-			}
-			task := elem.Unwrap()
-			task_ctx, cancel := context.WithTimeout(p.ctx, p.cfg.Write_timeout)
-			if err := qwrite(task_ctx, task); err != nil {
-				p.add_error(task.queue_id(), err)
-			}
-			cancel()
 		}
+		task := elem.Unwrap()
+		task_ctx, cancel := context.WithTimeout(p.ctx, p.cfg.Write_timeout)
+		if err := qwrite(task_ctx, task); err != nil {
+			p.add_error(task.queue_id(), err)
+		}
+		cancel()
 	}
 }
