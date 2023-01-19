@@ -7,13 +7,11 @@ import (
 	"mock-server/internal/coderun/docker-provider"
 	"mock-server/internal/configs"
 	"mock-server/internal/logger"
-	"os"
+	"mock-server/internal/util"
 	"time"
 
 	zlog "github.com/rs/zerolog/log"
 )
-
-const DefaultConfigPath = "/configs/config.yaml"
 
 func play_brokers(ctx context.Context, cancel context.CancelFunc) {
 	// broker example
@@ -48,7 +46,7 @@ func play_brokers(ctx context.Context, cancel context.CancelFunc) {
 }
 
 func play_docker(ctx context.Context, cancel context.CancelFunc) {
-	provider, err := docker.NewDockerProvider(ctx, "mock-server-coderun-worker", &configs.GetCoderunConfig().DockerContainerResources)
+	provider, err := docker.NewDockerProvider(ctx, &configs.GetCoderunConfig().DockerContainerResources)
 	if err != nil {
 		zlog.Error().Err(err).Msg("cannot create provider")
 		return
@@ -60,7 +58,7 @@ func play_docker(ctx context.Context, cancel context.CancelFunc) {
 		return
 	}
 
-	id, err := provider.CreateWorkerContainer("8072")
+	id, err := provider.CreateWorkerContainer("8095")
 	if err != nil {
 		zlog.Error().Err(err).Msg("cannot create container")
 		return
@@ -74,25 +72,39 @@ func play_docker(ctx context.Context, cancel context.CancelFunc) {
 	}
 	zlog.Info().Str("id", id).Msg("container started")
 
-	// time.Sleep(time.Second * 21)
+	time.Sleep(time.Second * 100)
 
-	// err = provider.RemoveWorkerContainer(id, true)
-	// if err != nil {
-	// 	zlog.Error().Err(err).Msg("cannot remove container")
-	// 	return
-	// }
-	// zlog.Info().Str("id", id).Msg("container removed")
+	err = provider.RemoveWorkerContainer(id, true)
+	if err != nil {
+		zlog.Error().Err(err).Msg("cannot remove container")
+		return
+	}
+	zlog.Info().Str("id", id).Msg("container removed")
 	provider.Close()
 }
 
-func main() {
-	config_path := os.Getenv("CONFIG_PATH")
-	if config_path == "" {
-		config_path = DefaultConfigPath
+func play_file_storage(ctx context.Context, cancel context.CancelFunc) {
+	fs, err := util.NewFileStorageDriver("coderun")
+	if err != nil {
+		zlog.Error().Err(err).Msg("cannot create filestorage")
+		return
 	}
+	err = fs.Write("mappers", "a", []byte("Hello, world!"))
+	if err != nil {
+		zlog.Error().Err(err).Msg("write failed")
+		return
+	}
+	s, err := fs.Read("mappers", "a")
+	if err != nil {
+		zlog.Error().Err(err).Msg("read failed")
+		return
+	}
+	zlog.Info().Str("text", s).Msg("read file successfuly")
+}
 
+func main() {
 	// load config
-	configs.LoadConfig(config_path)
+	configs.LoadConfig()
 
 	// init logger
 	logger.Init(configs.GetLogConfig())
@@ -105,4 +117,5 @@ func main() {
 
 	// play_brokers(ctx, cancel)
 	play_docker(ctx, cancel)
+	// play_file_storage(ctx, cancel)
 }

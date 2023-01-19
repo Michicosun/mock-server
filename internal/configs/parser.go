@@ -11,6 +11,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const DefaultConfigPath = "/configs/config.yaml"
+
 type ServiceConfig struct {
 	Logs    LogConfig         `yaml:"logs"`
 	Pool    PoolConfig        `yaml:"pool"`
@@ -20,7 +22,12 @@ type ServiceConfig struct {
 
 var config ServiceConfig
 
-func LoadConfig(cfg_path string) {
+func LoadConfig() {
+	cfg_path := os.Getenv("CONFIG_PATH")
+	if cfg_path == "" {
+		cfg_path = DefaultConfigPath
+	}
+
 	path, err := util.GetProjectRoot()
 	if err != nil {
 		zlog.Err(err).Msg("undefined project root")
@@ -45,7 +52,7 @@ func LoadConfig(cfg_path string) {
 	}
 
 	s, err := json.MarshalIndent(config, "", "\t")
-	if err != nil {
+	if err == nil {
 		fmt.Println("Config", string(s))
 	}
 }

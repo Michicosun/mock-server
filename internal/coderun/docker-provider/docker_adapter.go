@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"mock-server/internal/configs"
 	"mock-server/internal/util"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -19,24 +20,26 @@ import (
 	zlog "github.com/rs/zerolog/log"
 )
 
+const (
+	TAG_PREFIX = "mock-server-coderun-worker"
+)
+
 type DockerProvider struct {
-	ctx       context.Context
-	cli       *client.Client
-	cfg       *configs.ContainerResources
-	tagPrefix string
+	ctx context.Context
+	cli *client.Client
+	cfg *configs.ContainerResources
 }
 
-func NewDockerProvider(ctx context.Context, tagPrefix string, cfg *configs.ContainerResources) (*DockerProvider, error) {
+func NewDockerProvider(ctx context.Context, cfg *configs.ContainerResources) (*DockerProvider, error) {
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create docker adapter")
 	}
 
 	return &DockerProvider{
-		ctx:       ctx,
-		cli:       cli,
-		cfg:       cfg,
-		tagPrefix: tagPrefix,
+		ctx: ctx,
+		cli: cli,
+		cfg: cfg,
 	}, nil
 }
 
@@ -55,7 +58,7 @@ func (dp *DockerProvider) hasWorkerImages() (bool, error) {
 
 	for i := 0; i < len(images); i++ {
 		for _, tag := range images[i].RepoTags {
-			if strings.HasPrefix(tag, dp.tagPrefix) {
+			if strings.HasPrefix(tag, TAG_PREFIX) {
 				return true, nil
 			}
 		}
@@ -71,7 +74,7 @@ func (dp *DockerProvider) PruneWorkerImages() ([]types.ImageDeleteResponseItem, 
 	}
 	if has_worker_images {
 		zlog.Info().Msg("worker image exists on host, prunning")
-		return dp.cli.ImageRemove(dp.ctx, dp.tagPrefix, types.ImageRemoveOptions{
+		return dp.cli.ImageRemove(dp.ctx, TAG_PREFIX, types.ImageRemoveOptions{
 			PruneChildren: true,
 			Force:         true,
 		})
@@ -98,7 +101,7 @@ func (dp *DockerProvider) BuildWorkerImage() error {
 
 	zlog.Info().Str("path", dockerfile_path).Msg("using dockerfile")
 
-	cmd := exec.Command("docker", "build", ".", "-f", dockerfile_path, "-t", dp.tagPrefix)
+	cmd := exec.Command("docker", "build", ".", "-f", dockerfile_path, "-t", TAG_PREFIX)
 	var errb bytes.Buffer
 	cmd.Stderr = &errb
 	err = cmd.Run()
@@ -109,19 +112,26 @@ func (dp *DockerProvider) BuildWorkerImage() error {
 	return nil
 }
 
-func (dp *DockerProvider) CreateWorkerContainer(port string) (string, error) {
-	zlog.Info().Str("port", port).Msg("creating worker container")
+func getEnvList(port string) []string {
+	return []string{
+		fmt.Sprintf("PORT=%s", port),
+		fmt.Sprintf("CONFIG_PATH=%s", os.Getenv("CONFIG_PATH")),
+	}
+}
 
-	cport := fmt.Sprintf("%s/tcp", port)
-
-	contConfig := &container.Config{
-		Image: dp.tagPrefix,
-		ExposedPorts: nat.PortSet{
-			nat.Port(cport): struct{}{},
-		},
+func getMountList() ([]mount.Mount, error) {
+	file_storage_root, err := util.FileStorageRoot()
+	if err != nil {
+		return nil, err
 	}
 
-	mount_list := make([]mount.Mount, 0)
+	mount_list := []mount.Mount{
+		{
+			Type:   mount.TypeBind,
+			Source: file_storage_root,
+			Target: file_storage_root,
+		},
+	}
 
 	if configs.GetLogConfig().FileLoggingEnabled {
 		mount_list = append(mount_list, mount.Mount{
@@ -131,7 +141,26 @@ func (dp *DockerProvider) CreateWorkerContainer(port string) (string, error) {
 		})
 	}
 
-	// TODO add code directory to mount list
+	return mount_list, nil
+}
+
+func (dp *DockerProvider) CreateWorkerContainer(port string) (string, error) {
+	zlog.Info().Str("port", port).Msg("creating worker container")
+
+	cport := fmt.Sprintf("%s/tcp", port)
+
+	contConfig := &container.Config{
+		Image: TAG_PREFIX,
+		ExposedPorts: nat.PortSet{
+			nat.Port(cport): struct{}{},
+		},
+		Env: getEnvList(port),
+	}
+
+	mount_list, err := getMountList()
+	if err != nil {
+		return "", err
+	}
 
 	hostConfig := &container.HostConfig{
 		Resources: container.Resources{
@@ -165,6 +194,10 @@ func (dp *DockerProvider) CreateWorkerContainer(port string) (string, error) {
 
 func (dp *DockerProvider) StartWorkerContainer(id string) error {
 	return dp.cli.ContainerStart(dp.ctx, id, types.ContainerStartOptions{})
+}
+
+func (dp *DockerProvider) StopWorkerContainer(id string) error {
+	return dp.cli.ContainerStop(dp.ctx, id, nil)
 }
 
 func (dp *DockerProvider) RemoveWorkerContainer(id string, force bool) error {

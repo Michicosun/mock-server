@@ -5,21 +5,13 @@ import (
 	"mock-server/internal/brokers"
 	"mock-server/internal/configs"
 	"mock-server/internal/logger"
-	"os"
 
 	zlog "github.com/rs/zerolog/log"
 )
 
-const DefaultConfigPath = "/configs/config.yaml"
-
 func main() {
-	config_path := os.Getenv("CONFIG_PATH")
-	if config_path == "" {
-		config_path = DefaultConfigPath
-	}
-
 	// load config
-	configs.LoadConfig(config_path)
+	configs.LoadConfig()
 
 	// init logger
 	logger.Init(configs.GetLogConfig())

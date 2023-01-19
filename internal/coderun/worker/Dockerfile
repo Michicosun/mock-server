@@ -1,6 +1,6 @@
 FROM golang:1.19
 
-WORKDIR /opt
+WORKDIR /worker_dir
 
 # Download dependencies.
 COPY go.mod go.sum ./
