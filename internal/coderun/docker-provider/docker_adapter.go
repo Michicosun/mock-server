@@ -132,7 +132,7 @@ func getMountList() ([]mount.Mount, error) {
 		{
 			Type:   mount.TypeBind,
 			Source: file_storage_root,
-			Target: file_storage_root,
+			Target: "/worker_dir/.storage",
 		},
 	}
 

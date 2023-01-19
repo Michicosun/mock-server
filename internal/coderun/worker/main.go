@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"mock-server/internal/configs"
 	"mock-server/internal/logger"
+	"mock-server/internal/util"
 	"net/http"
 	"os"
 
@@ -11,8 +12,18 @@ import (
 )
 
 func run(w http.ResponseWriter, req *http.Request) {
+	driver, err := util.NewFileStorageDriver("coderun")
+	if err != nil {
+		zlog.Error().Err(err).Msg("driver initialization")
+	}
+
+	s, err := driver.Read("mappers", "a")
+	if err != nil {
+		zlog.Error().Err(err).Msg("read")
+	}
+
 	zlog.Info().Msg("got request")
-	fmt.Fprintf(w, "hello\n\n")
+	fmt.Fprintf(w, "hello: %s\n", s)
 }
 
 func headers(w http.ResponseWriter, req *http.Request) {
