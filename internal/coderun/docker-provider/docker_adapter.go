@@ -84,6 +84,8 @@ func (dp *DockerProvider) PruneWorkerImages() ([]types.ImageDeleteResponseItem, 
 }
 
 func (dp *DockerProvider) BuildWorkerImage() error {
+	zlog.Info().Msg("building worker image")
+
 	_, err := dp.PruneWorkerImages()
 	if err != nil {
 		return errors.Wrap(err, "prune old images")
@@ -109,6 +111,7 @@ func (dp *DockerProvider) BuildWorkerImage() error {
 		return errors.Wrap(err, errb.String())
 	}
 
+	zlog.Info().Msg("worker image built")
 	return nil
 }
 
@@ -187,21 +190,28 @@ func (dp *DockerProvider) CreateWorkerContainer(port string) (string, error) {
 	if len(cont.Warnings) != 0 {
 		l = zlog.Warn().Strs("warnings", cont.Warnings)
 	}
-	l.Msg("container created")
 
+	l.Str("id", cont.ID).Msg("worker container created")
 	return cont.ID, nil
 }
 
 func (dp *DockerProvider) StartWorkerContainer(id string) error {
+	zlog.Info().Str("id", id).Msg("starting worker container")
 	return dp.cli.ContainerStart(dp.ctx, id, types.ContainerStartOptions{})
 }
 
 func (dp *DockerProvider) StopWorkerContainer(id string) error {
+	zlog.Info().Str("id", id).Msg("stopping worker container")
 	return dp.cli.ContainerStop(dp.ctx, id, nil)
 }
 
+func (dp *DockerProvider) RestartWorkerContainer(id string) error {
+	zlog.Info().Str("id", id).Msg("restarting worker container")
+	return dp.cli.ContainerRestart(dp.ctx, id, nil)
+}
+
 func (dp *DockerProvider) RemoveWorkerContainer(id string, force bool) error {
-	zlog.Info().Str("id", id).Msg("removing container")
+	zlog.Info().Str("id", id).Msg("removing worker container")
 	return dp.cli.ContainerRemove(dp.ctx, id, types.ContainerRemoveOptions{
 		RemoveVolumes: true,
 		Force:         force,

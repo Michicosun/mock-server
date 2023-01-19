@@ -63,14 +63,12 @@ func play_docker(ctx context.Context, cancel context.CancelFunc) {
 		zlog.Error().Err(err).Msg("cannot create container")
 		return
 	}
-	zlog.Info().Str("id", id).Msg("container created")
 
 	err = provider.StartWorkerContainer(id)
 	if err != nil {
 		zlog.Error().Err(err).Msg("cannot create container")
 		return
 	}
-	zlog.Info().Str("id", id).Msg("container started")
 
 	time.Sleep(time.Second * 100)
 
@@ -79,7 +77,6 @@ func play_docker(ctx context.Context, cancel context.CancelFunc) {
 		zlog.Error().Err(err).Msg("cannot remove container")
 		return
 	}
-	zlog.Info().Str("id", id).Msg("container removed")
 	provider.Close()
 }
 
