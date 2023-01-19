@@ -20,3 +20,9 @@ brokers:
         port: 5672
         username: "guest"
         password: "guest"
+
+coderun:
+    worker_cnt: 10
+    docker_container:
+        cpu_limit: 0.5
+        memory_limit: 200
