@@ -46,7 +46,7 @@ func play_brokers(ctx context.Context, cancel context.CancelFunc) {
 }
 
 func play_docker(ctx context.Context, cancel context.CancelFunc) {
-	provider, err := docker.NewDockerProvider(ctx, &configs.GetCoderunConfig().DockerContainerResources)
+	provider, err := docker.NewDockerProvider(ctx, &configs.GetCoderunConfig().WorkerConfig.Resources)
 	if err != nil {
 		zlog.Error().Err(err).Msg("cannot create provider")
 		return
@@ -86,12 +86,12 @@ func play_file_storage(ctx context.Context, cancel context.CancelFunc) {
 		zlog.Error().Err(err).Msg("cannot create filestorage")
 		return
 	}
-	err = fs.Write("mappers", "a", []byte("Hello, world!"))
+	err = fs.Write("mapper", "test.py", []byte(`print("Hello, world!")`))
 	if err != nil {
 		zlog.Error().Err(err).Msg("write failed")
 		return
 	}
-	s, err := fs.Read("mappers", "a")
+	s, err := fs.Read("mapper", "test.py")
 	if err != nil {
 		zlog.Error().Err(err).Msg("read failed")
 		return

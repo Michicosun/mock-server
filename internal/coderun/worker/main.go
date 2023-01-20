@@ -1,46 +1,82 @@
 package main
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
+	"io"
+	"mock-server/internal/coderun/scripts"
 	"mock-server/internal/configs"
 	"mock-server/internal/logger"
-	"mock-server/internal/util"
 	"net/http"
 	"os"
-	"os/exec"
+	"strings"
 
 	zlog "github.com/rs/zerolog/log"
 )
 
-func run(w http.ResponseWriter, req *http.Request) {
-	cmd := exec.Command("python3", "--version")
-	stdout, err := cmd.Output()
-	if err != nil {
-		zlog.Error().Err(err).Msg("python3")
-	}
+//// format
+// Headers:
+// - run_type -- {mapper, dyn_handle}
+// - script
+// Body
+// - json -- {arg: argval}
 
-	fmt.Fprintf(w, "python3 version: %s\n", string(stdout))
+func parseRequest(req *http.Request) (*scripts.RunRequest, error) {
+	var run_request scripts.RunRequest
 
-	driver, err := util.NewFileStorageDriver("coderun")
-	if err != nil {
-		zlog.Error().Err(err).Msg("driver initialization")
-	}
-
-	s, err := driver.Read("mappers", "a")
-	if err != nil {
-		zlog.Error().Err(err).Msg("read")
-	}
-
-	zlog.Info().Msg("got request")
-	fmt.Fprintf(w, "hello: %s\n", s)
-}
-
-func headers(w http.ResponseWriter, req *http.Request) {
 	for name, headers := range req.Header {
-		for _, h := range headers {
-			fmt.Fprintf(w, "%v: %v\n", name, h)
+		if strings.EqualFold(name, "RunType") {
+			run_request.RunType = headers[0]
+		}
+		if strings.EqualFold(name, "Script") {
+			run_request.Script = headers[0]
 		}
 	}
+
+	body, err := io.ReadAll(req.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var kv_body map[string]string
+
+	err = json.Unmarshal(body, &kv_body)
+	if err != nil {
+		return nil, err
+	}
+
+	for k, v := range kv_body {
+		run_request.Args = append(run_request.Args, fmt.Sprintf("--%s", k))
+		run_request.Args = append(run_request.Args, v)
+	}
+
+	return &run_request, nil
+}
+
+func runHandle(w http.ResponseWriter, req *http.Request) {
+	zlog.Info().Msg("processing request")
+	run_request, err := parseRequest(req)
+	if err != nil {
+		zlog.Error().Err(err).Msg("parse error")
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "parse error: %s", err.Error())
+		return
+	}
+
+	run_ctx, cancel := context.WithTimeout(req.Context(), configs.GetCoderunConfig().WorkerConfig.HandleTimeout)
+	defer cancel()
+
+	out, err := scripts.RunPythonScript(run_ctx, run_request)
+	if err != nil {
+		zlog.Error().Err(err).Msg("run error")
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "run error: %s", err.Error())
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprint(w, out)
 }
 
 func main() {
@@ -58,8 +94,9 @@ func main() {
 	// set port variable for every log msg
 	zlog.Logger = zlog.Logger.With().Str("port", port).Logger()
 
-	http.HandleFunc("/run", run)
-	http.HandleFunc("/headers", headers)
+	http.HandleFunc("/run", runHandle)
+	err := http.ListenAndServe(fmt.Sprintf(":%s", port), nil)
 
-	http.ListenAndServe(fmt.Sprintf(":%s", port), nil)
+	zlog.Error().Err(err).Msg("server start failed")
+	panic(err)
 }

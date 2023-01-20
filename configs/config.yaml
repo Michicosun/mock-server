@@ -23,6 +23,8 @@ brokers:
 
 coderun:
     worker_cnt: 10
-    docker_container:
-        cpu_limit: 0.5
-        memory_limit: 200
+    worker:
+        handle_timeout: 10s
+        resources:
+            cpu_limit: 0.5
+            memory_limit: 200
