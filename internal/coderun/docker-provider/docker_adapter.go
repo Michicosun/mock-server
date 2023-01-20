@@ -67,6 +67,10 @@ func (dp *DockerProvider) hasWorkerImages() (bool, error) {
 	return false, nil
 }
 
+func (dp *DockerProvider) ChangeContext(ctx context.Context) {
+	dp.ctx = ctx
+}
+
 func (dp *DockerProvider) PruneWorkerImages() ([]types.ImageDeleteResponseItem, error) {
 	has_worker_images, err := dp.hasWorkerImages()
 	if err != nil {
@@ -198,6 +202,11 @@ func (dp *DockerProvider) CreateWorkerContainer(port string) (string, error) {
 func (dp *DockerProvider) StartWorkerContainer(id string) error {
 	zlog.Info().Str("id", id).Msg("starting worker container")
 	return dp.cli.ContainerStart(dp.ctx, id, types.ContainerStartOptions{})
+}
+
+func (dp *DockerProvider) InspectWorkerContainer(id string) (types.ContainerJSON, error) {
+	zlog.Info().Str("id", id).Msg("inspecting worker container")
+	return dp.cli.ContainerInspect(dp.ctx, id)
 }
 
 func (dp *DockerProvider) StopWorkerContainer(id string) error {

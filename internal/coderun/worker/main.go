@@ -39,7 +39,7 @@ func parseRequest(req *http.Request) (*scripts.RunRequest, error) {
 		return nil, err
 	}
 
-	var kv_body map[string]string
+	var kv_body map[string]interface{}
 
 	err = json.Unmarshal(body, &kv_body)
 	if err != nil {
@@ -47,8 +47,12 @@ func parseRequest(req *http.Request) (*scripts.RunRequest, error) {
 	}
 
 	for k, v := range kv_body {
+		string_value, err := json.Marshal(v)
+		if err != nil {
+			return nil, err
+		}
 		run_request.Args = append(run_request.Args, fmt.Sprintf("--%s", k))
-		run_request.Args = append(run_request.Args, v)
+		run_request.Args = append(run_request.Args, string(string_value))
 	}
 
 	return &run_request, nil

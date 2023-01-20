@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"mock-server/internal/brokers"
+	"mock-server/internal/coderun"
 	"mock-server/internal/coderun/docker-provider"
 	"mock-server/internal/configs"
 	"mock-server/internal/logger"
@@ -99,6 +100,49 @@ func play_file_storage(ctx context.Context, cancel context.CancelFunc) {
 	zlog.Info().Str("text", s).Msg("read file successfuly")
 }
 
+type ComplexArgs struct {
+	A string   `json:"A"`
+	B int      `json:"B"`
+	C []string `json:"C"`
+}
+
+func play_coderun(ctx context.Context, cancel context.CancelFunc) {
+	err := coderun.WorkerWatcher.Init(ctx, configs.GetCoderunConfig())
+
+	time.Sleep(5 * time.Second)
+
+	if err != nil {
+		zlog.Error().Err(err).Msg("watcher init")
+		return
+	}
+
+	for i := 0; i < 1000; i += 1 {
+		worker, err := coderun.WorkerWatcher.BorrowWorker()
+		if err != nil {
+			zlog.Error().Err(err).Msg("borrow worker")
+			return
+		}
+
+		out, err := worker.RunScript("mapper", "test.py", ComplexArgs{
+			A: "sample_A",
+			B: 42,
+			C: []string{"a", "b", "c"},
+		})
+		if err != nil {
+			zlog.Error().Err(err).Msg("run script")
+			return
+		}
+
+		zlog.Info().Str("output", string(out)).Msg("script finished")
+
+		worker.Return()
+	}
+
+	cancel()
+
+	coderun.WorkerWatcher.Stop()
+}
+
 func main() {
 	// load config
 	configs.LoadConfig()
@@ -113,6 +157,7 @@ func main() {
 	zlog.Info().Msg("starting...")
 
 	// play_brokers(ctx, cancel)
-	play_docker(ctx, cancel)
+	// play_docker(ctx, cancel)
 	// play_file_storage(ctx, cancel)
+	play_coderun(ctx, cancel)
 }
