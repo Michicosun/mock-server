@@ -7,11 +7,20 @@ import (
 	"mock-server/internal/util"
 	"net/http"
 	"os"
+	"os/exec"
 
 	zlog "github.com/rs/zerolog/log"
 )
 
 func run(w http.ResponseWriter, req *http.Request) {
+	cmd := exec.Command("python3", "--version")
+	stdout, err := cmd.Output()
+	if err != nil {
+		zlog.Error().Err(err).Msg("python3")
+	}
+
+	fmt.Fprintf(w, "python3 version: %s\n", string(stdout))
+
 	driver, err := util.NewFileStorageDriver("coderun")
 	if err != nil {
 		zlog.Error().Err(err).Msg("driver initialization")
