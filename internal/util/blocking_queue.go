@@ -16,11 +16,16 @@ type BlockingQueue[T any] struct {
 	empty    *sync.Cond
 }
 
+// call under lock only
+func (q *BlockingQueue[T]) isFull() bool {
+	return q.max_size > 0 && q.elems.Len() >= q.max_size
+}
+
 func (q *BlockingQueue[T]) Put(el T) bool {
 	q.mtx.Lock()
 	defer q.mtx.Unlock()
 
-	if !q.closed && q.max_size > 0 && q.elems.Len() >= q.max_size {
+	if !q.closed && q.isFull() {
 		q.full.Wait()
 	}
 
@@ -81,15 +86,5 @@ func NewBoundedBlockingQueue[T any](max_size int) BlockingQueue[T] {
 }
 
 func NewUnboundedBlockingQueue[T any]() BlockingQueue[T] {
-	q := BlockingQueue[T]{
-		max_size: -1,
-		closed:   false,
-		elems:    deque.New[T](),
-		mtx:      &sync.Mutex{},
-	}
-
-	q.full = sync.NewCond(q.mtx)
-	q.empty = sync.NewCond(q.mtx)
-
-	return q
+	return NewBoundedBlockingQueue[T](-1)
 }
