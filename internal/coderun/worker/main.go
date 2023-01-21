@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"mock-server/internal/coderun/scripts"
@@ -39,21 +38,7 @@ func parseRequest(req *http.Request) (*scripts.RunRequest, error) {
 		return nil, err
 	}
 
-	var kv_body map[string]interface{}
-
-	err = json.Unmarshal(body, &kv_body)
-	if err != nil {
-		return nil, err
-	}
-
-	for k, v := range kv_body {
-		string_value, err := json.Marshal(v)
-		if err != nil {
-			return nil, err
-		}
-		run_request.Args = append(run_request.Args, fmt.Sprintf("--%s", k))
-		run_request.Args = append(run_request.Args, string(string_value))
-	}
+	run_request.Args = body
 
 	return &run_request, nil
 }

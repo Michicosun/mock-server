@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"mock-server/internal/util"
+	"os"
 	"os/exec"
 	"path/filepath"
 
@@ -14,7 +15,7 @@ import (
 type RunRequest struct {
 	RunType string
 	Script  string
-	Args    []string
+	Args    []byte
 }
 
 func getCoderunRoot() (string, error) {
@@ -32,7 +33,7 @@ func getCoderunRoot() (string, error) {
 }
 
 func RunPythonScript(ctx context.Context, req *RunRequest) (string, error) {
-	zlog.Info().Str("type", req.RunType).Str("script", req.Script).Strs("args", req.Args).Msg("running script")
+	zlog.Info().Str("type", req.RunType).Str("script", req.Script).Str("args", string(req.Args)).Msg("running script")
 	coderun_root, err := getCoderunRoot()
 	if err != nil {
 		zlog.Error().Err(err).Msg("run failed")
@@ -41,7 +42,13 @@ func RunPythonScript(ctx context.Context, req *RunRequest) (string, error) {
 
 	script_full_path := filepath.Join(coderun_root, req.RunType, req.Script)
 
-	cmd := exec.CommandContext(ctx, "python3", append([]string{script_full_path}, req.Args...)...)
+	err = os.WriteFile("data.json", req.Args, 0644)
+	if err != nil {
+		zlog.Error().Err(err).Msg("dump args to file failed")
+		return "", errors.Wrap(err, "dump args to file failed")
+	}
+
+	cmd := exec.CommandContext(ctx, "python3", script_full_path)
 	var stderr, stdout bytes.Buffer
 	cmd.Stderr = &stderr
 	cmd.Stdout = &stdout
