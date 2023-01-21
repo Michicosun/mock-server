@@ -121,6 +121,7 @@ func (w *watcher) processWorkerInfo(worker *worker, info *types.ContainerJSON) {
 	}
 	if info.State.Paused || info.State.OOMKilled || info.State.Dead {
 		w.dp.RestartWorkerContainer(worker.cId)
+		w.repair <- worker
 	}
 	// info.State.Restarting
 }
