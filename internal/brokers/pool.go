@@ -2,6 +2,7 @@ package brokers
 
 import (
 	"context"
+	"math/rand"
 	"sync"
 	"time"
 
@@ -12,6 +13,11 @@ import (
 )
 
 var BrokerPool = &bPool{}
+
+const (
+	MAX_TIME_SHIFT_MS = 1024
+	MAX_ERRORS        = 128
+)
 
 type QueueId string
 
@@ -40,8 +46,8 @@ type QueueError struct {
 type bPool struct {
 	constructor sync.Once
 	cfg         *configs.PoolConfig
-	read_tasks  chan qReadTask
-	write_tasks chan qWriteTask
+	read_tasks  util.BlockingQueue[qReadTask]
+	write_tasks util.BlockingQueue[qWriteTask]
 	errors      chan QueueError
 	ctx         context.Context
 	wg          sync.WaitGroup
@@ -51,29 +57,31 @@ type bPool struct {
 func (p *bPool) Init(ctx context.Context, cfg *configs.PoolConfig) {
 	p.constructor.Do(func() {
 		p.cfg = cfg
-		p.read_tasks = make(chan qReadTask, cfg.R_workers*2)
-		p.write_tasks = make(chan qWriteTask, cfg.W_workers*2)
-		p.errors = make(chan QueueError, 100)
+		p.read_tasks = util.NewUnboundedBlockingQueue[qReadTask]()
+		p.write_tasks = util.NewUnboundedBlockingQueue[qWriteTask]()
+		p.errors = make(chan QueueError, MAX_ERRORS)
 		p.ctx = ctx
 		p.running_ids = util.NewSyncSet[QueueId]()
 	})
 }
 
 func (p *bPool) Stop() {
-	zlog.Info().Msg("pool: stop called")
-	p.wg.Wait()
+	zlog.Info().Msg("stop called")
+	p.read_tasks.Close(true)
+	p.write_tasks.Close(true)
 	close(p.errors)
+	p.wg.Wait()
 	zlog.Info().Msg("all workers joined")
 }
 
 func (p *bPool) Start() {
 	for i := uint32(0); i < p.cfg.R_workers; i += 1 {
 		p.wg.Add(1)
-		go p.r_worker_routine()
+		go p.rWorkerRoutine()
 	}
 	for i := uint32(0); i < p.cfg.W_workers; i += 1 {
 		p.wg.Add(1)
-		go p.w_worker_routine()
+		go p.wWorkerRoutine()
 	}
 }
 
@@ -88,16 +96,16 @@ func (p *bPool) StopEventually(id QueueId) {
 
 func (p *bPool) submitReadTask(task qReadTask) QueueId {
 	p.running_ids.Add(task.queue_id())
-	p.read_tasks <- task
+	p.read_tasks.Put(task)
 	return task.queue_id()
 }
 
 func (p *bPool) submitWriteTask(task qWriteTask) QueueId {
-	p.write_tasks <- task
+	p.write_tasks.Put(task)
 	return task.queue_id()
 }
 
-func (p *bPool) add_error(id QueueId, err error) {
+func (p *bPool) addError(id QueueId, err error) {
 	zlog.Error().Str("task", string(id)).Err(err).Msg("task failed")
 	qerr := QueueError{
 		queue_id: id,
@@ -130,34 +138,41 @@ func qread(ctx context.Context, task qReadTask) error {
 	return nil
 }
 
-func (p *bPool) r_worker_routine() {
+func (p *bPool) rescheduleDelayTime() time.Duration {
+	return p.cfg.Disable_task + time.Duration(rand.Intn(MAX_TIME_SHIFT_MS))*time.Millisecond
+}
+
+// reschedule task to not keep alive tcp sessions with broker
+func (p *bPool) reschedule(task qReadTask) {
+	select {
+	case <-p.ctx.Done():
+		return
+	case <-time.After(p.rescheduleDelayTime()):
+		zlog.Info().Str("task", string(task.queue_id())).Msg("rescheduled")
+		p.read_tasks.Put(task)
+	}
+}
+
+func (p *bPool) rWorkerRoutine() {
 	for {
-		select {
-		case <-p.ctx.Done():
+		elem := p.read_tasks.Get()
+		if elem.IsNone() {
 			zlog.Debug().Msg("r_worker Done")
 			p.wg.Done()
 			return
-		case task := <-p.read_tasks:
-			task_ctx, cancel := context.WithTimeout(p.ctx, p.cfg.Read_timeout)
-			if err := qread(task_ctx, task); err != nil {
-				p.add_error(task.queue_id(), err)
-			}
-			cancel()
-
-			if !p.running_ids.Contains(task.queue_id()) {
-				continue
-			}
-
-			go func() {
-				select {
-				case <-p.ctx.Done():
-					return
-				case <-time.After(p.cfg.Disable_task):
-					zlog.Info().Str("task", string(task.queue_id())).Msg("rescheduled")
-					p.read_tasks <- task
-				}
-			}()
 		}
+		task := elem.Unwrap()
+		task_ctx, cancel := context.WithTimeout(p.ctx, p.cfg.Read_timeout)
+		if err := qread(task_ctx, task); err != nil {
+			p.addError(task.queue_id(), err)
+		}
+		cancel()
+
+		if !p.running_ids.Contains(task.queue_id()) {
+			continue
+		}
+
+		go p.reschedule(task)
 	}
 }
 
@@ -178,19 +193,19 @@ func qwrite(ctx context.Context, task qWriteTask) error {
 	return nil
 }
 
-func (p *bPool) w_worker_routine() {
+func (p *bPool) wWorkerRoutine() {
 	for {
-		select {
-		case <-p.ctx.Done():
+		elem := p.write_tasks.Get()
+		if elem.IsNone() {
 			zlog.Debug().Msg("w_worker Done")
 			p.wg.Done()
 			return
-		case task := <-p.write_tasks:
-			task_ctx, cancel := context.WithTimeout(p.ctx, p.cfg.Write_timeout)
-			if err := qwrite(task_ctx, task); err != nil {
-				p.add_error(task.queue_id(), err)
-			}
-			cancel()
 		}
+		task := elem.Unwrap()
+		task_ctx, cancel := context.WithTimeout(p.ctx, p.cfg.Write_timeout)
+		if err := qwrite(task_ctx, task); err != nil {
+			p.addError(task.queue_id(), err)
+		}
+		cancel()
 	}
 }
