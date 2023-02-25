@@ -55,6 +55,10 @@ func (w *worker) RunScript(run_type string, script string, args interface{}) ([]
 		return nil, err
 	}
 
+	if res.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("run script error: %s, code: %d", out, res.StatusCode)
+	}
+
 	return out, err
 }
 

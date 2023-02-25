@@ -3,6 +3,7 @@ package scripts
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"mock-server/internal/util"
 	"os"
 	"os/exec"
@@ -40,6 +41,9 @@ func RunPythonScript(ctx context.Context, req *RunRequest) (string, error) {
 	}
 
 	script_full_path := filepath.Join(coderun_root, req.RunType, req.Script)
+	if _, err := os.Stat(script_full_path); errors.Is(err, os.ErrNotExist) {
+		return "", fmt.Errorf("script: %s not exists", script_full_path)
+	}
 
 	err = os.WriteFile("data.json", req.Args, 0644)
 	if err != nil {

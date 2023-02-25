@@ -47,8 +47,7 @@ func runHandle(w http.ResponseWriter, req *http.Request) {
 	run_request, err := parseRequest(req)
 	if err != nil {
 		zlog.Error().Err(err).Msg("parse error")
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, "parse error: %s", err.Error())
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -58,8 +57,7 @@ func runHandle(w http.ResponseWriter, req *http.Request) {
 	out, err := scripts.RunPythonScript(run_ctx, run_request)
 	if err != nil {
 		zlog.Error().Err(err).Msg("run error")
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "run error: %s", err.Error())
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
