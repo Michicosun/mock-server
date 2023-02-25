@@ -20,3 +20,11 @@ brokers:
         port: 5672
         username: "guest"
         password: "guest"
+
+coderun:
+    worker_cnt: 10
+    worker:
+        handle_timeout: 10s
+        resources:
+            cpu_limit: 0.5
+            memory_limit_mb: 200

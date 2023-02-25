@@ -3,6 +3,7 @@ package configs
 import (
 	"encoding/json"
 	"fmt"
+	"mock-server/internal/util"
 	"os"
 	"path/filepath"
 
@@ -10,34 +11,48 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const DefaultConfigPath = "/configs/config.yaml"
+
 type ServiceConfig struct {
 	Logs    LogConfig         `yaml:"logs"`
 	Pool    PoolConfig        `yaml:"pool"`
 	Brokers BrokerConnections `yaml:"brokers"`
+	Coderun CoderunConfig     `yaml:"coderun"`
 }
 
 var config ServiceConfig
 
-func LoadConfig(cfg_path string) {
-	path, err := os.Getwd()
+func LoadConfig() {
+	cfg_path := os.Getenv("CONFIG_PATH")
+	if cfg_path == "" {
+		cfg_path = DefaultConfigPath
+	}
+
+	path, err := util.GetProjectRoot()
 	if err != nil {
-		zlog.Err(err)
+		zlog.Err(err).Msg("undefined project root")
 		panic(err)
 	}
 
-	filename, _ := filepath.Abs(filepath.Join(path, cfg_path))
-	yamlFile, err := os.ReadFile(filename)
+	full_cfg_path, err := filepath.Abs(filepath.Join(path, cfg_path))
+	if err != nil {
+		zlog.Err(err).Msg("failed to create full config path")
+		panic(err)
+	}
+	cfg, err := os.ReadFile(full_cfg_path)
 
 	if err != nil {
 		zlog.Err(err).Msg("failed to read config file")
 		panic(err)
 	}
 
-	if err = yaml.Unmarshal(yamlFile, &config); err != nil {
+	if err = yaml.Unmarshal(cfg, &config); err != nil {
 		zlog.Err(err).Msg("Unmarshal config failed")
 		panic(err)
 	}
 
-	s, _ := json.MarshalIndent(config, "", "\t")
-	fmt.Println("Config", string(s))
+	s, err := json.MarshalIndent(config, "", "\t")
+	if err == nil {
+		fmt.Println("Config", string(s))
+	}
 }
