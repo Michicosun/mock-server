@@ -36,7 +36,6 @@ func RunPythonScript(ctx context.Context, req *RunRequest) (string, error) {
 	zlog.Info().Str("type", req.RunType).Str("script", req.Script).Str("args", string(req.Args)).Msg("running script")
 	coderun_root, err := getCoderunRoot()
 	if err != nil {
-		zlog.Error().Err(err).Msg("run failed")
 		return "", errors.Wrap(err, "get coderun root failed")
 	}
 
@@ -44,7 +43,6 @@ func RunPythonScript(ctx context.Context, req *RunRequest) (string, error) {
 
 	err = os.WriteFile("data.json", req.Args, 0644)
 	if err != nil {
-		zlog.Error().Err(err).Msg("dump args to file failed")
 		return "", errors.Wrap(err, "dump args to file failed")
 	}
 
@@ -52,8 +50,7 @@ func RunPythonScript(ctx context.Context, req *RunRequest) (string, error) {
 	var stderr, stdout bytes.Buffer
 	cmd.Stderr = &stderr
 	cmd.Stdout = &stdout
-	err = cmd.Run()
-	if err != nil {
+	if err := cmd.Run(); err != nil {
 		zlog.Error().Str("type", req.RunType).Str("script", req.Script).Err(err).Msg("run failed")
 		return stderr.String(), err
 	}

@@ -63,13 +63,13 @@ func (w *worker) Return() {
 }
 
 type watcher struct {
-	initialized bool
-	wg          sync.WaitGroup
-	ctx         context.Context
-	dp          *docker.DockerProvider
-	workers     chan *worker
-	repair      chan *worker
-	portworker  map[string]*worker
+	initialized  bool
+	wg           sync.WaitGroup
+	ctx          context.Context
+	dp           *docker.DockerProvider
+	workers      chan *worker
+	repair       chan *worker
+	workerByPort map[string]*worker
 }
 
 func getFreePort() (string, error) {
@@ -98,8 +98,7 @@ func (w *watcher) startNewWorker() error {
 		return err
 	}
 
-	w.dp.StartWorkerContainer(id)
-	if err != nil {
+	if err := w.dp.StartWorkerContainer(id); err != nil {
 		return err
 	}
 
@@ -110,7 +109,7 @@ func (w *watcher) startNewWorker() error {
 	}
 
 	w.workers <- &worker
-	w.portworker[port] = &worker
+	w.workerByPort[port] = &worker
 
 	return nil
 }
@@ -137,7 +136,7 @@ func (w *watcher) repairLoop() {
 			info, err := w.dp.InspectWorkerContainer(worker.cId)
 			if err != nil {
 				w.dp.RemoveWorkerContainer(worker.cId, true)
-				delete(w.portworker, worker.port)
+				delete(w.workerByPort, worker.port)
 				w.startNewWorker()
 			} else {
 				w.processWorkerInfo(worker, &info)
@@ -170,7 +169,7 @@ func (w *watcher) Init(ctx context.Context, cfg *configs.CoderunConfig) error {
 
 	w.workers = make(chan *worker, configs.GetCoderunConfig().WorkerCnt)
 	w.repair = make(chan *worker, configs.GetCoderunConfig().WorkerCnt)
-	w.portworker = make(map[string]*worker)
+	w.workerByPort = make(map[string]*worker)
 	for i := 0; i < configs.GetCoderunConfig().WorkerCnt; i += 1 {
 		err = w.startNewWorker()
 		if err != nil {
@@ -219,7 +218,7 @@ func (w *watcher) Stop() {
 
 	w.dp.ChangeContext(ctx)
 
-	for _, worker := range w.portworker {
+	for _, worker := range w.workerByPort {
 		w.dp.RemoveWorkerContainer(worker.cId, true)
 	}
 

@@ -27,4 +27,4 @@ coderun:
         handle_timeout: 10s
         resources:
             cpu_limit: 0.5
-            memory_limit: 200
+            memory_limit_mb: 200

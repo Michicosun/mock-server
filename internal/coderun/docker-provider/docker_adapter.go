@@ -71,27 +71,27 @@ func (dp *DockerProvider) ChangeContext(ctx context.Context) {
 	dp.ctx = ctx
 }
 
-func (dp *DockerProvider) PruneWorkerImages() ([]types.ImageDeleteResponseItem, error) {
+func (dp *DockerProvider) PruneWorkerImages() error {
 	has_worker_images, err := dp.hasWorkerImages()
 	if err != nil {
-		return make([]types.ImageDeleteResponseItem, 0), err
+		return err
 	}
 	if has_worker_images {
 		zlog.Info().Msg("worker image exists on host, prunning")
-		return dp.cli.ImageRemove(dp.ctx, TAG_PREFIX, types.ImageRemoveOptions{
+		_, err := dp.cli.ImageRemove(dp.ctx, TAG_PREFIX, types.ImageRemoveOptions{
 			PruneChildren: true,
 			Force:         true,
 		})
+		return err
 	}
 	zlog.Info().Msg("worker image doesn't exitst on host")
-	return make([]types.ImageDeleteResponseItem, 0), nil
+	return nil
 }
 
 func (dp *DockerProvider) BuildWorkerImage() error {
 	zlog.Info().Msg("building worker image")
 
-	_, err := dp.PruneWorkerImages()
-	if err != nil {
+	if err := dp.PruneWorkerImages(); err != nil {
 		return errors.Wrap(err, "prune old images")
 	}
 
@@ -110,12 +110,11 @@ func (dp *DockerProvider) BuildWorkerImage() error {
 	cmd := exec.Command("docker", "build", ".", "-f", dockerfile_path, "-t", TAG_PREFIX)
 	var errb bytes.Buffer
 	cmd.Stderr = &errb
-	err = cmd.Run()
-	if err != nil {
+	if err = cmd.Run(); err != nil {
 		return errors.Wrap(err, errb.String())
 	}
 
-	zlog.Info().Msg("worker image built")
+	zlog.Info().Msg("worker image was built successfully")
 	return nil
 }
 
@@ -172,7 +171,7 @@ func (dp *DockerProvider) CreateWorkerContainer(port string) (string, error) {
 	hostConfig := &container.HostConfig{
 		Resources: container.Resources{
 			NanoCPUs: int64(dp.cfg.CPULimit * 1e9),
-			Memory:   int64(dp.cfg.MemoryLimit * 1e6),
+			Memory:   int64(dp.cfg.MemoryLimitMB * 1e6),
 		},
 		PortBindings: nat.PortMap{
 			nat.Port(cport): []nat.PortBinding{

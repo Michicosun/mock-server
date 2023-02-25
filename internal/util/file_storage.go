@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 )
 
-type fileStorageDriver struct {
+type fileStorage struct {
 	prefix string
 }
 
@@ -16,20 +16,20 @@ const (
 
 func createIfNotExists(path string) error {
 	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
-		if err := os.Mkdir(path, os.ModePerm); err != nil {
+		if err := os.MkdirAll(path, os.ModePerm); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func createFileStorage() (*fileStorageDriver, error) {
+func createFileStorage() (*fileStorage, error) {
 	file_storage_root, err := FileStorageRoot()
 	if err != nil {
 		return nil, err
 	}
 
-	return &fileStorageDriver{
+	return &fileStorage{
 		prefix: file_storage_root,
 	}, nil
 }
@@ -52,7 +52,7 @@ func FileStorageRoot() (string, error) {
 	return file_storage_root, nil
 }
 
-func NewFileStorageDriver(prefix string) (*fileStorageDriver, error) {
+func NewFileStorageDriver(prefix string) (*fileStorage, error) {
 	driver, err := createFileStorage()
 	if err != nil {
 		return nil, err
@@ -67,7 +67,7 @@ func NewFileStorageDriver(prefix string) (*fileStorageDriver, error) {
 	return driver, nil
 }
 
-func (fs *fileStorageDriver) Read(prefix string, filename string) (string, error) {
+func (fs *fileStorage) Read(prefix string, filename string) (string, error) {
 	full_path := filepath.Join(fs.prefix, prefix, filename)
 
 	file, err := os.ReadFile(full_path)
@@ -78,7 +78,7 @@ func (fs *fileStorageDriver) Read(prefix string, filename string) (string, error
 	return string(file), nil
 }
 
-func (fs *fileStorageDriver) Write(prefix string, filename string, data []byte) error {
+func (fs *fileStorage) Write(prefix string, filename string, data []byte) error {
 	folder := filepath.Join(fs.prefix, prefix)
 	err := createIfNotExists(folder)
 	if err != nil {
@@ -94,7 +94,7 @@ func (fs *fileStorageDriver) Write(prefix string, filename string, data []byte) 
 
 	cnt_read := 0
 	for cnt_read < len(data) {
-		n, err := file.Write(data)
+		n, err := file.Write(data[cnt_read:])
 		if err != nil {
 			return err
 		}

@@ -3,8 +3,8 @@ package configs
 import "time"
 
 type ContainerResources struct {
-	CPULimit    float64 `yaml:"cpu_limit"`
-	MemoryLimit float64 `yaml:"memory_limit"`
+	CPULimit      float64 `yaml:"cpu_limit"`
+	MemoryLimitMB float64 `yaml:"memory_limit_mb"`
 }
 
 type WorkerConfig struct {

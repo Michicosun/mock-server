@@ -27,8 +27,7 @@ func parseRequest(req *http.Request) (*scripts.RunRequest, error) {
 	for name, headers := range req.Header {
 		if strings.EqualFold(name, "RunType") {
 			run_request.RunType = headers[0]
-		}
-		if strings.EqualFold(name, "Script") {
+		} else if strings.EqualFold(name, "Script") {
 			run_request.Script = headers[0]
 		}
 	}
@@ -77,6 +76,7 @@ func main() {
 
 	port, ok := os.LookupEnv("PORT")
 	if !ok {
+		zlog.Error().Msg("port wasn't provided to worker")
 		os.Exit(1)
 	}
 
