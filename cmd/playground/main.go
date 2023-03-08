@@ -150,6 +150,53 @@ func play_coderun(ctx context.Context, cancel context.CancelFunc) {
 	coderun.WorkerWatcher.Stop()
 }
 
+func play_esb(ctx context.Context, cancel context.CancelFunc) {
+	brokers.MPRegistry.Init()
+	brokers.Esb.Init()
+
+	brokers.MPTaskScheduler.Init(ctx, configs.GetMPTaskSchedulerConfig())
+
+	brokers.MPTaskScheduler.Start()
+	defer brokers.MPTaskScheduler.Stop()
+
+	coderun.WorkerWatcher.Init(ctx, configs.GetCoderunConfig())
+	defer coderun.WorkerWatcher.Stop()
+
+	pool1, _ := brokers.MPRegistry.AddMessagePool(brokers.NewRabbitMQMessagePool("test-pool-1", "test-mock-queue-1"))
+	pool2, _ := brokers.MPRegistry.AddMessagePool(brokers.NewRabbitMQMessagePool("test-pool-2", "test-mock-queue-2"))
+
+	fs, _ := util.NewFileStorageDriver("coderun")
+	fs.Write("mapper", "test-mapper.py", []byte(`print([[72, 69, 76, 76, 79], [87, 79, 82, 76, 68], [33]])`))
+
+	brokers.Esb.AddEsbRecordWithMapper("test-pool-1", "test-pool-2", "test-mapper.py")
+
+	///////////////////////////////////////////////////////////////////////////////////////
+
+	go func() {
+		for x := range brokers.MPTaskScheduler.Errors() {
+			fmt.Println(x)
+		}
+	}()
+
+	pool1.NewReadTask().Schedule()
+
+	<-time.After(2 * time.Second)
+
+	pool1.NewWriteTask([][]byte{
+		[]byte(fmt.Sprintf("%d", 40)),
+		[]byte(fmt.Sprintf("%d", 41)),
+		[]byte(fmt.Sprintf("%d", 42)),
+	}).Schedule()
+
+	<-time.After(2 * time.Second)
+
+	pool2.NewReadTask().Schedule()
+
+	<-time.After(10 * time.Second)
+
+	cancel()
+}
+
 func main() {
 	// load config
 	configs.LoadConfig()
@@ -163,8 +210,9 @@ func main() {
 
 	zlog.Info().Msg("starting...")
 
-	play_brokers(ctx, cancel)
+	// play_brokers(ctx, cancel)
 	// play_docker(ctx, cancel)
 	// play_file_storage(ctx, cancel)
 	// play_coderun(ctx, cancel)
+	play_esb(ctx, cancel)
 }

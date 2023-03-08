@@ -21,6 +21,7 @@ type TaskId string
 type qTask interface {
 	connectAndPrepare() error
 	getTaskId() TaskId
+	getMessagePool() MessagePool
 	close()
 }
 
@@ -28,7 +29,7 @@ type qReadTask interface {
 	qTask
 	Schedule() TaskId
 	read(ctx context.Context) error
-	json() ([]byte, error)
+	json() ([][]byte, error)
 }
 
 type qWriteTask interface {
@@ -122,10 +123,18 @@ func qread(ctx context.Context, task qReadTask) error {
 		return err
 	}
 
-	// push to esb
-	// write to db
-
 	zlog.Info().Str("task", string(task.getTaskId())).Err(ctx.Err()).Msg("finished")
+
+	msgs, err := task.json()
+	if err != nil {
+		return err
+	}
+
+	if err = Esb.submit(task.getMessagePool().getName(), msgs); err != nil {
+		return err
+	}
+
+	// write to db
 	return nil
 }
 

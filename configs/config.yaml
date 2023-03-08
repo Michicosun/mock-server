@@ -1,4 +1,5 @@
 logs:
+    level: 0
     consoleLoggingEnabled: true
     fileLoggingEnabled: true
     directory: "/tmp/mock-server-logs"
@@ -21,7 +22,7 @@ brokers:
         password: "guest"
 
 coderun:
-    worker_cnt: 10
+    worker_cnt: 1
     worker:
         handle_timeout: 10s
         resources:

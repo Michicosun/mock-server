@@ -1,6 +1,7 @@
 package configs
 
 type LogConfig struct {
+	Level                 uint8  `yaml:"level"`
 	ConsoleLoggingEnabled bool   `yaml:"consoleLoggingEnabled"`
 	FileLoggingEnabled    bool   `yaml:"fileLoggingEnabled"`
 	Directory             string `yaml:"directory"`

@@ -2,7 +2,6 @@ package brokers
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"mock-server/internal/configs"
 
@@ -66,6 +65,10 @@ type rabbitMQTask struct {
 	conn *amqp.Connection
 	ch   *amqp.Channel
 	q    *amqp.Queue
+}
+
+func (t *rabbitMQTask) getMessagePool() MessagePool {
+	return t.pool
 }
 
 func (t *rabbitMQTask) getTaskId() TaskId {
@@ -151,14 +154,20 @@ func (t *rabbitMQReadTask) read(ctx context.Context) error {
 		case <-ctx.Done():
 			return nil
 		case msg := <-msgs:
-			zlog.Info().Str("task", string(t.getTaskId())).Bytes("msg", msg.Body).Msg("read msg")
+			zlog.Debug().Str("task", string(t.getTaskId())).Bytes("msg", msg.Body).Msg("read msg")
 			t.msgs = append(t.msgs, msg)
 		}
 	}
 }
 
-func (t *rabbitMQReadTask) json() ([]byte, error) {
-	return json.Marshal(t.msgs)
+func (t *rabbitMQReadTask) json() ([][]byte, error) {
+	msgs := make([][]byte, 0)
+
+	for _, msg := range t.msgs {
+		msgs = append(msgs, msg.Body)
+	}
+
+	return msgs, nil
 }
 
 // RabbitMQ write task
