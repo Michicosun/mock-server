@@ -17,31 +17,38 @@ import (
 func play_brokers(ctx context.Context, cancel context.CancelFunc) {
 	// broker example
 
-	brokers.BrokerPool.Init(ctx, configs.GetPoolConfig())
-	brokers.BrokerPool.Start()
+	brokers.MPRegistry.Init()
 
-	brokers.BrokerPool.NewRabbitMQWriteTask("test-mock-queue").Write([][]byte{
-		[]byte(fmt.Sprintf("%d", 40)),
-		[]byte(fmt.Sprintf("%d", 41)),
-		[]byte(fmt.Sprintf("%d", 42)),
-	})
+	brokers.MPTaskScheduler.Init(ctx, configs.GetMPTaskSchedulerConfig())
+	brokers.MPTaskScheduler.Start()
+
+	handler, err := brokers.MPRegistry.AddMessagePool(brokers.NewRabbitMQMessagePool("test-pool", "test-mock-queue"))
+	if err != nil {
+		zlog.Error().Err(err).Msg("add new pool failed")
+	}
+
+	id := handler.NewReadTask().Schedule()
+	zlog.Info().Str("id", string(id)).Msg("start reading")
 
 	<-time.After(1 * time.Second)
 
-	id := brokers.BrokerPool.NewRabbitMQReadTask("test-mock-queue").Read()
+	handler, err = brokers.MPRegistry.GetMessagePool("test-pool")
+	if err != nil {
+		zlog.Error().Err(err).Msg("get pool failed")
+	}
 
-	zlog.Info().Msg("start reading")
-	<-time.After(5 * time.Second)
+	handler.NewWriteTask([][]byte{
+		[]byte(fmt.Sprintf("%d", 40)),
+		[]byte(fmt.Sprintf("%d", 41)),
+		[]byte(fmt.Sprintf("%d", 42)),
+	}).Schedule()
 
-	brokers.BrokerPool.StopEventually(id)
-
-	<-time.After(10 * time.Second)
+	<-time.After(1 * time.Second)
 
 	cancel()
 
-	brokers.BrokerPool.Stop()
-
-	for x := range brokers.BrokerPool.Errors() {
+	brokers.MPTaskScheduler.Stop()
+	for x := range brokers.MPTaskScheduler.Errors() {
 		fmt.Println(x)
 	}
 }
@@ -156,8 +163,8 @@ func main() {
 
 	zlog.Info().Msg("starting...")
 
-	// play_brokers(ctx, cancel)
+	play_brokers(ctx, cancel)
 	// play_docker(ctx, cancel)
 	// play_file_storage(ctx, cancel)
-	play_coderun(ctx, cancel)
+	// play_coderun(ctx, cancel)
 }
