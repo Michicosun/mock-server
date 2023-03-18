@@ -29,7 +29,7 @@ type qReadTask interface {
 	qTask
 	Schedule() TaskId
 	read(ctx context.Context) error
-	json() ([][]byte, error)
+	messages() ([][]byte, error)
 }
 
 type qWriteTask interface {
@@ -97,7 +97,7 @@ func (mps *mpTaskScheduler) submitWriteTask(task qWriteTask) TaskId {
 	return task.getTaskId()
 }
 
-func (mps *mpTaskScheduler) addError(id TaskId, err error) {
+func (mps *mpTaskScheduler) submitError(id TaskId, err error) {
 	zlog.Error().Str("task", string(id)).Err(err).Msg("task failed")
 	qerr := TaskError{
 		task_id: id,
@@ -125,7 +125,7 @@ func qread(ctx context.Context, task qReadTask) error {
 
 	zlog.Info().Str("task", string(task.getTaskId())).Err(ctx.Err()).Msg("finished")
 
-	msgs, err := task.json()
+	msgs, err := task.messages()
 	if err != nil {
 		return err
 	}
@@ -149,7 +149,7 @@ func (mps *mpTaskScheduler) rWorkerRoutine() {
 		task := elem.Unwrap()
 		task_ctx, cancel := context.WithTimeout(mps.ctx, mps.cfg.Read_timeout)
 		if err := qread(task_ctx, task); err != nil {
-			mps.addError(task.getTaskId(), err)
+			mps.submitError(task.getTaskId(), err)
 		}
 		cancel()
 	}
@@ -183,7 +183,7 @@ func (mps *mpTaskScheduler) wWorkerRoutine() {
 		task := elem.Unwrap()
 		task_ctx, cancel := context.WithTimeout(mps.ctx, mps.cfg.Write_timeout)
 		if err := qwrite(task_ctx, task); err != nil {
-			mps.addError(task.getTaskId(), err)
+			mps.submitError(task.getTaskId(), err)
 		}
 		cancel()
 	}

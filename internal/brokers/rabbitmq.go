@@ -160,7 +160,7 @@ func (t *rabbitMQReadTask) read(ctx context.Context) error {
 	}
 }
 
-func (t *rabbitMQReadTask) json() ([][]byte, error) {
+func (t *rabbitMQReadTask) messages() ([][]byte, error) {
 	msgs := make([][]byte, 0)
 
 	for _, msg := range t.msgs {
