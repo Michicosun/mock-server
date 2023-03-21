@@ -14,10 +14,9 @@ import (
 const DefaultConfigPath = "/configs/config.yaml"
 
 type ServiceConfig struct {
-	Logs    LogConfig         `yaml:"logs"`
-	Pool    PoolConfig        `yaml:"pool"`
-	Brokers BrokerConnections `yaml:"brokers"`
-	Coderun CoderunConfig     `yaml:"coderun"`
+	Logs    LogConfig     `yaml:"logs"`
+	Brokers BrokersConfig `yaml:"brokers"`
+	Coderun CoderunConfig `yaml:"coderun"`
 }
 
 var config ServiceConfig

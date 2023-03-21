@@ -5,6 +5,7 @@ import (
 	"os"
 	"strconv"
 	"sync"
+	"time"
 )
 
 type UndefinedConnection struct {
@@ -22,8 +23,20 @@ type RabbitMQConnectionConfig struct {
 	Password string `yaml:"password"`
 }
 
-type BrokerConnections struct {
-	Rabbitmq RabbitMQConnectionConfig `yaml:"rabbitmq"`
+type MPTaskSchedulerConfig struct {
+	R_workers     uint32        `yaml:"r_workers"`
+	W_workers     uint32        `yaml:"w_workers"`
+	Read_timeout  time.Duration `yaml:"read_timeout"`
+	Write_timeout time.Duration `yaml:"write_timeout"`
+}
+
+type BrokersConfig struct {
+	Scheduler MPTaskSchedulerConfig    `yaml:"scheduler"`
+	Rabbitmq  RabbitMQConnectionConfig `yaml:"rabbitmq"`
+}
+
+func GetMPTaskSchedulerConfig() *MPTaskSchedulerConfig {
+	return &config.Brokers.Scheduler
 }
 
 var rabbitmq_init sync.Once

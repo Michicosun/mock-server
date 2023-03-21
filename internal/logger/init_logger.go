@@ -49,7 +49,7 @@ func Init(cfg *configs.LogConfig) {
 
 	zlog.Logger = zerolog.
 		New(mw).
-		Level(zerolog.InfoLevel).
+		Level(zerolog.Level(cfg.Level)).
 		With().
 		Timestamp().
 		Caller().

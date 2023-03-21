@@ -206,6 +206,7 @@ func (w *watcher) BorrowWorker() (*worker, error) {
 				return worker, nil
 			}
 
+			zlog.Info().Str("port", worker.port).Str("state", info.State.Status).Msg("found broken worker")
 			w.repair <- worker
 		}
 	}

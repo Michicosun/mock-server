@@ -1,4 +1,5 @@
 logs:
+    level: 0
     consoleLoggingEnabled: true
     fileLoggingEnabled: true
     directory: "/tmp/mock-server-logs"
@@ -7,14 +8,13 @@ logs:
     maxBackups: 5
     maxAge: 30
 
-pool:
-    r_workers: 50
-    w_workers: 50
-    read_timeout: 10s
-    write_timeout: 10s
-    disable_task: 5s
-
 brokers:
+    scheduler:
+        r_workers: 50
+        w_workers: 50
+        read_timeout: 10s
+        write_timeout: 10s
+
     rabbitmq:
         host: "localhost"
         port: 5672
@@ -22,7 +22,7 @@ brokers:
         password: "guest"
 
 coderun:
-    worker_cnt: 10
+    worker_cnt: 1
     worker:
         handle_timeout: 10s
         resources:
