@@ -17,6 +17,7 @@ type ServiceConfig struct {
 	Logs    LogConfig     `yaml:"logs"`
 	Brokers BrokersConfig `yaml:"brokers"`
 	Coderun CoderunConfig `yaml:"coderun"`
+	Server  ServerConfig  `yaml:"server"`
 }
 
 var config ServiceConfig
