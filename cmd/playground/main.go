@@ -1,14 +1,20 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"mock-server/internal/brokers"
 	"mock-server/internal/coderun"
 	"mock-server/internal/coderun/docker-provider"
 	"mock-server/internal/configs"
+	"mock-server/internal/database"
 	"mock-server/internal/logger"
+	"mock-server/internal/server"
 	"mock-server/internal/util"
+	"net/http"
 	"time"
 
 	zlog "github.com/rs/zerolog/log"
@@ -197,6 +203,76 @@ func play_esb(ctx context.Context, cancel context.CancelFunc) {
 	cancel()
 }
 
+func do_get(url string) {
+	resp, err := http.Get(url)
+	if err != nil {
+		zlog.Error().Err(err).Str("url", url).Msg("GET failed")
+		return
+	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		zlog.Error().Err(err).Msg("failed to read body")
+		return
+	}
+
+	zlog.Info().
+		Int("status", resp.StatusCode).
+		Str("body", string(body)).
+		Msg("GET success")
+}
+
+func do_post(url string, content []byte) {
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(content))
+	if err != nil {
+		zlog.Error().Err(err).Str("url", url).Bytes("body", content).Msg("POST failed")
+		return
+	}
+
+	var res map[string]string
+
+	json.NewDecoder(resp.Body).Decode(&res)
+
+	zlog.Info().
+		Int("status", resp.StatusCode).
+		Msg("POST success")
+}
+
+func play_server() {
+	db := database.NewInmemoryDatabase()
+
+	server.Server.Init(configs.GetServerConfig(), db)
+
+	go func() {
+		time.Sleep(1 * time.Second)
+
+		cfg := configs.GetServerConfig()
+		endpoint := fmt.Sprintf("http://%s:%s", cfg.Addr, cfg.Port)
+
+		{
+			url := endpoint + "/ping"
+			do_get(url)
+		}
+
+		{
+			url := endpoint + "/test_url"
+			do_get(url)
+
+			url = endpoint + "/static/add"
+			requestBody := []byte(`{
+                "path": "/test_url",
+                "expected_response": "hello"
+            }`)
+
+			do_post(url, requestBody)
+
+			url = endpoint + "/test_url"
+			do_get(url)
+		}
+	}()
+
+	server.Server.Start()
+}
+
 func main() {
 	// load config
 	configs.LoadConfig()
@@ -205,8 +281,8 @@ func main() {
 	logger.Init(configs.GetLogConfig())
 
 	// create root context
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	// ctx, cancel := context.WithCancel(context.Background())
+	// defer cancel()
 
 	zlog.Info().Msg("starting...")
 
@@ -214,5 +290,6 @@ func main() {
 	// play_docker(ctx, cancel)
 	// play_file_storage(ctx, cancel)
 	// play_coderun(ctx, cancel)
-	play_esb(ctx, cancel)
+	// play_esb(ctx, cancel)
+	play_server()
 }
