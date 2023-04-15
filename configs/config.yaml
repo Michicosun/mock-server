@@ -28,3 +28,9 @@ coderun:
         resources:
             cpu_limit: 0.5
             memory_limit_mb: 200
+
+server:
+    addr: "127.0.0.1"
+    port: "1337"
+    accept_timeout: 20s
+    response_timeout: 20s
