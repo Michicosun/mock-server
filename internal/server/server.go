@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"mock-server/internal/configs"
 	"mock-server/internal/database"
+	"mock-server/internal/logger"
 	requesttypes "mock-server/internal/server/request_types"
 	"net/http"
 	"sync"
@@ -23,14 +24,14 @@ type server struct {
 	db              database.Database
 }
 
-func (s *server) Init(cfg *configs.ServerConfig, database database.Database) {
+func (s *server) Init(cfg *configs.ServerConfig) {
 	s.constructor.Do(func() {
-		s.db = database
+		s.db = database.DB
 
 		s.router = gin.New()
 
-		s.router.Use(Logger())       // use custom logger (zerolog)
-		s.router.Use(gin.Recovery()) // recovery from all panics
+		s.router.Use(logger.GinLogger()) // use custom logger (zerolog)
+		s.router.Use(gin.Recovery())     // recovery from all panics
 
 		s.initMainRoutes()
 
@@ -48,48 +49,70 @@ func (s *server) Start() {
 }
 
 func (s *server) initMainRoutes() {
+	api := s.router.Group("api")
+
 	// just ping
-	s.router.GET("/ping", func(c *gin.Context) {
-		c.JSON(http.StatusOK, "Ping yourself, I have another work!\n")
-	})
+	{
+		api.GET("/ping", func(c *gin.Context) {
+			c.JSON(http.StatusOK, "Ping yourself, I have another work!\n")
+		})
+	}
 
 	// static routes
-	static := s.router.Group("static")
 	{
-		static.POST("/add", func(c *gin.Context) {
+		staticRoutesEndpoint := "/static"
+
+		api.GET(staticRoutesEndpoint, func(c *gin.Context) {
+			endpoints := s.db.ListAllStaticEndpoints()
+
+			c.JSON(http.StatusOK, gin.H{"endpoints": endpoints})
+		})
+
+		api.POST(staticRoutesEndpoint, func(c *gin.Context) {
 			var staticEndpoint requesttypes.StaticEndpoint
 			if err := c.Bind(&staticEndpoint); err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{"error": errors.Wrap(err, "bad request").Error()})
 				return
 			}
 
-			if s.db.PeekStaticEndpoint(staticEndpoint.Path) {
+			zlog.Info().Str("path", staticEndpoint.Path).Msg("Received create static request")
+
+			if s.db.HasStaticEndpoint(staticEndpoint.Path) {
 				c.JSON(http.StatusConflict, "The same static endpoint already exists")
 				return
 			}
 
-			s.db.AddStaticEndpoint(staticEndpoint.Path, []byte(staticEndpoint.ExpectedResponse))
+			s.db.AddStaticEndpoint(staticEndpoint.Path, staticEndpoint.ExpectedResponse)
+
+			zlog.Info().Str("path", staticEndpoint.Path).Msg("Static endpoint created")
 			c.JSON(http.StatusOK, "Static endpoint successfully added!")
 		})
 
-		static.DELETE("/remove", func(c *gin.Context) {
-			var path requesttypes.StaticEndpointPath
-			if err := c.Bind(&path); err != nil {
-				c.JSON(http.StatusBadRequest, gin.H{"error": errors.Wrap(err, "bad request").Error()})
+		api.DELETE(staticRoutesEndpoint, func(c *gin.Context) {
+			path := c.Query("path")
+			if path == "" {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "specify path param"})
 				return
 			}
 
-			s.db.RemoveStaticEndpoint(path.Path)
+			zlog.Info().Str("path", path).Msg("Received delete static request")
+
+			s.db.RemoveStaticEndpoint(path)
+
+			zlog.Info().Str("path", path).Msg("Static endpoint removed")
 			c.String(http.StatusOK, "Static endpoint successfully removed!")
 		})
 	}
+
+	// route all query to handle dynamically
+	// created user mock endpoints
 	s.router.NoRoute(func(c *gin.Context) {
 		path := c.Request.URL.Path
-		zlog.Info().Str("path", path).Msg("got path")
+		zlog.Info().Str("path", path).Msg("Received path")
 
 		expected_response, err := s.db.GetStaticEndpointResponse(path)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": errors.Wrap(err, "bad request").Error()})
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
 

@@ -35,6 +35,18 @@ func (mp *SyncMap[K, V]) Contains(key K) bool {
 	return ok
 }
 
+func (mp *SyncMap[K, V]) GetAllKeys() []K {
+	mp.mtx.RLock()
+	defer mp.mtx.RUnlock()
+
+	var ret []K
+	for key := range mp.buffer {
+		ret = append(ret, key)
+	}
+
+	return ret
+}
+
 func NewSyncMap[K comparable, V any]() SyncMap[K, V] {
 	return SyncMap[K, V]{
 		buffer: make(map[K]V),

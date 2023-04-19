@@ -10,7 +10,6 @@ import (
 	"mock-server/internal/coderun"
 	"mock-server/internal/coderun/docker-provider"
 	"mock-server/internal/configs"
-	"mock-server/internal/database"
 	"mock-server/internal/logger"
 	"mock-server/internal/server"
 	"mock-server/internal/util"
@@ -237,36 +236,75 @@ func do_post(url string, content []byte) {
 		Msg("POST success")
 }
 
-func play_server() {
-	db := database.NewInmemoryDatabase()
+func do_delete(url string) {
+	client := &http.Client{}
 
-	server.Server.Init(configs.GetServerConfig(), db)
+	req, err := http.NewRequest(http.MethodDelete, url, nil)
+	if err != nil {
+		zlog.Error().Err(err).Str("url", url).Msg("DELETE failed")
+		return
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		zlog.Error().Err(err).Str("url", url).Msg("DELETE failed")
+		return
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		zlog.Error().Err(err).Msg("Failed to read body")
+		return
+	}
+
+	zlog.Info().
+		Int("status", resp.StatusCode).
+		Str("body", string(body)).
+		Msg("DELETE success")
+}
+
+func play_server_api() {
+	server.Server.Init(configs.GetServerConfig())
 
 	go func() {
 		time.Sleep(1 * time.Second)
 
 		cfg := configs.GetServerConfig()
 		endpoint := fmt.Sprintf("http://%s:%s", cfg.Addr, cfg.Port)
+		staticApiEndpoint := endpoint + "/api/static"
 
 		{
-			url := endpoint + "/ping"
+			url := endpoint + "/api/ping"
 			do_get(url)
 		}
 
 		{
-			url := endpoint + "/test_url"
-			do_get(url)
+			testUrl := endpoint + "/test_url"
 
-			url = endpoint + "/static/add"
+			// no routes created -> 404
+			do_get(testUrl)
+			// expects []
+			do_get(staticApiEndpoint)
+
+			// create route /test_url with reponse `hello`
 			requestBody := []byte(`{
                 "path": "/test_url",
                 "expected_response": "hello"
             }`)
+			do_post(staticApiEndpoint, requestBody)
 
-			do_post(url, requestBody)
+			// expects `hello`
+			do_get(testUrl)
+			// expects ["/test_url"]
+			do_get(staticApiEndpoint)
 
-			url = endpoint + "/test_url"
-			do_get(url)
+			// detele /test_url
+			do_delete(staticApiEndpoint + "?path=/test_url")
+
+			// /test_url deleted -> 404
+			do_get(testUrl)
+			// expects []
+			do_get(staticApiEndpoint)
 		}
 	}()
 
@@ -291,5 +329,5 @@ func main() {
 	// play_file_storage(ctx, cancel)
 	// play_coderun(ctx, cancel)
 	// play_esb(ctx, cancel)
-	play_server()
+	play_server_api()
 }
