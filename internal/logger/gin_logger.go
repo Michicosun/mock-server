@@ -1,4 +1,4 @@
-package server
+package logger
 
 import (
 	"time"
@@ -7,7 +7,7 @@ import (
 	zlog "github.com/rs/zerolog/log"
 )
 
-func Logger() gin.HandlerFunc {
+func GinLogger() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		t := time.Now()
 		path := c.Request.URL.Path
