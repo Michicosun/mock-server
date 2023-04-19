@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog"
 	zlog "github.com/rs/zerolog/log"
 )
 
@@ -37,12 +38,23 @@ type requestData struct {
 }
 
 func (r *requestData) log() {
+	var loggerEvent *zerolog.Event
+	var msg string
+
 	switch {
 	case 500 <= r.status:
-		zlog.Error().Str("ip", r.client_ip).Str("path", r.path).Int("status", r.status).Str("latency", r.latency.String()).Err(r.err).Msg("5xx")
+		loggerEvent = zlog.Error().Err(r.err)
+		msg = "Internal error"
 	case 400 <= r.status:
-		zlog.Warn().Str("ip", r.client_ip).Str("path", r.path).Int("status", r.status).Str("latency", r.latency.String()).Err(r.err).Msg("4xx")
+		loggerEvent = zlog.Warn().Err(r.err)
+		msg = "Client Error"
 	default:
-		zlog.Info().Str("ip", r.client_ip).Str("path", r.path).Int("status", r.status).Str("latency", r.latency.String()).Msg("Success")
+		loggerEvent = zlog.Info()
+		msg = "Success"
 	}
+
+	loggerEvent.
+		Str("ip", r.client_ip).Str("path", r.path).
+		Int("status", r.status).Str("latency", r.latency.String()).
+		Msg(msg)
 }
