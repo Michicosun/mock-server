@@ -58,17 +58,39 @@ func (s *server) initMainRoutes() {
 		})
 	}
 
+	// init routes (static, proxy, dynamic)
+	s.initRoutesApi(api)
+
+	// route all query to handle dynamically
+	// created user mock endpoints
+	s.router.NoRoute(func(c *gin.Context) {
+		path := c.Request.URL.Path
+		zlog.Info().Str("path", path).Msg("Received path")
+
+		expected_response, err := s.db.GetStaticEndpointResponse(path)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusOK, expected_response)
+	})
+}
+
+func (s *server) initRoutesApi(apiGroup *gin.RouterGroup) {
+	routes := apiGroup.Group("routes")
+
 	// static routes
 	{
 		staticRoutesEndpoint := "/static"
 
-		api.GET(staticRoutesEndpoint, func(c *gin.Context) {
+		routes.GET(staticRoutesEndpoint, func(c *gin.Context) {
 			endpoints := s.db.ListAllStaticEndpoints()
 
 			c.JSON(http.StatusOK, gin.H{"endpoints": endpoints})
 		})
 
-		api.POST(staticRoutesEndpoint, func(c *gin.Context) {
+		routes.POST(staticRoutesEndpoint, func(c *gin.Context) {
 			var staticEndpoint requesttypes.StaticEndpoint
 			if err := c.Bind(&staticEndpoint); err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{"error": errors.Wrap(err, "bad request").Error()})
@@ -88,7 +110,7 @@ func (s *server) initMainRoutes() {
 			c.JSON(http.StatusOK, "Static endpoint successfully added!")
 		})
 
-		api.DELETE(staticRoutesEndpoint, func(c *gin.Context) {
+		routes.DELETE(staticRoutesEndpoint, func(c *gin.Context) {
 			path := c.Query("path")
 			if path == "" {
 				c.JSON(http.StatusBadRequest, gin.H{"error": "specify path param"})
@@ -103,19 +125,4 @@ func (s *server) initMainRoutes() {
 			c.String(http.StatusOK, "Static endpoint successfully removed!")
 		})
 	}
-
-	// route all query to handle dynamically
-	// created user mock endpoints
-	s.router.NoRoute(func(c *gin.Context) {
-		path := c.Request.URL.Path
-		zlog.Info().Str("path", path).Msg("Received path")
-
-		expected_response, err := s.db.GetStaticEndpointResponse(path)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-
-		c.JSON(http.StatusOK, expected_response)
-	})
 }

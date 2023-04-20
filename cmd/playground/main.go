@@ -271,7 +271,7 @@ func play_server_api() {
 
 		cfg := configs.GetServerConfig()
 		endpoint := fmt.Sprintf("http://%s:%s", cfg.Addr, cfg.Port)
-		staticApiEndpoint := endpoint + "/api/static"
+		staticApiEndpoint := endpoint + "/api/routes/static"
 
 		{
 			url := endpoint + "/api/ping"
