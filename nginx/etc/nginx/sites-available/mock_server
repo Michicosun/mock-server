@@ -1,0 +1,20 @@
+server {
+    listen 80;
+    listen [::]:80;
+
+    server_name 62.84.125.40;
+    
+    root /var/www/mock_server/html;
+
+    location / {
+        try_files $uri @dynamic;
+    }
+
+    location /api/ {
+        proxy_pass http://localhost:1337/api/;
+    }
+
+    location @dynamic{
+        proxy_pass http://localhost:1337;
+    }
+}
