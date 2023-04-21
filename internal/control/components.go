@@ -11,13 +11,15 @@ import (
 	zlog "github.com/rs/zerolog/log"
 )
 
-type Components struct {
+var Components = &componentsManager{}
+
+type componentsManager struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 	cfg    *configs.ComponentsConfig
 }
 
-func (c *Components) Start() {
+func (c *componentsManager) Start() {
 	// make root context
 	c.ctx, c.cancel = context.WithCancel(context.Background())
 
@@ -58,7 +60,7 @@ func (c *Components) Start() {
 	}
 }
 
-func (c *Components) Stop() {
+func (c *componentsManager) Stop() {
 	// send stop signal
 	c.cancel()
 

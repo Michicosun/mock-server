@@ -234,9 +234,8 @@ func play_server_api() {
 }
 
 func main() {
-	var components control.Components
-	components.Start()
-	defer components.Stop()
+	control.Components.Start()
+	defer control.Components.Stop()
 
 	// play_brokers()
 	// play_file_storage()
