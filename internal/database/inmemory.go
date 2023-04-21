@@ -6,15 +6,33 @@ import (
 )
 
 type inmemoryDB struct {
-	static_routes util.SyncMap[string, string]
+	static_routes  util.SyncMap[string, string]
+	read_messages  util.SyncMap[string, interface{}]
+	write_messages util.SyncMap[string, interface{}]
 }
 
 func newInmemoryDatabase() *inmemoryDB {
 	db := inmemoryDB{
-		static_routes: util.NewSyncMap[string, string](),
+		static_routes:  util.NewSyncMap[string, string](),
+		read_messages:  util.NewSyncMap[string, interface{}](),
+		write_messages: util.NewSyncMap[string, interface{}](),
 	}
 
 	return &db
+}
+
+func (db *inmemoryDB) GetReadMessagesCollection() *util.SyncMap[string, interface{}] {
+	return &db.read_messages
+}
+
+func (db *inmemoryDB) GetWriteMessagesCollection() *util.SyncMap[string, interface{}] {
+	return &db.write_messages
+}
+
+func (db *inmemoryDB) Drop() {
+	db.static_routes = util.NewSyncMap[string, string]()
+	db.read_messages = util.NewSyncMap[string, interface{}]()
+	db.write_messages = util.NewSyncMap[string, interface{}]()
 }
 
 func (db *inmemoryDB) AddStaticEndpoint(path string, expected_response string) {

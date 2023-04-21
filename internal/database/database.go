@@ -1,5 +1,7 @@
 package database
 
+import "mock-server/internal/util"
+
 var DB Database = newInmemoryDatabase()
 
 type Database interface {
@@ -9,4 +11,11 @@ type Database interface {
 	GetStaticEndpointResponse(path string) (string, error)
 	ListAllStaticEndpoints() []string
 	HasStaticEndpoint(path string) bool
+
+	// brokers
+	GetReadMessagesCollection() *util.SyncMap[string, interface{}]
+	GetWriteMessagesCollection() *util.SyncMap[string, interface{}]
+
+	// common
+	Drop()
 }

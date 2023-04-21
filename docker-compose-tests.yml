@@ -1,0 +1,19 @@
+version: "3.8"
+
+services:
+  rabbitmq:
+    image: "rabbitmq:3.11.6-management-alpine"
+    volumes:
+      - 'rabbitmq_data:/data'
+
+  tests:
+    build:
+      context: .
+      dockerfile: ./tests/Dockerfile
+    environment:
+      - CONFIG_PATH=tests/config.yaml
+    depends_on:
+      - rabbitmq
+
+volumes:
+  rabbitmq_data:
