@@ -36,6 +36,7 @@ type qWriteTask interface {
 	qTask
 	Schedule() TaskId
 	write(ctx context.Context) error
+	messages() [][]byte
 }
 
 type TaskError struct {

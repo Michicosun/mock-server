@@ -206,6 +206,10 @@ func (t *rabbitMQWriteTask) write(ctx context.Context) error {
 	return nil
 }
 
+func (t *rabbitMQWriteTask) messages() [][]byte {
+	return t.msgs
+}
+
 func NewRabbitMQMessagePool(name string, queue string) *RabbitMQMessagePool {
 	return &RabbitMQMessagePool{
 		name:  name,
