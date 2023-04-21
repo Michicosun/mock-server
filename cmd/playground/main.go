@@ -2,16 +2,13 @@ package main
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"mock-server/internal/brokers"
 	"mock-server/internal/coderun"
-	"mock-server/internal/coderun/docker-provider"
 	"mock-server/internal/configs"
-	"mock-server/internal/logger"
-	"mock-server/internal/server"
+	"mock-server/internal/control"
 	"mock-server/internal/util"
 	"net/http"
 	"time"
@@ -19,13 +16,8 @@ import (
 	zlog "github.com/rs/zerolog/log"
 )
 
-func play_brokers(ctx context.Context, cancel context.CancelFunc) {
+func play_brokers() {
 	// broker example
-
-	brokers.MPRegistry.Init()
-
-	brokers.MPTaskScheduler.Init(ctx, configs.GetMPTaskSchedulerConfig())
-	brokers.MPTaskScheduler.Start()
 
 	handler, err := brokers.MPRegistry.AddMessagePool(brokers.NewRabbitMQMessagePool("test-pool", "test-mock-queue"))
 	if err != nil {
@@ -35,7 +27,7 @@ func play_brokers(ctx context.Context, cancel context.CancelFunc) {
 	id := handler.NewReadTask().Schedule()
 	zlog.Info().Str("id", string(id)).Msg("start reading")
 
-	<-time.After(1 * time.Second)
+	time.Sleep(1 * time.Second)
 
 	handler, err = brokers.MPRegistry.GetMessagePool("test-pool")
 	if err != nil {
@@ -48,52 +40,10 @@ func play_brokers(ctx context.Context, cancel context.CancelFunc) {
 		[]byte(fmt.Sprintf("%d", 42)),
 	}).Schedule()
 
-	<-time.After(1 * time.Second)
-
-	cancel()
-
-	brokers.MPTaskScheduler.Stop()
-	for x := range brokers.MPTaskScheduler.Errors() {
-		fmt.Println(x)
-	}
+	time.Sleep(1 * time.Second)
 }
 
-func play_docker(ctx context.Context, cancel context.CancelFunc) {
-	provider, err := docker.NewDockerProvider(ctx, &configs.GetCoderunConfig().WorkerConfig.Resources)
-	if err != nil {
-		zlog.Error().Err(err).Msg("cannot create provider")
-		return
-	}
-
-	err = provider.BuildWorkerImage()
-	if err != nil {
-		zlog.Error().Err(err).Msg("cannot build image")
-		return
-	}
-
-	id, err := provider.CreateWorkerContainer("8095")
-	if err != nil {
-		zlog.Error().Err(err).Msg("cannot create container")
-		return
-	}
-
-	err = provider.StartWorkerContainer(id)
-	if err != nil {
-		zlog.Error().Err(err).Msg("cannot create container")
-		return
-	}
-
-	time.Sleep(time.Second * 100)
-
-	err = provider.RemoveWorkerContainer(id, true)
-	if err != nil {
-		zlog.Error().Err(err).Msg("cannot remove container")
-		return
-	}
-	provider.Close()
-}
-
-func play_file_storage(ctx context.Context, cancel context.CancelFunc) {
+func play_file_storage() {
 	fs, err := util.NewFileStorageDriver("coderun")
 	if err != nil {
 		zlog.Error().Err(err).Msg("cannot create filestorage")
@@ -118,16 +68,7 @@ type ComplexArgs struct {
 	C []string `json:"C"`
 }
 
-func play_coderun(ctx context.Context, cancel context.CancelFunc) {
-	err := coderun.WorkerWatcher.Init(ctx, configs.GetCoderunConfig())
-
-	time.Sleep(5 * time.Second)
-
-	if err != nil {
-		zlog.Error().Err(err).Msg("watcher init")
-		return
-	}
-
+func play_coderun() {
 	for i := 0; i < 1000; i += 1 {
 		worker, err := coderun.WorkerWatcher.BorrowWorker()
 		if err != nil {
@@ -149,24 +90,9 @@ func play_coderun(ctx context.Context, cancel context.CancelFunc) {
 
 		worker.Return()
 	}
-
-	cancel()
-
-	coderun.WorkerWatcher.Stop()
 }
 
-func play_esb(ctx context.Context, cancel context.CancelFunc) {
-	brokers.MPRegistry.Init()
-	brokers.Esb.Init()
-
-	brokers.MPTaskScheduler.Init(ctx, configs.GetMPTaskSchedulerConfig())
-
-	brokers.MPTaskScheduler.Start()
-	defer brokers.MPTaskScheduler.Stop()
-
-	coderun.WorkerWatcher.Init(ctx, configs.GetCoderunConfig())
-	defer coderun.WorkerWatcher.Stop()
-
+func play_esb() {
 	pool1, _ := brokers.MPRegistry.AddMessagePool(brokers.NewRabbitMQMessagePool("test-pool-1", "test-mock-queue-1"))
 	pool2, _ := brokers.MPRegistry.AddMessagePool(brokers.NewRabbitMQMessagePool("test-pool-2", "test-mock-queue-2"))
 
@@ -185,7 +111,7 @@ func play_esb(ctx context.Context, cancel context.CancelFunc) {
 
 	pool1.NewReadTask().Schedule()
 
-	<-time.After(2 * time.Second)
+	time.Sleep(2 * time.Second)
 
 	pool1.NewWriteTask([][]byte{
 		[]byte(fmt.Sprintf("%d", 40)),
@@ -193,13 +119,11 @@ func play_esb(ctx context.Context, cancel context.CancelFunc) {
 		[]byte(fmt.Sprintf("%d", 42)),
 	}).Schedule()
 
-	<-time.After(2 * time.Second)
+	time.Sleep(2 * time.Second)
 
 	pool2.NewReadTask().Schedule()
 
-	<-time.After(10 * time.Second)
-
-	cancel()
+	time.Sleep(10 * time.Second)
 }
 
 func do_get(url string) {
@@ -264,8 +188,6 @@ func do_delete(url string) {
 }
 
 func play_server_api() {
-	server.Server.Init(configs.GetServerConfig())
-
 	go func() {
 		time.Sleep(1 * time.Second)
 
@@ -308,26 +230,17 @@ func play_server_api() {
 		}
 	}()
 
-	server.Server.Start()
+	time.Sleep(5 * time.Second)
 }
 
 func main() {
-	// load config
-	configs.LoadConfig()
+	var components control.Components
+	components.Start()
+	defer components.Stop()
 
-	// init logger
-	logger.Init(configs.GetLogConfig())
-
-	// create root context
-	// ctx, cancel := context.WithCancel(context.Background())
-	// defer cancel()
-
-	zlog.Info().Msg("starting...")
-
-	// play_brokers(ctx, cancel)
-	// play_docker(ctx, cancel)
-	// play_file_storage(ctx, cancel)
-	// play_coderun(ctx, cancel)
-	// play_esb(ctx, cancel)
+	// play_brokers()
+	// play_file_storage()
+	// play_coderun()
+	// play_esb()
 	play_server_api()
 }

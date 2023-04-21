@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"fmt"
 	"mock-server/internal/configs"
 	"mock-server/internal/database"
@@ -8,6 +9,7 @@ import (
 	requesttypes "mock-server/internal/server/request_types"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"
@@ -45,7 +47,16 @@ func (s *server) Init(cfg *configs.ServerConfig) {
 }
 
 func (s *server) Start() {
-	s.server_instance.ListenAndServe()
+	zlog.Info().Msg("starting server")
+	go s.server_instance.ListenAndServe()
+}
+
+func (s *server) Stop() {
+	timeout, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := s.server_instance.Shutdown(timeout); err != nil {
+		zlog.Fatal().Err(err).Msg("Server forced to shutdown")
+	}
 }
 
 func (s *server) initMainRoutes() {
