@@ -52,6 +52,7 @@ func (s *server) Start() {
 }
 
 func (s *server) Stop() {
+	zlog.Info().Msg("server gracefully shutdown with timeout 5 seconds")
 	timeout, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := s.server_instance.Shutdown(timeout); err != nil {

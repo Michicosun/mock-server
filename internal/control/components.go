@@ -7,6 +7,8 @@ import (
 	"mock-server/internal/configs"
 	"mock-server/internal/logger"
 	"mock-server/internal/server"
+	"os/signal"
+	"syscall"
 
 	zlog "github.com/rs/zerolog/log"
 )
@@ -21,7 +23,7 @@ type componentsManager struct {
 
 func (c *componentsManager) Start() {
 	// make root context
-	c.ctx, c.cancel = context.WithCancel(context.Background())
+	c.ctx, c.cancel = signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 
 	// load config
 	configs.LoadConfig()
@@ -58,6 +60,11 @@ func (c *componentsManager) Start() {
 		server.Server.Init(configs.GetServerConfig())
 		server.Server.Start()
 	}
+}
+
+func (c *componentsManager) Wait() {
+	// wait for os interrupt signal
+	<-c.ctx.Done()
 }
 
 func (c *componentsManager) Stop() {
