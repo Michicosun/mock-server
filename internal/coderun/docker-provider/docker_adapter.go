@@ -1,13 +1,14 @@
 package docker
 
 import (
-	"bytes"
+	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"mock-server/internal/configs"
 	"mock-server/internal/util"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -15,6 +16,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/client"
+	"github.com/docker/docker/pkg/archive"
 	"github.com/docker/go-connections/nat"
 	"github.com/pkg/errors"
 	zlog "github.com/rs/zerolog/log"
@@ -88,6 +90,37 @@ func (dp *DockerProvider) PruneWorkerImages() error {
 	return nil
 }
 
+type errorDetail struct {
+	Message string `json:"message"`
+}
+
+type errorLine struct {
+	Error       string      `json:"error"`
+	ErrorDetail errorDetail `json:"errorDetail"`
+}
+
+func parseDockerBuildLogs(rd io.Reader) error {
+	var lastLine string
+
+	scanner := bufio.NewScanner(rd)
+	for scanner.Scan() {
+		lastLine = scanner.Text()
+		zlog.Info().Msg(lastLine)
+	}
+
+	errLine := &errorLine{}
+	json.Unmarshal([]byte(lastLine), errLine)
+	if errLine.Error != "" {
+		return errors.New(errLine.Error)
+	}
+
+	if err := scanner.Err(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (dp *DockerProvider) BuildWorkerImage() error {
 	zlog.Info().Msg("building worker image")
 
@@ -100,21 +133,33 @@ func (dp *DockerProvider) BuildWorkerImage() error {
 		return err
 	}
 
-	dockerfile_path, err := filepath.Abs(filepath.Join(root, "internal", "coderun", "worker", "Dockerfile"))
+	dockerfile_path := filepath.Join("internal", "coderun", "worker", "Dockerfile")
+	zlog.Info().Str("path", dockerfile_path).Msg("using dockerfile")
+
+	tar, err := archive.TarWithOptions(root, &archive.TarOptions{})
 	if err != nil {
 		return err
 	}
 
-	zlog.Info().Str("path", dockerfile_path).Msg("using dockerfile")
+	defer tar.Close()
 
-	cmd := exec.Command("docker", "build", ".", "-f", dockerfile_path, "-t", TAG_PREFIX)
-	var errb bytes.Buffer
-	cmd.Stderr = &errb
-	if err = cmd.Run(); err != nil {
-		return errors.Wrap(err, errb.String())
+	opts := types.ImageBuildOptions{
+		Dockerfile: dockerfile_path,
+		Tags:       []string{TAG_PREFIX},
+		Remove:     true,
 	}
 
-	zlog.Info().Msg("worker image was built successfully")
+	res, err := dp.cli.ImageBuild(dp.ctx, tar, opts)
+	if err != nil {
+		return err
+	}
+
+	defer res.Body.Close()
+
+	if err = parseDockerBuildLogs(res.Body); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -210,12 +255,12 @@ func (dp *DockerProvider) InspectWorkerContainer(id string) (types.ContainerJSON
 
 func (dp *DockerProvider) StopWorkerContainer(id string) error {
 	zlog.Info().Str("id", id).Msg("stopping worker container")
-	return dp.cli.ContainerStop(dp.ctx, id, nil)
+	return dp.cli.ContainerStop(dp.ctx, id, container.StopOptions{})
 }
 
 func (dp *DockerProvider) RestartWorkerContainer(id string) error {
 	zlog.Info().Str("id", id).Msg("restarting worker container")
-	return dp.cli.ContainerRestart(dp.ctx, id, nil)
+	return dp.cli.ContainerRestart(dp.ctx, id, container.StopOptions{})
 }
 
 func (dp *DockerProvider) RemoveWorkerContainer(id string, force bool) error {
