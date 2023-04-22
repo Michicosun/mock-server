@@ -1,17 +1,9 @@
 package main
 
-import (
-	"mock-server/internal/configs"
-	"mock-server/internal/logger"
-	"mock-server/internal/server"
-)
+import "mock-server/internal/control"
 
 func main() {
-	// load config
-	configs.LoadConfig()
-
-	logger.Init(configs.GetLogConfig())
-
-	server.Server.Init(configs.GetServerConfig())
-	server.Server.Start() // blocks until manual interruptions
+	control.Components.Start()
+	defer control.Components.Stop()
+	control.Components.Wait()
 }

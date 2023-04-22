@@ -152,7 +152,7 @@ func (w *watcher) repairLoop() {
 }
 
 func (w *watcher) Init(ctx context.Context, cfg *configs.CoderunConfig) error {
-	zlog.Info().Msg("initializing watcher")
+	zlog.Info().Msg("starting watcher")
 	if w.initialized {
 		return fmt.Errorf("watcher has already initialized")
 	}
@@ -180,6 +180,9 @@ func (w *watcher) Init(ctx context.Context, cfg *configs.CoderunConfig) error {
 			return err
 		}
 	}
+
+	// wait until containers start working
+	time.Sleep(2 * time.Second)
 
 	w.wg.Add(1)
 	go w.repairLoop() // start repair loop

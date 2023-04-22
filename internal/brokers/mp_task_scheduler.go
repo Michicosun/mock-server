@@ -74,6 +74,7 @@ func (mps *mpTaskScheduler) Stop() {
 }
 
 func (mps *mpTaskScheduler) Start() {
+	zlog.Info().Msg("starting broker task scheduler")
 	for i := uint32(0); i < mps.cfg.R_workers; i += 1 {
 		mps.wg.Add(1)
 		go mps.rWorkerRoutine()

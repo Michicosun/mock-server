@@ -8,6 +8,11 @@ logs:
     maxBackups: 5
     maxAge: 30
 
+use_components:
+    server: true
+    brokers: true
+    coderun: true
+
 brokers:
     scheduler:
         r_workers: 50
