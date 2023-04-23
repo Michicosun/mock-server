@@ -1,36 +1,23 @@
 package broker_tests
 
 import (
-	"context"
 	"fmt"
 	"mock-server/internal/brokers"
-	"mock-server/internal/coderun"
-	"mock-server/internal/configs"
+	"mock-server/internal/control"
 	"mock-server/internal/util"
-	test_lib "mock-server/tests/common"
 	"testing"
 	"time"
 )
 
 func TestEsb(t *testing.T) {
-	test_lib.InitTest()
+	control.Components.Start()
+	defer control.Components.Stop()
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	brokers.MPRegistry.Init()
-	brokers.Esb.Init()
-
-	brokers.MPTaskScheduler.Init(ctx, configs.GetMPTaskSchedulerConfig())
-	brokers.MPTaskScheduler.Start()
-	defer brokers.MPTaskScheduler.Stop()
-
-	err := coderun.WorkerWatcher.Init(ctx, configs.GetCoderunConfig())
-	if err != nil {
-		t.Error(err)
-	}
-
-	defer coderun.WorkerWatcher.Stop()
+	go func() {
+		for err := range brokers.MPTaskScheduler.Errors() {
+			t.Error(err)
+		}
+	}()
 
 	pool1, err := brokers.MPRegistry.AddMessagePool(brokers.NewRabbitMQMessagePool("test-pool-1", "test-mock-queue-1"))
 	if err != nil {
@@ -53,15 +40,9 @@ func TestEsb(t *testing.T) {
 
 	///////////////////////////////////////////////////////////////////////////////////////
 
-	go func() {
-		for err := range brokers.MPTaskScheduler.Errors() {
-			t.Error(err)
-		}
-	}()
-
 	pool1.NewReadTask().Schedule()
 
-	<-time.After(2 * time.Second)
+	time.Sleep(2 * time.Second)
 
 	pool1.NewWriteTask([][]byte{
 		[]byte(fmt.Sprintf("%d", 40)),
@@ -69,12 +50,9 @@ func TestEsb(t *testing.T) {
 		[]byte(fmt.Sprintf("%d", 42)),
 	}).Schedule()
 
-	<-time.After(2 * time.Second)
+	time.Sleep(2 * time.Second)
 
 	pool2.NewReadTask().Schedule()
 
-	<-time.After(10 * time.Second)
-
-	cancel()
-
+	time.Sleep(10 * time.Second)
 }

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"mock-server/internal/coderun"
 	"mock-server/internal/util"
-	"sync"
 
 	zlog "github.com/rs/zerolog/log"
 )
@@ -19,15 +18,12 @@ type esbRecord struct {
 }
 
 type esb struct {
-	constructor sync.Once
-	records     util.SyncMap[string, esbRecord]
+	records util.SyncMap[string, esbRecord]
 }
 
 func (e *esb) Init() {
-	e.constructor.Do(func() {
-		e.records = util.NewSyncMap[string, esbRecord]()
-		// fetch db
-	})
+	e.records = util.NewSyncMap[string, esbRecord]()
+	// fetch db
 }
 
 type MapperArgs struct {

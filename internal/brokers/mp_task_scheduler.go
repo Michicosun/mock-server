@@ -45,7 +45,6 @@ type TaskError struct {
 }
 
 type mpTaskScheduler struct {
-	constructor sync.Once
 	cfg         *configs.MPTaskSchedulerConfig
 	read_tasks  util.BlockingQueue[qReadTask]
 	write_tasks util.BlockingQueue[qWriteTask]
@@ -55,13 +54,11 @@ type mpTaskScheduler struct {
 }
 
 func (mps *mpTaskScheduler) Init(ctx context.Context, cfg *configs.MPTaskSchedulerConfig) {
-	mps.constructor.Do(func() {
-		mps.cfg = cfg
-		mps.read_tasks = util.NewUnboundedBlockingQueue[qReadTask]()
-		mps.write_tasks = util.NewUnboundedBlockingQueue[qWriteTask]()
-		mps.errors = make(chan TaskError, MAX_ERRORS)
-		mps.ctx = ctx
-	})
+	mps.cfg = cfg
+	mps.read_tasks = util.NewUnboundedBlockingQueue[qReadTask]()
+	mps.write_tasks = util.NewUnboundedBlockingQueue[qWriteTask]()
+	mps.errors = make(chan TaskError, MAX_ERRORS)
+	mps.ctx = ctx
 }
 
 func (mps *mpTaskScheduler) Stop() {

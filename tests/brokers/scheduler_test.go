@@ -1,58 +1,44 @@
 package broker_tests
 
-// func TestScheduler(t *testing.T) {
-// 	test_lib.InitTest()
+import (
+	"fmt"
+	"mock-server/internal/brokers"
+	"mock-server/internal/control"
+	"testing"
+	"time"
+)
 
-// 	brokers.MPRegistry.Init()
+func TestScheduler(t *testing.T) {
+	control.Components.Start()
+	defer control.Components.Stop()
 
-// 	ctx, cancel := context.WithCancel(context.Background())
-// 	defer cancel()
+	go func() {
+		for err := range brokers.MPTaskScheduler.Errors() {
+			t.Error(err)
+		}
+	}()
 
-// 	brokers.MPTaskScheduler.Init(ctx, configs.GetMPTaskSchedulerConfig())
-// 	brokers.MPTaskScheduler.Start()
+	handler, err := brokers.MPRegistry.AddMessagePool(brokers.NewRabbitMQMessagePool("test-pool", "test-mock-queue"))
+	if err != nil {
+		t.Error(err)
+	}
 
-// 	_, err := brokers.MPRegistry.AddMessagePool(brokers.NewRabbitMQMessagePool("test-pool", "test-mock-queue"))
-// 	if err != nil {
-// 		t.Error(err)
-// 	}
+	handler.NewReadTask().Schedule()
 
-// 	if len(database.DB.GetReadMessagesCollection().GetAllKeys()) != 0 {
-// 		t.Error(fmt.Errorf("incorrect setup"))
-// 	}
+	time.Sleep(1 * time.Second)
 
-// 	if len(database.DB.GetWriteMessagesCollection().GetAllKeys()) != 0 {
-// 		t.Error(fmt.Errorf("incorrect setup"))
-// 	}
+	handler, err = brokers.MPRegistry.GetMessagePool("test-pool")
+	if err != nil {
+		t.Error(err)
+	}
 
-// 	handler, err := brokers.MPRegistry.GetMessagePool("test-pool")
-// 	if err != nil {
-// 		t.Error(err)
-// 	}
+	handler.NewWriteTask([][]byte{
+		[]byte(fmt.Sprintf("%d", 40)),
+		[]byte(fmt.Sprintf("%d", 41)),
+		[]byte(fmt.Sprintf("%d", 42)),
+	}).Schedule()
 
-// 	handler.NewWriteTask([][]byte{
-// 		[]byte(fmt.Sprintf("%d", 40)),
-// 		[]byte(fmt.Sprintf("%d", 41)),
-// 		[]byte(fmt.Sprintf("%d", 42)),
-// 	}).Schedule()
+	time.Sleep(1 * time.Second)
 
-// 	<-time.After(1 * time.Second)
-
-// 	handler.NewReadTask().Schedule()
-
-// 	<-time.After(2 * time.Second)
-
-// 	cancel()
-
-// 	brokers.MPTaskScheduler.Stop()
-// 	for x := range brokers.MPTaskScheduler.Errors() {
-// 		t.Error(x)
-// 	}
-
-// 	if len(database.DB.GetReadMessagesCollection().GetAllKeys()) != 3 {
-// 		t.Error(fmt.Errorf("read messages error"))
-// 	}
-
-// 	if len(database.DB.GetWriteMessagesCollection().GetAllKeys()) != 3 {
-// 		t.Error(fmt.Errorf("write messages error"))
-// 	}
-// }
+	// TODO check database for read records
+}

@@ -29,10 +29,10 @@ const (
 type DockerProvider struct {
 	ctx context.Context
 	cli *client.Client
-	cfg *configs.ContainerResources
+	cfg *configs.ContainerConfig
 }
 
-func NewDockerProvider(ctx context.Context, cfg *configs.ContainerResources) (*DockerProvider, error) {
+func NewDockerProvider(ctx context.Context, cfg *configs.ContainerConfig) (*DockerProvider, error) {
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create docker adapter")
@@ -74,20 +74,12 @@ func (dp *DockerProvider) ChangeContext(ctx context.Context) {
 }
 
 func (dp *DockerProvider) PruneWorkerImages() error {
-	has_worker_images, err := dp.hasWorkerImages()
-	if err != nil {
-		return err
-	}
-	if has_worker_images {
-		zlog.Info().Msg("worker image exists on host, prunning")
-		_, err := dp.cli.ImageRemove(dp.ctx, TAG_PREFIX, types.ImageRemoveOptions{
-			PruneChildren: true,
-			Force:         true,
-		})
-		return err
-	}
-	zlog.Info().Msg("worker image doesn't exitst on host")
-	return nil
+	zlog.Info().Msg("removing worker image")
+	_, err := dp.cli.ImageRemove(dp.ctx, TAG_PREFIX, types.ImageRemoveOptions{
+		PruneChildren: true,
+		Force:         true,
+	})
+	return err
 }
 
 type errorDetail struct {
@@ -124,8 +116,20 @@ func parseDockerBuildLogs(rd io.Reader) error {
 func (dp *DockerProvider) BuildWorkerImage() error {
 	zlog.Info().Msg("building worker image")
 
-	if err := dp.PruneWorkerImages(); err != nil {
-		return errors.Wrap(err, "prune old images")
+	has_worker_images, err := dp.hasWorkerImages()
+	if err != nil {
+		return err
+	}
+
+	if has_worker_images {
+		if dp.cfg.NeedRebuild {
+			if err := dp.PruneWorkerImages(); err != nil {
+				return errors.Wrap(err, "prune old images")
+			}
+		} else {
+			zlog.Info().Msg("image already exists on host and rebuild is disabled")
+			return nil
+		}
 	}
 
 	root, err := util.GetProjectRoot()
