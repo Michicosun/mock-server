@@ -8,7 +8,6 @@ import (
 	"mock-server/internal/logger"
 	requesttypes "mock-server/internal/server/request_types"
 	"net/http"
-	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -19,31 +18,27 @@ import (
 var Server = &server{}
 
 type server struct {
-	constructor sync.Once
-
 	server_instance *http.Server
 	router          *gin.Engine
 	db              database.Database
 }
 
 func (s *server) Init(cfg *configs.ServerConfig) {
-	s.constructor.Do(func() {
-		s.db = database.DB
+	s.db = database.DB
 
-		s.router = gin.New()
+	s.router = gin.New()
 
-		s.router.Use(logger.GinLogger()) // use custom logger (zerolog)
-		s.router.Use(gin.Recovery())     // recovery from all panics
+	s.router.Use(logger.GinLogger()) // use custom logger (zerolog)
+	s.router.Use(gin.Recovery())     // recovery from all panics
 
-		s.initMainRoutes()
+	s.initMainRoutes()
 
-		s.server_instance = &http.Server{
-			Addr:         fmt.Sprintf("%s:%s", cfg.Addr, cfg.Port),
-			Handler:      s.router,
-			ReadTimeout:  cfg.AcceptTimeout,
-			WriteTimeout: cfg.ResponseTimeout,
-		}
-	})
+	s.server_instance = &http.Server{
+		Addr:         fmt.Sprintf("%s:%s", cfg.Addr, cfg.Port),
+		Handler:      s.router,
+		ReadTimeout:  cfg.AcceptTimeout,
+		WriteTimeout: cfg.ResponseTimeout,
+	}
 }
 
 func (s *server) Start() {

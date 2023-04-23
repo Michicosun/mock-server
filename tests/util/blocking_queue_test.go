@@ -1,6 +1,7 @@
-package util
+package util_tests
 
 import (
+	"mock-server/internal/util"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -8,7 +9,7 @@ import (
 )
 
 func TestSimple(t *testing.T) {
-	q := NewBoundedBlockingQueue[int](10)
+	q := util.NewBoundedBlockingQueue[int](10)
 
 	q.Put(1)
 	q.Put(2)
@@ -36,7 +37,7 @@ func TestSimple(t *testing.T) {
 func TestConcurrent(t *testing.T) {
 	elements_count := 10000000
 	concurrency_level := 10
-	q := NewUnboundedBlockingQueue[int]() // unbounded
+	q := util.NewUnboundedBlockingQueue[int]() // unbounded
 
 	c := int64(0)
 	b := make(chan struct{})
@@ -75,7 +76,7 @@ func TestConcurrent(t *testing.T) {
 
 func TestClose(t *testing.T) {
 	concurrency_level := 10
-	q := NewUnboundedBlockingQueue[int]() // unbounded
+	q := util.NewUnboundedBlockingQueue[int]() // unbounded
 
 	b := make(chan struct{})
 	var wg sync.WaitGroup

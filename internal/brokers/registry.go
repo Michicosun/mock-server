@@ -3,7 +3,6 @@ package brokers
 import (
 	"fmt"
 	"mock-server/internal/util"
-	"sync"
 )
 
 var MPRegistry = &mpRegistry{}
@@ -20,15 +19,12 @@ type MessagePool interface {
 }
 
 type mpRegistry struct {
-	constructor sync.Once
-	registry    util.SyncMap[string, MessagePool]
+	registry util.SyncMap[string, MessagePool]
 }
 
 func (r *mpRegistry) Init() {
-	r.constructor.Do(func() {
-		r.registry = util.NewSyncMap[string, MessagePool]()
-		// fetch db
-	})
+	r.registry = util.NewSyncMap[string, MessagePool]()
+	// fetch db
 }
 
 func (r *mpRegistry) AddMessagePool(pool MessagePool) (MessagePoolHandler, error) {

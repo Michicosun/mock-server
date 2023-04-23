@@ -159,7 +159,7 @@ func (w *watcher) Init(ctx context.Context, cfg *configs.CoderunConfig) error {
 	w.initialized = true
 	w.ctx = ctx
 
-	provider, err := docker.NewDockerProvider(ctx, &cfg.WorkerConfig.Resources)
+	provider, err := docker.NewDockerProvider(ctx, &cfg.WorkerConfig.ContainerConfig)
 	if err != nil {
 		return err
 	}
