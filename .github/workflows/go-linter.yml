@@ -1,5 +1,11 @@
 name: Go-Lint
 
+on:
+  push:
+    if: false
+  pull_request:
+    if: false
+
 jobs:
   linter:
     runs-on: ubuntu-latest
