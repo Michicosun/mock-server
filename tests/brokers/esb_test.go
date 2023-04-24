@@ -34,9 +34,15 @@ func TestEsb(t *testing.T) {
 		t.Error(err)
 	}
 
-	fs.Write("mapper", "test-mapper.py", []byte(`print([[72, 69, 76, 76, 79], [87, 79, 82, 76, 68], [33]])`))
+	err = fs.Write("mapper", "test-mapper.py", []byte(`print([[72, 69, 76, 76, 79], [87, 79, 82, 76, 68], [33]])`))
+	if err != nil {
+		t.Error(err)
+	}
 
-	brokers.Esb.AddEsbRecordWithMapper("test-pool-1", "test-pool-2", "test-mapper.py")
+	err = brokers.Esb.AddEsbRecordWithMapper("test-pool-1", "test-pool-2", "test-mapper.py")
+	if err != nil {
+		t.Error(err)
+	}
 
 	///////////////////////////////////////////////////////////////////////////////////////
 

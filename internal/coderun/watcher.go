@@ -123,7 +123,7 @@ func (w *watcher) processWorkerInfo(worker *worker, info *types.ContainerJSON) {
 		w.workers <- worker
 	}
 	if info.State.Paused || info.State.OOMKilled || info.State.Dead {
-		w.dp.RestartWorkerContainer(worker.cId)
+		w.dp.RestartWorkerContainer(worker.cId) // nolint:errcheck
 		w.repair <- worker
 	}
 	// info.State.Restarting
@@ -139,9 +139,9 @@ func (w *watcher) repairLoop() {
 			zlog.Info().Str("port", worker.port).Msg("repairing worker")
 			info, err := w.dp.InspectWorkerContainer(worker.cId)
 			if err != nil {
-				w.dp.RemoveWorkerContainer(worker.cId, true)
+				w.dp.RemoveWorkerContainer(worker.cId, true) // nolint:errcheck
 				delete(w.workerByPort, worker.port)
-				w.startNewWorker()
+				w.startNewWorker() // nolint:errcheck
 			} else {
 				w.processWorkerInfo(worker, &info)
 			}
@@ -227,7 +227,7 @@ func (w *watcher) Stop() {
 	w.dp.ChangeContext(ctx)
 
 	for _, worker := range w.workerByPort {
-		w.dp.RemoveWorkerContainer(worker.cId, true)
+		w.dp.RemoveWorkerContainer(worker.cId, true) // nolint:errcheck
 	}
 
 	zlog.Info().Msg("watcher stopped")

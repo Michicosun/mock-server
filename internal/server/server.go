@@ -43,7 +43,11 @@ func (s *server) Init(cfg *configs.ServerConfig) {
 
 func (s *server) Start() {
 	zlog.Info().Msg("starting server")
-	go s.server_instance.ListenAndServe()
+	go func() {
+		if err := s.server_instance.ListenAndServe(); err != nil {
+			panic(errors.Wrap(err, "server start"))
+		}
+	}()
 }
 
 func (s *server) Stop() {

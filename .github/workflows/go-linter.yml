@@ -2,9 +2,9 @@ name: Go-Lint
 
 on:
   push:
-    if: false
+    branches: [ "main" ]
   pull_request:
-    if: false
+    branches: [ "main" ]
 
 jobs:
   linter:
