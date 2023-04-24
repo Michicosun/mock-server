@@ -43,7 +43,7 @@ func (s *server) Init(cfg *configs.ServerConfig) {
 
 func (s *server) Start() {
 	zlog.Info().Msg("starting server")
-	go s.server_instance.ListenAndServe()
+	go s.server_instance.ListenAndServe() // nolint:errcheck
 }
 
 func (s *server) Stop() {

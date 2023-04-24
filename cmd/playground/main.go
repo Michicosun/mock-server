@@ -97,9 +97,17 @@ func play_esb() {
 	pool2, _ := brokers.MPRegistry.AddMessagePool(brokers.NewRabbitMQMessagePool("test-pool-2", "test-mock-queue-2"))
 
 	fs, _ := util.NewFileStorageDriver("coderun")
-	fs.Write("mapper", "test-mapper.py", []byte(`print([[72, 69, 76, 76, 79], [87, 79, 82, 76, 68], [33]])`))
+	err := fs.Write("mapper", "test-mapper.py", []byte(`print([[72, 69, 76, 76, 79], [87, 79, 82, 76, 68], [33]])`))
+	if err != nil {
+		zlog.Error().Err(err).Msg("write to file")
+		return
+	}
 
-	brokers.Esb.AddEsbRecordWithMapper("test-pool-1", "test-pool-2", "test-mapper.py")
+	err = brokers.Esb.AddEsbRecordWithMapper("test-pool-1", "test-pool-2", "test-mapper.py")
+	if err != nil {
+		zlog.Error().Err(err).Msg("add esb record")
+		return
+	}
 
 	///////////////////////////////////////////////////////////////////////////////////////
 
@@ -153,7 +161,10 @@ func do_post(url string, content []byte) {
 
 	var res map[string]string
 
-	json.NewDecoder(resp.Body).Decode(&res)
+	if err = json.NewDecoder(resp.Body).Decode(&res); err != nil {
+		zlog.Error().Err(err).Msg("decode failed")
+		return
+	}
 
 	zlog.Info().
 		Int("status", resp.StatusCode).
