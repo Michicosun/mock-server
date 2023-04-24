@@ -1,11 +1,5 @@
 name: Go-Lint
 
-on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
-
 jobs:
   linter:
     runs-on: ubuntu-latest
