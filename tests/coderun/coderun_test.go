@@ -44,8 +44,8 @@ func TestCoderun(t *testing.T) {
 			return
 		}
 
-		if bytes.Equal(out, []byte("Hello, world!")) {
-			t.Errorf(`%s != "Hello, world!"`, string(out))
+		if !bytes.Equal(out, []byte("Hello, world!\n")) {
+			t.Errorf(`%s != "Hello, world!\n"`, string(out))
 		}
 
 		worker.Return()
