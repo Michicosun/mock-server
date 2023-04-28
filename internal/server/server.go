@@ -70,6 +70,9 @@ func (s *server) Start() {
 			zlog.Error().Err(err).Msg("failure while server working")
 		}
 	}()
+
+	// wait until server start listening
+	time.Sleep(1 * time.Second)
 }
 
 func (s *server) Stop() {
