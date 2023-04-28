@@ -7,12 +7,15 @@ import (
 	"mock-server/internal/database"
 	"mock-server/internal/logger"
 	requesttypes "mock-server/internal/server/request_types"
+	"net"
 	"net/http"
+	"syscall"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"
 	zlog "github.com/rs/zerolog/log"
+	"golang.org/x/sys/unix"
 )
 
 var Server = &server{}
@@ -42,12 +45,35 @@ func (s *server) Init(cfg *configs.ServerConfig) {
 }
 
 func (s *server) Start() {
-	zlog.Info().Msg("starting server")
-	go s.server_instance.ListenAndServe() // nolint:errcheck
+	go func() {
+		zlog.Info().Msg("starting server")
+
+		lc := net.ListenConfig{
+			Control: func(network, address string, c syscall.RawConn) error {
+				var opErr error
+				err := c.Control(func(fd uintptr) {
+					opErr = unix.SetsockoptInt(int(fd), unix.SOL_SOCKET, unix.SO_REUSEPORT, 1)
+				})
+				if err != nil {
+					return err
+				}
+				return opErr
+			},
+		}
+
+		ln, err := lc.Listen(context.Background(), "tcp", s.server_instance.Addr)
+		if err != nil {
+			zlog.Fatal().Err(err).Msg("listen configuration failure")
+		}
+
+		if err := s.server_instance.Serve(ln); err != nil && err != http.ErrServerClosed {
+			zlog.Error().Err(err).Msg("failure while server working")
+		}
+	}()
 }
 
 func (s *server) Stop() {
-	zlog.Info().Msg("server gracefully shutdown with timeout 5 seconds")
+	zlog.Info().Msg("stopping server with timeout 5 seconds")
 	timeout, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := s.server_instance.Shutdown(timeout); err != nil {
