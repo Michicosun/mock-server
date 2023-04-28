@@ -45,6 +45,8 @@ func (s *server) Init(cfg *configs.ServerConfig) {
 }
 
 func (s *server) Start() {
+	ch := make(chan interface{})
+
 	go func() {
 		zlog.Info().Msg("starting server")
 
@@ -66,10 +68,14 @@ func (s *server) Start() {
 			zlog.Fatal().Err(err).Msg("listen configuration failure")
 		}
 
+		ch <- struct{}{}
+
 		if err := s.server_instance.Serve(ln); err != nil && err != http.ErrServerClosed {
 			zlog.Error().Err(err).Msg("failure while server working")
 		}
 	}()
+
+	<-ch
 
 	// wait until server start listening
 	time.Sleep(1 * time.Second)

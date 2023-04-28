@@ -70,100 +70,98 @@ func TestStaticRoutes(t *testing.T) {
 	endpoint := fmt.Sprintf("http://%s:%s", cfg.Addr, cfg.Port)
 	staticApiEndpoint := endpoint + "/api/routes/static"
 
-	{
-		url := endpoint + "/api/ping"
-		code, body := do_get(url, t)
+	url := endpoint + "/api/ping"
+	code, body := do_get(url, t)
 
-		if code != 200 {
-			t.Errorf("ping status code != 200")
-		}
-
-		if body != `"Ping yourself, I have another work!\n"` {
-			t.Errorf(`ping: %s != "Ping yourself, I have another work!\n"`, body)
-		}
+	if code != 200 {
+		t.Errorf("ping status code != 200")
 	}
 
-	{
-		testUrl := endpoint + "/test_url"
+	if body != `"Ping yourself, I have another work!\n"` {
+		t.Errorf(`ping: %s != "Ping yourself, I have another work!\n"`, body)
+	}
 
-		// no routes created -> 400
-		code, body := do_get(testUrl, t)
-		if code != 400 {
-			t.Errorf("expected 400 on mismatch get")
-		}
+	//////////////////////////////////////////////////////
 
-		if body != `{"error":"no such path"}` {
-			t.Errorf(`mismatch get: %s != {"error":"no such path"}`, body)
-		}
+	testUrl := endpoint + "/test_url"
 
-		// expects []
-		code, body = do_get(staticApiEndpoint, t)
-		if code != 200 {
-			t.Errorf("expected 200 code response on list all request")
-		}
+	// no routes created -> 400
+	code, body = do_get(testUrl, t)
+	if code != 400 {
+		t.Errorf("expected 400 on mismatch get")
+	}
 
-		if body != `{"endpoints":null}` {
-			t.Errorf(`list request must be empty at the begining: %s != {"endpoints":null}`, body)
-		}
+	if body != `{"error":"no such path"}` {
+		t.Errorf(`mismatch get: %s != {"error":"no such path"}`, body)
+	}
 
-		// create route /test_url with reponse `hello`
-		requestBody := []byte(`{
-			"path": "/test_url",
-			"expected_response": "hello"
-		}`)
-		code = do_post(staticApiEndpoint, requestBody, t)
-		if code != 200 {
-			t.Errorf("create route failed")
-		}
+	// expects []
+	code, body = do_get(staticApiEndpoint, t)
+	if code != 200 {
+		t.Errorf("expected 200 code response on list all request")
+	}
 
-		// expects `hello`
-		code, body = do_get(testUrl, t)
-		if code != 200 {
-			t.Errorf("expected to be possible make request to new route")
-		}
+	if body != `{"endpoints":null}` {
+		t.Errorf(`list request must be empty at the begining: %s != {"endpoints":null}`, body)
+	}
 
-		if body != `"hello"` {
-			t.Errorf(`static data mismatch: %s != "hello"`, body)
-		}
+	// create route /test_url with reponse `hello`
+	requestBody := []byte(`{
+		"path": "/test_url",
+		"expected_response": "hello"
+	}`)
+	code = do_post(staticApiEndpoint, requestBody, t)
+	if code != 200 {
+		t.Errorf("create route failed")
+	}
 
-		// expects ["/test_url"]
-		code, body = do_get(staticApiEndpoint, t)
-		if code != 200 {
-			t.Errorf("expected 200 code response on list all request")
-		}
+	// expects `hello`
+	code, body = do_get(testUrl, t)
+	if code != 200 {
+		t.Errorf("expected to be possible make request to new route")
+	}
 
-		if body != `{"endpoints":["/test_url"]}` {
-			t.Errorf(`must be visible new route after creation: %s != {"endpoints":["/test_url"]}`, body)
-		}
+	if body != `"hello"` {
+		t.Errorf(`static data mismatch: %s != "hello"`, body)
+	}
 
-		// detele /test_url
-		code, body = do_delete(staticApiEndpoint+"?path=/test_url", t)
-		if code != 200 {
-			t.Errorf("it must be possible to delete route")
-		}
+	// expects ["/test_url"]
+	code, body = do_get(staticApiEndpoint, t)
+	if code != 200 {
+		t.Errorf("expected 200 code response on list all request")
+	}
 
-		if body != `Static endpoint successfully removed!` {
-			t.Errorf(`unexpected body on delete query: %s != Static endpoint successfully removed!`, body)
-		}
+	if body != `{"endpoints":["/test_url"]}` {
+		t.Errorf(`must be visible new route after creation: %s != {"endpoints":["/test_url"]}`, body)
+	}
 
-		// /test_url deleted -> 404
-		code, body = do_get(testUrl, t)
-		if code != 400 {
-			t.Errorf("expected to be impossible to request deleted route: %d != 400", code)
-		}
+	// detele /test_url
+	code, body = do_delete(staticApiEndpoint+"?path=/test_url", t)
+	if code != 200 {
+		t.Errorf("it must be possible to delete route")
+	}
 
-		if body != `{"error":"no such path"}` {
-			t.Errorf("unexpected error description")
-		}
+	if body != `Static endpoint successfully removed!` {
+		t.Errorf(`unexpected body on delete query: %s != Static endpoint successfully removed!`, body)
+	}
 
-		// expects []
-		code, body = do_get(staticApiEndpoint, t)
-		if code != 200 {
-			t.Errorf("expected 200 code response on list all request")
-		}
+	// /test_url deleted -> 404
+	code, body = do_get(testUrl, t)
+	if code != 400 {
+		t.Errorf("expected to be impossible to request deleted route: %d != 400", code)
+	}
 
-		if body != `{"endpoints":null}` {
-			t.Errorf(`expected empty response after deletion: %s != {"endpoints":null}`, body)
-		}
+	if body != `{"error":"no such path"}` {
+		t.Errorf("unexpected error description")
+	}
+
+	// expects []
+	code, body = do_get(staticApiEndpoint, t)
+	if code != 200 {
+		t.Errorf("expected 200 code response on list all request")
+	}
+
+	if body != `{"endpoints":null}` {
+		t.Errorf(`expected empty response after deletion: %s != {"endpoints":null}`, body)
 	}
 }
