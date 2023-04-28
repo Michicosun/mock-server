@@ -69,7 +69,7 @@ type ComplexArgs struct {
 }
 
 func play_coderun() {
-	for i := 0; i < 1000; i += 1 {
+	for i := 0; i < 10; i += 1 {
 		worker, err := coderun.WorkerWatcher.BorrowWorker()
 		if err != nil {
 			zlog.Error().Err(err).Msg("borrow worker")
@@ -199,58 +199,52 @@ func do_delete(url string) {
 }
 
 func play_server_api() {
-	go func() {
-		time.Sleep(1 * time.Second)
+	cfg := configs.GetServerConfig()
+	endpoint := fmt.Sprintf("http://%s:%s", cfg.Addr, cfg.Port)
+	staticApiEndpoint := endpoint + "/api/routes/static"
 
-		cfg := configs.GetServerConfig()
-		endpoint := fmt.Sprintf("http://%s:%s", cfg.Addr, cfg.Port)
-		staticApiEndpoint := endpoint + "/api/routes/static"
+	{
+		url := endpoint + "/api/ping"
+		do_get(url)
+	}
 
-		{
-			url := endpoint + "/api/ping"
-			do_get(url)
-		}
+	{
+		testUrl := endpoint + "/test_url"
 
-		{
-			testUrl := endpoint + "/test_url"
+		// no routes created -> 404
+		do_get(testUrl)
+		// expects []
+		do_get(staticApiEndpoint)
 
-			// no routes created -> 404
-			do_get(testUrl)
-			// expects []
-			do_get(staticApiEndpoint)
+		// create route /test_url with reponse `hello`
+		requestBody := []byte(`{
+			"path": "/test_url",
+			"expected_response": "hello"
+		}`)
+		do_post(staticApiEndpoint, requestBody)
 
-			// create route /test_url with reponse `hello`
-			requestBody := []byte(`{
-                "path": "/test_url",
-                "expected_response": "hello"
-            }`)
-			do_post(staticApiEndpoint, requestBody)
+		// expects `hello`
+		do_get(testUrl)
+		// expects ["/test_url"]
+		do_get(staticApiEndpoint)
 
-			// expects `hello`
-			do_get(testUrl)
-			// expects ["/test_url"]
-			do_get(staticApiEndpoint)
+		// detele /test_url
+		do_delete(staticApiEndpoint + "?path=/test_url")
 
-			// detele /test_url
-			do_delete(staticApiEndpoint + "?path=/test_url")
-
-			// /test_url deleted -> 404
-			do_get(testUrl)
-			// expects []
-			do_get(staticApiEndpoint)
-		}
-	}()
-
-	time.Sleep(5 * time.Second)
+		// /test_url deleted -> 404
+		do_get(testUrl)
+		// expects []
+		do_get(staticApiEndpoint)
+	}
 }
 
 func main() {
 	control.Components.Start()
 	defer control.Components.Stop()
 
-	// play_brokers()
-	// play_file_storage()
-	// play_coderun()
-	// play_esb()
+	play_brokers()
+	play_file_storage()
+	play_coderun()
+	play_esb()
 	play_server_api()
 }
