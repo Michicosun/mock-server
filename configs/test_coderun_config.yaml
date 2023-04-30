@@ -1,0 +1,23 @@
+use_components:
+    server: false
+    brokers: false
+    coderun: true
+
+coderun:
+    worker_cnt: 1
+    worker:
+        handle_timeout: 10s
+        container:
+            need_rebuild: false
+            cpu_limit: 0.5
+            memory_limit_mb: 200
+
+logs:
+    level: 0
+    consoleLoggingEnabled: true
+    fileLoggingEnabled: true
+    directory: "/tmp/mock-server-logs"
+    filename: "log"
+    maxSize: 500
+    maxBackups: 5
+    maxAge: 30
