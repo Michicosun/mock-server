@@ -9,6 +9,8 @@ import (
 )
 
 func TestScheduler(t *testing.T) {
+	t.Setenv("CONFIG_PATH", "/configs/test_brokers_config.yaml")
+
 	control.Components.Start()
 	defer control.Components.Stop()
 

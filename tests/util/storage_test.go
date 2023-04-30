@@ -7,6 +7,8 @@ import (
 )
 
 func TestStorage(t *testing.T) {
+	t.Setenv("CONFIG_PATH", "/configs/test_util_config.yaml")
+
 	control.Components.Start()
 	defer control.Components.Stop()
 

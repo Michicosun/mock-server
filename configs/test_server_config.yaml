@@ -1,0 +1,20 @@
+use_components:
+  server: true
+  brokers: false
+  coderun: false
+
+server:
+    addr: "127.0.0.1"
+    port: "3349"
+    accept_timeout: 20s
+    response_timeout: 20s
+
+logs:
+    level: 0
+    consoleLoggingEnabled: true
+    fileLoggingEnabled: true
+    directory: "/tmp/mock-server-logs"
+    filename: "log"
+    maxSize: 500
+    maxBackups: 5
+    maxAge: 30

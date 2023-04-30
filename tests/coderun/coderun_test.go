@@ -15,6 +15,8 @@ type ComplexArgs struct {
 }
 
 func TestCoderun(t *testing.T) {
+	t.Setenv("CONFIG_PATH", "/configs/test_coderun_config.yaml")
+
 	control.Components.Start()
 	defer control.Components.Stop()
 

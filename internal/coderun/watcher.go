@@ -230,5 +230,7 @@ func (w *watcher) Stop() {
 		w.dp.RemoveWorkerContainer(worker.cId, true) // nolint:errcheck
 	}
 
+	w.initialized = false
+
 	zlog.Info().Msg("watcher stopped")
 }

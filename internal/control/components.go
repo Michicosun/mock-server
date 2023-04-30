@@ -2,6 +2,7 @@ package control
 
 import (
 	"context"
+	"fmt"
 	"mock-server/internal/brokers"
 	"mock-server/internal/coderun"
 	"mock-server/internal/configs"
@@ -41,6 +42,12 @@ func (c *componentsManager) Start() {
 	// init esb
 	brokers.Esb.Init()
 
+	// start server
+	if c.cfg.Server {
+		server.Server.Init(configs.GetServerConfig())
+		server.Server.Start()
+	}
+
 	// start broker tasks scheduler
 	if c.cfg.Brokers {
 		brokers.MPTaskScheduler.Init(c.ctx, configs.GetMPTaskSchedulerConfig())
@@ -51,14 +58,8 @@ func (c *componentsManager) Start() {
 	if c.cfg.Coderun {
 		err := coderun.WorkerWatcher.Init(c.ctx, configs.GetCoderunConfig())
 		if err != nil {
-			c.cfg.Coderun = false
+			panic(fmt.Errorf("coderun expected to init but failed: %s", err.Error()))
 		}
-	}
-
-	// start server
-	if c.cfg.Server {
-		server.Server.Init(configs.GetServerConfig())
-		server.Server.Start()
 	}
 }
 
