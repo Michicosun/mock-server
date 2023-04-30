@@ -10,5 +10,5 @@ type ServerConfig struct {
 }
 
 func GetServerConfig() *ServerConfig {
-	return &config.Server
+	return config.Server
 }

@@ -15,9 +15,9 @@ const DefaultConfigPath = "/configs/config.yaml"
 
 type ServiceConfig struct {
 	Components ComponentsConfig `yaml:"use_components"`
-	Brokers    BrokersConfig    `yaml:"brokers"`
-	Coderun    CoderunConfig    `yaml:"coderun"`
-	Server     ServerConfig     `yaml:"server"`
+	Brokers    *BrokersConfig   `yaml:"brokers,omitempty"`
+	Coderun    *CoderunConfig   `yaml:"coderun,omitempty"`
+	Server     *ServerConfig    `yaml:"server,omitempty"`
 	Logs       LogConfig        `yaml:"logs"`
 }
 

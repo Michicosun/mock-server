@@ -19,5 +19,5 @@ type CoderunConfig struct {
 }
 
 func GetCoderunConfig() *CoderunConfig {
-	return &config.Coderun
+	return config.Coderun
 }
