@@ -8,6 +8,7 @@ import (
 	"io"
 	"mock-server/internal/configs"
 	"mock-server/internal/util"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -172,6 +173,7 @@ func (dp *DockerProvider) BuildWorkerImage() error {
 func getEnvList(port string) []string {
 	return []string{
 		fmt.Sprintf("PORT=%s", port),
+		fmt.Sprintf("CONFIG_PATH=%s", os.Getenv("CONFIG_PATH")),
 	}
 }
 
