@@ -2,6 +2,7 @@ package control
 
 import (
 	"context"
+	"fmt"
 	"mock-server/internal/brokers"
 	"mock-server/internal/coderun"
 	"mock-server/internal/configs"
@@ -51,7 +52,7 @@ func (c *componentsManager) Start() {
 	if c.cfg.Coderun {
 		err := coderun.WorkerWatcher.Init(c.ctx, configs.GetCoderunConfig())
 		if err != nil {
-			c.cfg.Coderun = false
+			panic(fmt.Errorf("coderun expected to init but failed: %s", err.Error()))
 		}
 	}
 
