@@ -63,6 +63,8 @@ func do_delete(url string, t *testing.T) (int, string) {
 }
 
 func TestStaticRoutes(t *testing.T) {
+	t.Setenv("CONFIG_PATH", "/configs/test_server_config.yaml")
+
 	control.Components.Start()
 	defer control.Components.Stop()
 
