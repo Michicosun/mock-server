@@ -69,7 +69,7 @@ func TestStaticRoutes(t *testing.T) {
 	defer control.Components.Stop()
 
 	cfg := configs.GetServerConfig()
-	endpoint := fmt.Sprintf("http://%s:%s", cfg.Addr, cfg.Port)
+	endpoint := fmt.Sprintf("http://%s", cfg.Addr)
 	staticApiEndpoint := endpoint + "/api/routes/static"
 
 	url := endpoint + "/api/ping"

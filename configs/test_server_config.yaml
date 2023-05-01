@@ -4,8 +4,7 @@ use_components:
   coderun: false
 
 server:
-    addr: "127.0.0.1"
-    port: "3349"
+    addr: "127.0.0.1:1337"
     accept_timeout: 20s
     response_timeout: 20s
 

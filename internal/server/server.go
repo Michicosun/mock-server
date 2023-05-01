@@ -2,20 +2,17 @@ package server
 
 import (
 	"context"
-	"fmt"
 	"mock-server/internal/configs"
 	"mock-server/internal/database"
 	"mock-server/internal/logger"
 	requesttypes "mock-server/internal/server/request_types"
-	"net"
 	"net/http"
-	"syscall"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	reuseport "github.com/kavu/go_reuseport"
 	"github.com/pkg/errors"
 	zlog "github.com/rs/zerolog/log"
-	"golang.org/x/sys/unix"
 )
 
 var Server = &server{}
@@ -37,7 +34,7 @@ func (s *server) Init(cfg *configs.ServerConfig) {
 	s.initMainRoutes()
 
 	s.server_instance = &http.Server{
-		Addr:         fmt.Sprintf("%s:%s", cfg.Addr, cfg.Port),
+		Addr:         cfg.Addr,
 		Handler:      s.router,
 		ReadTimeout:  cfg.AcceptTimeout,
 		WriteTimeout: cfg.ResponseTimeout,
@@ -50,25 +47,17 @@ func (s *server) Start() {
 	go func() {
 		zlog.Info().Msg("starting server")
 
-		lc := net.ListenConfig{
-			Control: func(network, address string, c syscall.RawConn) error {
-				var opErr error
-				err := c.Control(func(fd uintptr) {
-					opErr = unix.SetsockoptInt(int(fd), unix.SOL_SOCKET, unix.SO_REUSEPORT, 1)
-				})
-				if err != nil {
-					return err
-				}
-				return opErr
-			},
-		}
-
-		ln, err := lc.Listen(context.Background(), "tcp", s.server_instance.Addr)
-		if err != nil {
-			zlog.Fatal().Err(err).Msg("listen configuration failure")
-		}
-
 		ch <- struct{}{}
+
+		ln, err := reuseport.Listen("tcp", s.server_instance.Addr)
+		if err != nil {
+			zlog.Error().Err(err).Msg("Failed to create listener")
+			panic(err)
+		}
+
+		zlog.Info().
+			Str("addr", ln.Addr().String()).
+			Msg("Server listens")
 
 		if err := s.server_instance.Serve(ln); err != nil && err != http.ErrServerClosed {
 			zlog.Error().Err(err).Msg("failure while server working")
