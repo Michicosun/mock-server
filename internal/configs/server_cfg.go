@@ -4,7 +4,6 @@ import "time"
 
 type ServerConfig struct {
 	Addr            string        `yaml:"addr"`
-	Port            string        `yaml:"port"`
 	AcceptTimeout   time.Duration `yaml:"accept_timeout"`
 	ResponseTimeout time.Duration `yaml:"response_timeout"`
 }

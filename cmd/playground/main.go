@@ -200,7 +200,7 @@ func do_delete(url string) {
 
 func play_server_api() {
 	cfg := configs.GetServerConfig()
-	endpoint := fmt.Sprintf("http://%s:%s", cfg.Addr, cfg.Port)
+	endpoint := fmt.Sprintf("http://%s", cfg.Addr)
 	staticApiEndpoint := endpoint + "/api/routes/static"
 
 	{
