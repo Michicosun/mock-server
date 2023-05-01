@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	reuseport "github.com/kavu/go_reuseport"
 	"github.com/pkg/errors"
 	zlog "github.com/rs/zerolog/log"
 )
@@ -48,11 +49,17 @@ func (s *server) Start() {
 
 		ch <- struct{}{}
 
+		ln, err := reuseport.Listen("tcp", s.server_instance.Addr)
+		if err != nil {
+			zlog.Error().Err(err).Msg("Failed to create listener")
+			panic(err)
+		}
+
 		zlog.Info().
-			Str("addr", s.server_instance.Addr).
+			Str("addr", ln.Addr().String()).
 			Msg("Server listens")
 
-		if err := s.server_instance.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if err := s.server_instance.Serve(ln); err != nil && err != http.ErrServerClosed {
 			zlog.Error().Err(err).Msg("failure while server working")
 		}
 	}()
