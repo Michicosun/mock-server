@@ -39,7 +39,7 @@ func (mp *SyncMap[K, V]) GetAllKeys() []K {
 	mp.mtx.RLock()
 	defer mp.mtx.RUnlock()
 
-	var ret []K
+	ret := make([]K, 0)
 	for key := range mp.buffer {
 		ret = append(ret, key)
 	}
