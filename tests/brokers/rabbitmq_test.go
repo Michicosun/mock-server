@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func TestScheduler(t *testing.T) {
+func TestRabbitMq(t *testing.T) {
 	t.Setenv("CONFIG_PATH", "/configs/test_brokers_config.yaml")
 
 	control.Components.Start()
