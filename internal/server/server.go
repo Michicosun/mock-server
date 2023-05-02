@@ -131,7 +131,7 @@ func (s *server) initRoutesApi(apiGroup *gin.RouterGroup) {
 			zlog.Info().Str("path", staticEndpoint.Path).Msg("Received create static request")
 
 			if s.db.HasStaticEndpoint(staticEndpoint.Path) {
-				c.JSON(http.StatusConflict, "The same static endpoint already exists")
+				c.JSON(http.StatusConflict, gin.H{"error": "The same static endpoint already exists"})
 				return
 			}
 

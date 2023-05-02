@@ -103,8 +103,8 @@ func TestStaticRoutes(t *testing.T) {
 		t.Errorf("expected 200 code response on list all request")
 	}
 
-	if body != `{"endpoints":null}` {
-		t.Errorf(`list request must be empty at the begining: %s != {"endpoints":null}`, body)
+	if body != `{"endpoints":[]}` {
+		t.Errorf(`list request must be empty at the begining: %s != {"endpoints":[]}`, body)
 	}
 
 	// create route /test_url with reponse `hello`
@@ -163,7 +163,7 @@ func TestStaticRoutes(t *testing.T) {
 		t.Errorf("expected 200 code response on list all request")
 	}
 
-	if body != `{"endpoints":null}` {
-		t.Errorf(`expected empty response after deletion: %s != {"endpoints":null}`, body)
+	if body != `{"endpoints":[]}` {
+		t.Errorf(`expected empty response after deletion: %s != {"endpoints":[]}`, body)
 	}
 }
