@@ -238,6 +238,37 @@ func play_server_api() {
 	}
 }
 
+func play_kafka() {
+	go func() {
+		for x := range brokers.MPTaskScheduler.Errors() {
+			zlog.Error().Str("id", string(x.Task_id)).Err(x.Err).Msg("get error from scheduler")
+		}
+	}()
+
+	handler, err := brokers.MPRegistry.AddMessagePool(brokers.NewKafkaMessagePool("test-pool", "test-topic"))
+	if err != nil {
+		zlog.Error().Err(err).Msg("add new pool failed")
+	}
+
+	id := handler.NewReadTask().Schedule()
+	zlog.Info().Str("id", string(id)).Msg("start reading")
+
+	time.Sleep(1 * time.Second)
+
+	handler, err = brokers.MPRegistry.GetMessagePool("test-pool")
+	if err != nil {
+		zlog.Error().Err(err).Msg("get pool failed")
+	}
+
+	handler.NewWriteTask([][]byte{
+		[]byte(fmt.Sprintf("%d", 40)),
+		[]byte(fmt.Sprintf("%d", 41)),
+		[]byte(fmt.Sprintf("%d", 42)),
+	}).Schedule()
+
+	time.Sleep(5 * time.Second)
+}
+
 func main() {
 	control.Components.Start()
 	defer control.Components.Stop()
@@ -247,4 +278,5 @@ func main() {
 	play_coderun()
 	play_esb()
 	play_server_api()
+	play_kafka()
 }
