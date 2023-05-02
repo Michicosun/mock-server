@@ -163,7 +163,7 @@ func TestStaticRoutes(t *testing.T) {
 		t.Errorf("expected 200 code response on list all request")
 	}
 
-	if body != `{"endpoints":null}` {
+	if body != `{"endpoints":[]}` {
 		t.Errorf(`expected empty response after deletion: %s != {"endpoints":null}`, body)
 	}
 }
