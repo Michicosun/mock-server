@@ -111,14 +111,16 @@ func (t *kafkaReadTask) read(ctx context.Context) error {
 		return err
 	}
 
-	consumer.SubscribeTopics([]string{t.pool.topic}, nil)
+	if err := consumer.SubscribeTopics([]string{t.pool.topic}, nil); err != nil {
+		return err
+	}
 
 	err = nil
 	run := true
 	read_canceled := make(chan struct{}, 1)
 
 	go func() {
-		for run == true {
+		for run {
 			ev := consumer.Poll(100)
 			switch e := ev.(type) {
 			case *kafka.Message:

@@ -95,6 +95,16 @@ func KafkaConnectionConfigInit() {
 	if port, err := strconv.Atoi(s); ok && err != nil {
 		config.Brokers.Kafka.Port = port
 	}
+
+	client_id, ok := os.LookupEnv("CLIENT_ID")
+	if ok {
+		config.Brokers.Kafka.ClientId = client_id
+	}
+
+	group_id, ok := os.LookupEnv("GROUP_ID")
+	if ok {
+		config.Brokers.Kafka.GroupId = group_id
+	}
 }
 
 func GetKafkaConnectionConfig() (*KafkaConnectionConfig, error) {

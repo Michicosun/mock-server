@@ -25,20 +25,20 @@ func TestScheduler(t *testing.T) {
 		t.Error(err)
 	}
 
-	handler.NewReadTask().Schedule()
+	handler.NewWriteTask([][]byte{
+		[]byte(fmt.Sprintf("%d", 40)),
+		[]byte(fmt.Sprintf("%d", 41)),
+		[]byte(fmt.Sprintf("%d", 42)),
+	}).Schedule()
 
-	time.Sleep(1 * time.Second)
+	time.Sleep(3 * time.Second)
 
 	handler, err = brokers.MPRegistry.GetMessagePool("test-pool")
 	if err != nil {
 		t.Error(err)
 	}
 
-	handler.NewWriteTask([][]byte{
-		[]byte(fmt.Sprintf("%d", 40)),
-		[]byte(fmt.Sprintf("%d", 41)),
-		[]byte(fmt.Sprintf("%d", 42)),
-	}).Schedule()
+	handler.NewReadTask().Schedule()
 
 	time.Sleep(3 * time.Second)
 
