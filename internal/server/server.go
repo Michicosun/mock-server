@@ -6,6 +6,7 @@ import (
 	"mock-server/internal/database"
 	"mock-server/internal/logger"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -131,12 +132,15 @@ func (s *server) initRoutesApi(apiGroup *gin.RouterGroup) {
 
 			zlog.Info().Str("path", staticEndpoint.Path).Msg("Received create static request")
 
-			if _, err := database.GetStaticEndpointResponse(staticEndpoint.Path); err != nil {
-				if err.Error() == "no such path" {
-					c.JSON(http.StatusConflict, gin.H{"error": "The same static endpoint already exists"})
-				} else {
-					c.JSON(http.StatusInternalServerError, gin.H{"error": errors.Wrap(err, "internal error").Error()})
-				}
+			_, err := database.GetStaticEndpointResponse(staticEndpoint.Path)
+
+			if err != nil && !strings.Contains(err.Error(), "no such path") {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": errors.Wrap(err, "internal error").Error()})
+				return
+			}
+
+			if err == nil {
+				c.JSON(http.StatusConflict, gin.H{"error": "The same static endpoint already exists"})
 				return
 			}
 
