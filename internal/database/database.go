@@ -12,12 +12,12 @@ import (
 var inMemoryServer mim.Server
 
 func initInMemoryDB(ctx *context.Context) {
-	inMemoryServer, err := mim.Start(context.Background(), "5.0.2")
+	inMemoryServer, err := mim.Start(*ctx, "5.0.2")
 	if err != nil {
 		panic(err)
 	}
 
-	client, err := mongo.Connect(context.Background(), options.Client().ApplyURI(inMemoryServer.URI()))
+	client, err := mongo.Connect(*ctx, options.Client().ApplyURI(inMemoryServer.URI()))
 	if err != nil {
 		panic(err)
 	}
