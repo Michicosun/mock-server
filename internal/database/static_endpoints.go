@@ -2,7 +2,6 @@ package database
 
 import (
 	"context"
-	"errors"
 
 	"github.com/bluele/gcache"
 	"go.mongodb.org/mongo-driver/bson"
@@ -63,7 +62,7 @@ func (s *staticEndpoints) getStaticEndpointResponse(ctx context.Context, path st
 	res, err := s.cache.Get(path)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
-			return "", errors.New("no such path")
+			return "", ErrNoSuchPath
 		} else {
 			return "", err
 		}

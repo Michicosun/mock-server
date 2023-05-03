@@ -177,6 +177,7 @@ func (w *watcher) Init(ctx context.Context, cfg *configs.CoderunConfig) error {
 	for i := 0; i < configs.GetCoderunConfig().WorkerCnt; i += 1 {
 		err = w.startNewWorker()
 		if err != nil {
+			w.Stop()
 			return err
 		}
 	}
