@@ -85,6 +85,29 @@ else
     exit 1
 fi
 
+echo "Creating working directory if not exists"
+if test -d /etc/mock-server; then
+    echo "Working directory already exists!"
+else
+    echo "Creating new one"
+    sudo mkdir /etc/mock-server
+
+    if [ $? -neq 0 ]; then
+        echo "Failed to create working directory"
+        exit 1
+    fi
+fi
+
+sudo mkdir -p /etc/mock-server/configs
+
+echo "Copying golang binary config to working directory"
+if sudo cp ../configs/config.yaml /etc/mock-server/configs/; then
+    echo "Successfully copied"
+else
+    echo "Failed to copy golang binary config to /etc/mock-server/configs/"
+    exit 1
+fi
+
 echo "Copying service config"
 if sudo cp mock-server.service /etc/systemd/system/mock-server.service; then
     echo "Successfully copied to /etc/systemd/system/mock-server.service"
@@ -97,13 +120,22 @@ echo "Reloading systemd daemon"
 sudo systemctl daemon-reload
 echo "Starting mock-server.service"
 sudo systemctl start mock-server.service
+sudo systemctl restart mock-server.service
 
 echo "Wait 3 seconds until started"
 sleep 3
 
-echo "Try ping mock-server"
-if curl "$(curl ifconfig.me)/api/ping"; then
-    echo -e "\nMock server successfully deployed and running"
+echo "Try ping mock-server locally"
+if curl -s http://localhost:1337/api/ping; then
+    echo -e "\nMock server running locally"
+else
+    echo "Failed to start Mock server :("
+    exit 1
+fi
+
+echo "Try ping mock-server through nginx"
+if [[ $(curl -s "$(curl -s ifconfig.me)/api/ping" | head -n 1 | cut -d' ' -f2) != 200 ]]; then
+    echo -e "\nMock server successfully deployed and running. Available on http://$(curl -s ifconfig.me)"
 else
     echo "Failed to start Mock server :("
     exit 1
