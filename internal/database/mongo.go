@@ -16,7 +16,7 @@ var db = &MongoStorage{}
 func (db *MongoStorage) Init(client *mongo.Client) {
 	db.client = client
 	db.staticEndpoints = &staticEndpoints{}
-	db.staticEndpoints.Init(client)
+	db.staticEndpoints.init(client)
 }
 
 func AddStaticEndpoint(staticEndpoint StaticEndpoint) error {
