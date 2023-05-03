@@ -112,7 +112,12 @@ func (s *server) initRoutesApi(apiGroup *gin.RouterGroup) {
 		staticRoutesEndpoint := "/static"
 
 		routes.GET(staticRoutesEndpoint, func(c *gin.Context) {
-			endpoints, _ := database.ListAllStaticEndpoints()
+			endpoints, err := database.ListAllStaticEndpoints()
+
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": errors.Wrap(err, "internal error").Error()})
+				return
+			}
 
 			c.JSON(http.StatusOK, gin.H{"endpoints": endpoints})
 		})
@@ -126,8 +131,12 @@ func (s *server) initRoutesApi(apiGroup *gin.RouterGroup) {
 
 			zlog.Info().Str("path", staticEndpoint.Path).Msg("Received create static request")
 
-			if has, _ := database.HasStaticEndpoint(staticEndpoint.Path); has {
-				c.JSON(http.StatusConflict, gin.H{"error": "The same static endpoint already exists"})
+			if _, err := database.GetStaticEndpointResponse(staticEndpoint.Path); err != nil {
+				if err.Error() == "no such path" {
+					c.JSON(http.StatusConflict, gin.H{"error": "The same static endpoint already exists"})
+				} else {
+					c.JSON(http.StatusInternalServerError, gin.H{"error": errors.Wrap(err, "internal error").Error()})
+				}
 				return
 			}
 

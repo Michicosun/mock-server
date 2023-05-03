@@ -35,7 +35,7 @@ func (c *componentsManager) Start() {
 	logger.Init(configs.GetLogConfig())
 	zlog.Info().Msg("starting...")
 
-	database.InitDB(configs.GetDatabaseConfig())
+	database.InitDB(configs.GetDatabaseConfig(), &c.ctx)
 
 	// init pool registry
 	brokers.MPRegistry.Init()

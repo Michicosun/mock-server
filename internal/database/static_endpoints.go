@@ -8,6 +8,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 const staticEndpointsCollection string = "static_endpoints"
@@ -52,6 +53,7 @@ func (s *staticEndpoints) removeStaticEndpoint(path string) error {
 }
 
 func (s *staticEndpoints) getStaticEndpointResponse(path string) (string, error) {
+	// if key doesn't exist in cache, it will be fetched via LoadFunc from database
 	res, err := s.cache.Get(path)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
@@ -64,7 +66,8 @@ func (s *staticEndpoints) getStaticEndpointResponse(path string) (string, error)
 }
 
 func (s *staticEndpoints) listAllStaticEndpoints() ([]StaticEndpoint, error) {
-	cursor, err := s.coll.Find(context.TODO(), bson.D{})
+	opts := options.Find().SetSort(bson.D{{Key: "timestamp", Value: 1}, {Key: "_id", Value: 1}})
+	cursor, err := s.coll.Find(context.TODO(), bson.D{}, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -73,18 +76,4 @@ func (s *staticEndpoints) listAllStaticEndpoints() ([]StaticEndpoint, error) {
 		return nil, err
 	}
 	return results, nil
-}
-
-func (s *staticEndpoints) hasStaticEndpoint(path string) (bool, error) {
-	if s.cache.Has(path) {
-		return true, nil
-	}
-	if _, err := s.getStaticEndpointResponse(path); err != nil {
-		if err == gcache.KeyNotFoundError {
-			return false, nil
-		} else {
-			return false, err
-		}
-	}
-	return true, nil
 }

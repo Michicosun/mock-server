@@ -9,7 +9,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-func initInMemoryDB() {
+func initInMemoryDB(ctx *context.Context) {
 	testServer, err := mim.Start(context.Background(), "5.0.2")
 	if err != nil {
 		panic(err)
@@ -20,13 +20,12 @@ func initInMemoryDB() {
 		panic(err)
 	}
 
-	db = &MongoStorage{}
-	db.Init(client)
+	db.Init(client, ctx)
 }
 
-func InitDB(cfg *configs.DatabaseConfig) {
+func InitDB(cfg *configs.DatabaseConfig, ctx *context.Context) {
 	if cfg.InMemory {
-		initInMemoryDB()
+		initInMemoryDB(ctx)
 	} else {
 		panic("Not implemented")
 	}
