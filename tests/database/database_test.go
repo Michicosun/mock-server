@@ -22,7 +22,10 @@ func TestStaticEndpoints(t *testing.T) {
 	endpoints = append(endpoints, database.StaticEndpoint{Path: "/five", Response: "five"})
 
 	for _, endpoint := range endpoints {
-		database.AddStaticEndpoint(endpoint)
+		err := database.AddStaticEndpoint(endpoint)
+		if err != nil {
+			t.Errorf("AddStaticEndpoint return err: %s", err.Error())
+		}
 	}
 
 	res, err := database.ListAllStaticEndpoints()
@@ -46,7 +49,10 @@ func TestStaticEndpoints(t *testing.T) {
 
 	for i := 0; i < 5; i++ {
 		id := rand.Int() % (5 - i)
-		database.RemoveStaticEndpoint(endpoints[id].Path)
+		err := database.RemoveStaticEndpoint(endpoints[id].Path)
+		if err != nil {
+			t.Errorf("RemoveStaticEndpoint return err: %s", err.Error())
+		}
 		endpoints = append(endpoints[:id], endpoints[id+1:]...)
 		fmt.Println(len(endpoints))
 		res, err := database.ListAllStaticEndpoints()
