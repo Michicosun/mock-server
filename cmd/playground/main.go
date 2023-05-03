@@ -245,7 +245,10 @@ func play_database() {
 		Path:     "/test",
 		Response: "Zdarova",
 	}
-	database.AddStaticEndpoint(endpoint)
+	err := database.AddStaticEndpoint(endpoint)
+	if err != nil {
+		panic(err)
+	}
 	fmt.Printf("Add endpoint %s\n", endpoint)
 	res, _ := database.ListAllStaticEndpoints()
 	fmt.Println("Found endpoints:")

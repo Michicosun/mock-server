@@ -30,8 +30,11 @@ func (s *staticEndpoints) init(client *mongo.Client) {
 }
 
 func (s *staticEndpoints) addStaticEndpoint(staticEndpoint StaticEndpoint) error {
-	s.cache.Set(staticEndpoint.Path, staticEndpoint)
-	_, err := s.coll.InsertOne(
+	err := s.cache.Set(staticEndpoint.Path, staticEndpoint)
+	if err != nil {
+		return err
+	}
+	_, err = s.coll.InsertOne(
 		context.TODO(),
 		staticEndpoint,
 	)

@@ -131,7 +131,10 @@ func (s *server) initRoutesApi(apiGroup *gin.RouterGroup) {
 				return
 			}
 
-			database.AddStaticEndpoint(staticEndpoint)
+			if err := database.AddStaticEndpoint(staticEndpoint); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": errors.Wrap(err, "internal error").Error()})
+				return
+			}
 
 			zlog.Info().Str("path", staticEndpoint.Path).Msg("Static endpoint created")
 			c.JSON(http.StatusOK, "Static endpoint successfully added!")
@@ -146,7 +149,10 @@ func (s *server) initRoutesApi(apiGroup *gin.RouterGroup) {
 
 			zlog.Info().Str("path", path).Msg("Received delete static request")
 
-			database.RemoveStaticEndpoint(path)
+			if err := database.RemoveStaticEndpoint(path); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": errors.Wrap(err, "internal error").Error()})
+				return
+			}
 
 			zlog.Info().Str("path", path).Msg("Static endpoint removed")
 			c.String(http.StatusOK, "Static endpoint successfully removed!")

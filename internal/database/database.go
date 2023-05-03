@@ -33,5 +33,8 @@ func InitDB(cfg *configs.DatabaseConfig) {
 }
 
 func Disconnect() {
-	db.client.Disconnect(context.Background())
+	err := db.client.Disconnect(context.Background())
+	if err != nil {
+		panic(err)
+	}
 }
