@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"mock-server/internal/configs"
+	"sync/atomic"
 
 	kafka "github.com/confluentinc/confluent-kafka-go/kafka"
 	zlog "github.com/rs/zerolog/log"
@@ -116,11 +117,11 @@ func (t *kafkaReadTask) read(ctx context.Context) error {
 	}
 
 	err = nil
-	run := true
+	run := atomic.Bool{}
 	read_canceled := make(chan struct{}, 1)
 
 	go func() {
-		for run {
+		for run.Load() {
 			ev := consumer.Poll(100)
 			switch e := ev.(type) {
 			case *kafka.Message:
@@ -128,7 +129,7 @@ func (t *kafkaReadTask) read(ctx context.Context) error {
 				t.msgs = append(t.msgs, e)
 			case kafka.Error:
 				err = e
-				run = false
+				run.Store(false)
 			}
 		}
 		zlog.Info().Str("task", string(t.getTaskId())).Msg("read canceled")
@@ -138,7 +139,7 @@ func (t *kafkaReadTask) read(ctx context.Context) error {
 	zlog.Info().Str("task", string(t.getTaskId())).Msg("waiting for read deadline")
 	<-ctx.Done()
 
-	run = false
+	run.Store(false)
 	consumer.Close()
 	<-read_canceled
 
