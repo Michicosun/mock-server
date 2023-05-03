@@ -20,21 +20,21 @@ func (db *MongoStorage) Init(client *mongo.Client, ctx *context.Context) {
 	db.client = client
 	db.ctx = ctx
 	db.staticEndpoints = &staticEndpoints{}
-	db.staticEndpoints.init(client)
+	db.staticEndpoints.init(client, db.ctx)
 }
 
 func AddStaticEndpoint(staticEndpoint StaticEndpoint) error {
-	return db.staticEndpoints.addStaticEndpoint(staticEndpoint)
+	return db.staticEndpoints.addStaticEndpoint(staticEndpoint, db.ctx)
 }
 
 func RemoveStaticEndpoint(path string) error {
-	return db.staticEndpoints.removeStaticEndpoint(path)
+	return db.staticEndpoints.removeStaticEndpoint(path, db.ctx)
 }
 
 func GetStaticEndpointResponse(path string) (string, error) {
-	return db.staticEndpoints.getStaticEndpointResponse(path)
+	return db.staticEndpoints.getStaticEndpointResponse(path, db.ctx)
 }
 
 func ListAllStaticEndpoints() ([]StaticEndpoint, error) {
-	return db.staticEndpoints.listAllStaticEndpoints()
+	return db.staticEndpoints.listAllStaticEndpoints(db.ctx)
 }
