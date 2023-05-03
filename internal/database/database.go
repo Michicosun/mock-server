@@ -1,12 +1,37 @@
 package database
 
-var DB Database = newInmemoryDatabase()
+import (
+	"context"
+	"mock-server/internal/configs"
 
-type Database interface {
-	// static endpoints
-	AddStaticEndpoint(path string, expected_response string)
-	RemoveStaticEndpoint(path string)
-	GetStaticEndpointResponse(path string) (string, error)
-	ListAllStaticEndpoints() []string
-	HasStaticEndpoint(path string) bool
+	mim "github.com/ONSdigital/dp-mongodb-in-memory"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+)
+
+func initInMemoryDB() {
+	testServer, err := mim.Start(context.Background(), "5.0.2")
+	if err != nil {
+		panic(err)
+	}
+
+	client, err := mongo.Connect(context.Background(), options.Client().ApplyURI(testServer.URI()))
+	if err != nil {
+		panic(err)
+	}
+
+	db = &MongoStorage{}
+	db.Init(client)
+}
+
+func InitDB(cfg *configs.DatabaseConfig) {
+	if cfg.InMemory {
+		initInMemoryDB()
+	} else {
+		panic("Not implemented")
+	}
+}
+
+func Disconnect() {
+	db.client.Disconnect(context.Background())
 }

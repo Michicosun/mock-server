@@ -110,7 +110,7 @@ func TestStaticRoutes(t *testing.T) {
 	// create route /test_url with reponse `hello`
 	requestBody := []byte(`{
 		"path": "/test_url",
-		"expected_response": "hello"
+		"response": "hello"
 	}`)
 	code = do_post(staticApiEndpoint, requestBody, t)
 	if code != 200 {
@@ -133,8 +133,8 @@ func TestStaticRoutes(t *testing.T) {
 		t.Errorf("expected 200 code response on list all request")
 	}
 
-	if body != `{"endpoints":["/test_url"]}` {
-		t.Errorf(`must be visible new route after creation: %s != {"endpoints":["/test_url"]}`, body)
+	if body != `{"endpoints":[{"path":"/test_url","response":"hello"}]}` {
+		t.Errorf(`must be visible new route after creation: %s != {"endpoints":[{"path":"/test_url","response":"hello"}]}`, body)
 	}
 
 	// detele /test_url

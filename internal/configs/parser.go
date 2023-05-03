@@ -19,6 +19,7 @@ type ServiceConfig struct {
 	Coderun    *CoderunConfig   `yaml:"coderun,omitempty"`
 	Server     *ServerConfig    `yaml:"server,omitempty"`
 	Logs       LogConfig        `yaml:"logs"`
+	Database   DatabaseConfig   `yaml:"database"`
 }
 
 var config ServiceConfig

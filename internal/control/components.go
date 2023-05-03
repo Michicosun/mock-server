@@ -6,6 +6,7 @@ import (
 	"mock-server/internal/brokers"
 	"mock-server/internal/coderun"
 	"mock-server/internal/configs"
+	"mock-server/internal/database"
 	"mock-server/internal/logger"
 	"mock-server/internal/server"
 	"os/signal"
@@ -34,7 +35,7 @@ func (c *componentsManager) Start() {
 	logger.Init(configs.GetLogConfig())
 	zlog.Info().Msg("starting...")
 
-	// TODO: init database to prefetch data
+	database.InitDB(configs.GetDatabaseConfig())
 
 	// init pool registry
 	brokers.MPRegistry.Init()
@@ -87,5 +88,5 @@ func (c *componentsManager) Stop() {
 		coderun.WorkerWatcher.Stop()
 	}
 
-	// TODO: stop database cache and connection
+	database.Disconnect()
 }

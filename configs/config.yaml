@@ -39,3 +39,6 @@ server:
     addr: "127.0.0.1:1337"
     accept_timeout: 20s
     response_timeout: 20s
+
+database:
+    inmemory: true

@@ -9,6 +9,7 @@ import (
 	"mock-server/internal/coderun"
 	"mock-server/internal/configs"
 	"mock-server/internal/control"
+	"mock-server/internal/database"
 	"mock-server/internal/util"
 	"net/http"
 	"time"
@@ -44,6 +45,7 @@ func play_brokers() {
 }
 
 func play_file_storage() {
+	fmt.Println("play_file_storage")
 	fs, err := util.NewFileStorageDriver("coderun")
 	if err != nil {
 		zlog.Error().Err(err).Msg("cannot create filestorage")
@@ -148,8 +150,7 @@ func do_get(url string) {
 
 	zlog.Info().
 		Int("status", resp.StatusCode).
-		Str("body", string(body)).
-		Msg("GET success")
+		Str("body", string(body)).Msg("GET success")
 }
 
 func do_post(url string, content []byte) {
@@ -159,16 +160,17 @@ func do_post(url string, content []byte) {
 		return
 	}
 
-	var res map[string]string
+	var body string
 
-	if err = json.NewDecoder(resp.Body).Decode(&res); err != nil {
+	if err = json.NewDecoder(resp.Body).Decode(&body); err != nil {
 		zlog.Error().Err(err).Msg("decode failed")
 		return
 	}
 
 	zlog.Info().
 		Int("status", resp.StatusCode).
-		Msg("POST success")
+		Str("body", string(body)).
+		Msg(fmt.Sprintf("POST success with message: %s", body))
 }
 
 func do_delete(url string) {
@@ -238,13 +240,28 @@ func play_server_api() {
 	}
 }
 
+func play_database() {
+	endpoint := database.StaticEndpoint{
+		Path:     "/test",
+		Response: "Zdarova",
+	}
+	database.AddStaticEndpoint(endpoint)
+	fmt.Printf("Add endpoint %s\n", endpoint)
+	res, _ := database.ListAllStaticEndpoints()
+	fmt.Println("Found endpoints:")
+	for _, endpoint := range res {
+		fmt.Println(endpoint)
+	}
+}
+
 func main() {
 	control.Components.Start()
 	defer control.Components.Stop()
 
-	play_brokers()
-	play_file_storage()
-	play_coderun()
-	play_esb()
-	play_server_api()
+	// play_brokers()
+	// play_file_storage()
+	// play_coderun()
+	// play_esb()
+	// play_server_api()
+	play_database()
 }
