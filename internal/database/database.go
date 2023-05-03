@@ -9,13 +9,15 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
+var inMemoryServer mim.Server
+
 func initInMemoryDB(ctx *context.Context) {
-	testServer, err := mim.Start(context.Background(), "5.0.2")
+	inMemoryServer, err := mim.Start(context.Background(), "5.0.2")
 	if err != nil {
 		panic(err)
 	}
 
-	client, err := mongo.Connect(context.Background(), options.Client().ApplyURI(testServer.URI()))
+	client, err := mongo.Connect(context.Background(), options.Client().ApplyURI(inMemoryServer.URI()))
 	if err != nil {
 		panic(err)
 	}
@@ -36,4 +38,5 @@ func Disconnect() {
 	if err != nil {
 		panic(err)
 	}
+	inMemoryServer.Stop(context.Background())
 }
