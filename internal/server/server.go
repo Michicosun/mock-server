@@ -113,7 +113,7 @@ func (s *server) initRoutesApi(apiGroup *gin.RouterGroup) {
 		staticRoutesEndpoint := "/static"
 
 		routes.GET(staticRoutesEndpoint, func(c *gin.Context) {
-			endpoints, err := database.ListAllStaticEndpoints()
+			endpoints, err := database.ListAllStaticEndpointPaths()
 
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": errors.Wrap(err, "internal error").Error()})

@@ -133,8 +133,8 @@ func TestStaticRoutes(t *testing.T) {
 		t.Errorf("expected 200 code response on list all request")
 	}
 
-	if body != `{"endpoints":[{"path":"/test_url","response":"hello"}]}` {
-		t.Errorf(`must be visible new route after creation: %s != {"endpoints":[{"path":"/test_url","response":"hello"}]}`, body)
+	if body != `{"endpoints":["/test_url"]}` {
+		t.Errorf(`must be visible new route after creation: %s != {"endpoints":["/test_url"]}`, body)
 	}
 
 	// detele /test_url

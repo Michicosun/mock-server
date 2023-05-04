@@ -5,9 +5,20 @@ import (
 	"math/rand"
 	"mock-server/internal/control"
 	"mock-server/internal/database"
-	"reflect"
 	"testing"
 )
+
+func comparePaths(paths []string, expected []database.StaticEndpoint) bool {
+	if len(paths) != len(expected) {
+		return false
+	}
+	for i := 0; i < len(paths); i++ {
+		if paths[i] != expected[i].Path {
+			return false
+		}
+	}
+	return true
+}
 
 func TestStaticEndpoints(t *testing.T) {
 	t.Setenv("CONFIG_PATH", "/configs/test_database_config.yaml")
@@ -28,12 +39,12 @@ func TestStaticEndpoints(t *testing.T) {
 		}
 	}
 
-	res, err := database.ListAllStaticEndpoints()
+	res, err := database.ListAllStaticEndpointPaths()
 	if err != nil {
 		t.Errorf("ListAllStaticEndpoints return err: %s", err.Error())
 	}
 
-	if !reflect.DeepEqual(res, endpoints) {
+	if !comparePaths(res, endpoints) {
 		t.Errorf("res != expected: %s != %s", res, endpoints)
 	}
 
@@ -55,12 +66,12 @@ func TestStaticEndpoints(t *testing.T) {
 		}
 		endpoints = append(endpoints[:id], endpoints[id+1:]...)
 		fmt.Println(len(endpoints))
-		res, err := database.ListAllStaticEndpoints()
+		res, err := database.ListAllStaticEndpointPaths()
 		if err != nil {
 			t.Errorf("ListAllStaticEndpoints return err: %s", err.Error())
 		}
 
-		if !reflect.DeepEqual(res, endpoints) {
+		if !comparePaths(res, endpoints) {
 			t.Errorf("res != expected: %s != %s", res, endpoints)
 		}
 	}
