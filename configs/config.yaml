@@ -37,7 +37,6 @@ coderun:
     worker:
         handle_timeout: 10s
         container:
-            need_rebuild: false
             cpu_limit: 0.5
             memory_limit_mb: 200
 

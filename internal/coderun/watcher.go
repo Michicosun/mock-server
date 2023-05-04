@@ -3,7 +3,6 @@ package coderun
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"mock-server/internal/coderun/docker-provider"
@@ -25,14 +24,10 @@ type worker struct {
 	cId     string
 }
 
-func (w *worker) RunScript(run_type string, script string, args interface{}) ([]byte, error) {
+func (w *worker) RunScript(run_type string, script string, args []byte) ([]byte, error) {
 	zlog.Info().Str("run_type", run_type).Str("script", script).Msg("preparing worker request")
-	jsonBody, err := json.Marshal(args)
-	if err != nil {
-		return nil, err
-	}
 
-	bodyReader := bytes.NewReader(jsonBody)
+	bodyReader := bytes.NewReader(args)
 	requestURL := fmt.Sprintf("http://127.0.0.1:%s/run", w.port)
 	ctx, cancel := context.WithTimeout(w.watcher.ctx, configs.GetCoderunConfig().WorkerConfig.HandleTimeout)
 	defer cancel()
@@ -51,6 +46,7 @@ func (w *worker) RunScript(run_type string, script string, args interface{}) ([]
 	}
 
 	out, err := io.ReadAll(res.Body)
+	defer res.Body.Close()
 	if err != nil {
 		return nil, err
 	}

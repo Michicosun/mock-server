@@ -54,7 +54,8 @@ func (r *requestData) log() {
 	}
 
 	loggerEvent.
-		Str("ip", r.client_ip).Str("path", r.path).
-		Int("status", r.status).Str("latency", r.latency.String()).
+		Str("ip", r.client_ip).Str("method", r.method).
+		Str("path", r.path).Int("status", r.status).
+		Str("latency", r.latency.String()).
 		Msg(msg)
 }

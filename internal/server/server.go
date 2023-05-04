@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"io"
 	"mock-server/internal/coderun"
 	"mock-server/internal/configs"
 	"mock-server/internal/database"
@@ -19,6 +20,9 @@ import (
 
 var Server = &server{}
 
+const FILE_STORAGE_PATH = "coderun/dyn_handlers"
+const FILE_STORAGE_CODERUN_PATH = "dyn_handlers"
+
 type server struct {
 	server_instance *http.Server
 	router          *gin.Engine
@@ -27,7 +31,7 @@ type server struct {
 
 func (s *server) Init(cfg *configs.ServerConfig) {
 	{
-		fs, err := util.NewFileStorageDriver("dyn_handlers")
+		fs, err := util.NewFileStorageDriver(FILE_STORAGE_PATH)
 		if err != nil {
 			panic(err)
 		}
@@ -121,26 +125,24 @@ func (s *server) initMainRoutes() {
 		if err == nil {
 			worker, err := coderun.WorkerWatcher.BorrowWorker()
 			if err != nil {
+				zlog.Error().Err(err).Msg("Failed to borrow worker")
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				return
 			}
+			defer worker.Return()
 
-			type ComplexArgs struct {
-				A string   `json:"A"`
-				B int      `json:"B"`
-				C []string `json:"C"`
+			args, err := io.ReadAll(c.Request.Body)
+			defer c.Request.Body.Close()
+			if err != nil {
+				zlog.Error().Err(err).Msg("Failed to read request body")
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
 			}
 
+			output, err := worker.RunScript(FILE_STORAGE_CODERUN_PATH, s.db.GetDynamicEndpointScriptName(path), args)
 			if err != nil {
-				zlog.Error().Err(err).Str("path", path).Msg("Failed to get script name")
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			}
-			output, err := worker.RunScript("dyn_handle", scriptName, ComplexArgs{
-				A: "sample_A",
-				B: 42,
-				C: []string{"a", "b", "c"},
-			})
-			if err != nil {
+
+				zlog.Error().Err(err).Msg("Failed to run script")
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				return
 			}
@@ -211,6 +213,7 @@ func (s *server) initRoutesApi(apiGroup *gin.RouterGroup) {
 		routes.DELETE(staticRoutesEndpoint, func(c *gin.Context) {
 			path := c.Query("path")
 			if path == "" {
+				zlog.Error().Msg("Path param not specified")
 				c.JSON(http.StatusBadRequest, gin.H{"error": "specify path param"})
 				return
 			}
@@ -256,7 +259,7 @@ func (s *server) initRoutesApi(apiGroup *gin.RouterGroup) {
 			scriptName := util.GenUniqueFilename("py")
 			zlog.Info().Str("filename", scriptName).Msg("Generated script name")
 
-			if err := s.fs.Write("", scriptName, []byte(dynamicEndpoint.Code)); err != nil {
+			if err := s.fs.Write("", scriptName, []byte(util.DecorateCodeForArgExtraction(dynamicEndpoint.Code))); err != nil {
 				zlog.Error().Err(err).Msg("Failed to write code to file")
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				return
@@ -274,11 +277,38 @@ func (s *server) initRoutesApi(apiGroup *gin.RouterGroup) {
 			c.JSON(http.StatusOK, "Dynamic endpoint successfully added")
 		})
 
-		// TODO add PUT for script updating
+		routes.PUT(dynamicRoutesEndpoint, func(c *gin.Context) {
+			var dynamicEndpoint requesttypes.DynamicEndpoint
+			if err := c.Bind(&dynamicEndpoint); err != nil {
+				zlog.Error().Err(err).Msg("Failed to bind request")
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
+
+			zlog.Info().Str("path", dynamicEndpoint.Path).Msg("Received update dynamic request")
+
+			if !s.db.HasDynamicEndpoint(dynamicEndpoint.Path) {
+				zlog.Error().Msg("Update on unexisting path")
+				c.JSON(http.StatusNotFound, gin.H{"error": "Received path was not created before"})
+				return
+			}
+
+			scriptName := s.db.GetDynamicEndpointScriptName(dynamicEndpoint.Path)
+			zlog.Info().Str("filename", scriptName).Msg("Script name")
+
+			if err := s.fs.Write("", scriptName, []byte(util.DecorateCodeForArgExtraction(dynamicEndpoint.Code))); err != nil {
+				zlog.Error().Err(err).Msg("Failed to write code to file")
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+
+			c.JSON(http.StatusNoContent, "Dynamic endpoint successfully updated")
+		})
 
 		routes.DELETE(dynamicRoutesEndpoint, func(c *gin.Context) {
 			path := c.Query("path")
-			if path != "" {
+			if path == "" {
+				zlog.Error().Msg("Path param not specified")
 				c.JSON(http.StatusBadRequest, gin.H{"error": "specify path param"})
 				return
 			}

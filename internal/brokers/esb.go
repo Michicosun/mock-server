@@ -38,9 +38,8 @@ func (e *esb) runMapper(mapper_name string, msgs [][]byte) error {
 
 	defer worker.Return()
 
-	out, err := worker.RunScript("mapper", mapper_name, MapperArgs{
-		msgs: msgs,
-	})
+	// FIXME!
+	out, err := worker.RunScript("mapper", mapper_name, []byte{})
 	if err != nil {
 		return err
 	}

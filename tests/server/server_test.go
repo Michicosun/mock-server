@@ -36,6 +36,27 @@ func do_post(url string, content []byte, t *testing.T) int {
 	return resp.StatusCode
 }
 
+func do_put(url string, content []byte, t *testing.T) int {
+	client := &http.Client{}
+
+	req, err := http.NewRequest(http.MethodPut, url, bytes.NewBuffer(content))
+	req.Header.Set("Content-Type", "application/json")
+	if err != nil {
+		t.Error(err)
+		return 0
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Error(err)
+		return 0
+	}
+
+	defer resp.Body.Close()
+
+	return resp.StatusCode
+}
+
 func do_delete(url string, t *testing.T) int {
 	client := &http.Client{}
 
@@ -56,7 +77,7 @@ func do_delete(url string, t *testing.T) int {
 	return resp.StatusCode
 }
 
-func TestStaticRoutes(t *testing.T) {
+func TestStaticRoutesSimple(t *testing.T) {
 	t.Setenv("CONFIG_PATH", "/configs/test_server_config.yaml")
 
 	control.Components.Start()
@@ -158,7 +179,7 @@ func TestStaticRoutes(t *testing.T) {
 	}
 }
 
-func TestDynamicRoutes(t *testing.T) {
+func TestDynamicRoutesSimple(t *testing.T) {
 	t.Setenv("CONFIG_PATH", "/configs/test_server_config.yaml")
 
 	control.Components.Start()
@@ -203,7 +224,17 @@ func TestDynamicRoutes(t *testing.T) {
 		t.Errorf(`list request must be empty at the begining: %s != {"endpoints":[]}`, body)
 	}
 
-	// create route /test_url with reponse `print(['noooo way', 123])`
+	// try to update non route that is not exists yet
+	updateBody := []byte(`{
+		"path": "/test_url",
+		"code": "def args(**args):\n    print(['noooo way'])"
+	}`)
+	code = do_put(dynamicApiEndpoint, updateBody, t)
+	if code != 404 {
+		t.Errorf(`expected 404 code on non created path`)
+	}
+
+	// create route /test_url with response `print(['noooo way', 123])`
 	requestBody := []byte(`{
 		"path": "/test_url",
 		"code": "print(['noooo way', 123])"
@@ -213,14 +244,30 @@ func TestDynamicRoutes(t *testing.T) {
 		t.Errorf("create route failed")
 	}
 
-	// expects `hello`
+	// expects `['noooo way', 123]\n`
 	code, body = do_get(testUrl, t)
 	if code != 200 {
 		t.Errorf("expected to be possible make request to new route")
 	}
 
-	if body != `['noooo way', 123]` {
+	if body != `"['noooo way', 123]\n"` {
 		t.Errorf(`dynamic data mismatch: %s != ['noooo way', 123]`, body)
+	}
+
+	// update code
+	code = do_put(dynamicApiEndpoint, updateBody, t)
+	if code != 204 {
+		t.Errorf("update route's code failed")
+	}
+
+	// expects `['noooo way]`
+	code, body = do_get(testUrl, t)
+	if code != 200 {
+		t.Errorf("expected to be possible make request to an updated route")
+	}
+
+	if body != `"['noooo way']\n"` {
+		t.Errorf(`dynamic data mismatch: %s != ['noooo way']`, body)
 	}
 
 	// expects ["/test_url"]
@@ -257,5 +304,38 @@ func TestDynamicRoutes(t *testing.T) {
 
 	if body != `{"endpoints":[]}` {
 		t.Errorf(`expected empty response after deletion: %s != {"endpoints":[]}`, body)
+	}
+}
+
+// TODO: Add test that examines run request on bad python code (e.g. with syntax errors)
+// N.B. Currently, such request will cause an interanl error (500), but client error is needed
+
+func TestDynamicRoutesScriptWithArgs(t *testing.T) {
+	testBodyScript := []byte(`{
+		"path": "/test_url",
+		"code": "def func(**args):\n    A, B, C = args['A'], args['B'], args['C']\n    print(A)\n    print(B - 3)\n    print(list(reversed(C)))\n"}`)
+	expectedResponse := "sample_A\n39\n['c', 'b', 'a']\n"
+
+	t.Setenv("CONFIG_PATH", "/configs/test_server_config.yaml")
+
+	control.Components.Start()
+	defer control.Components.Stop()
+
+	cfg := configs.GetServerConfig()
+	endpoint := fmt.Sprintf("http://%s", cfg.Addr)
+	dynamicApiEndpoint := endpoint + "/api/routes/dynamic"
+	testUrl := endpoint + "/test_url"
+
+	code := do_post(dynamicApiEndpoint, testBodyScript, t)
+	if code != 200 {
+		t.Errorf("failed to add new dynamic route")
+	}
+
+	code, body := do_get(testUrl, t)
+	if code != 200 {
+		t.Errorf("failed to query created dynamic route")
+	}
+	if body != expectedResponse {
+		t.Errorf(`dynamic data mismatch: %s != %s`, body, expectedResponse)
 	}
 }
