@@ -72,7 +72,7 @@ func (s *dynamicEndpoints) getDynamicEndpointScriptName(ctx context.Context, pat
 }
 
 func (s *dynamicEndpoints) listAllDynamicEndpointPaths(ctx context.Context) ([]string, error) {
-	opts := options.Find().SetSort(bson.D{{Key: "timestamp", Value: 1}, {Key: "_id", Value: 1}})
+	opts := options.Find()
 	opts = opts.SetSort(bson.D{{Key: "timestamp", Value: 1}, {Key: "_id", Value: 1}})
 	opts = opts.SetProjection(bson.D{{Key: "path", Value: 1}})
 	cursor, err := s.coll.Find(ctx, bson.D{}, opts)
