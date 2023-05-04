@@ -18,6 +18,12 @@ type dynamicEndpoints struct {
 	cache gcache.Cache
 }
 
+func createDynamicEndpoints(ctx context.Context, client *mongo.Client) *dynamicEndpoints {
+	de := &dynamicEndpoints{}
+	de.init(ctx, client)
+	return de
+}
+
 func (s *dynamicEndpoints) init(ctx context.Context, client *mongo.Client) {
 	s.coll = client.Database(databaseName).Collection(dynamicEndpointsCollection)
 	s.cache = gcache.New(0).Simple().LoaderFunc(func(path interface{}) (interface{}, error) {

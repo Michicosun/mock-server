@@ -20,10 +20,8 @@ var db = &MongoStorage{}
 func (db *MongoStorage) init(ctx context.Context, client *mongo.Client) {
 	db.client = client
 	db.ctx = ctx
-	db.staticEndpoints = &staticEndpoints{}
-	db.staticEndpoints.init(db.ctx, client)
-	db.dynamicEndpoints = &dynamicEndpoints{}
-	db.dynamicEndpoints.init(db.ctx, client)
+	db.staticEndpoints = createStaticEndpoints(db.ctx, client)
+	db.dynamicEndpoints = createDynamicEndpoints(db.ctx, client)
 }
 
 func AddStaticEndpoint(staticEndpoint StaticEndpoint) error {

@@ -18,6 +18,12 @@ type staticEndpoints struct {
 	cache gcache.Cache
 }
 
+func createStaticEndpoints(ctx context.Context, client *mongo.Client) *staticEndpoints {
+	se := &staticEndpoints{}
+	se.init(ctx, client)
+	return se
+}
+
 func (s *staticEndpoints) init(ctx context.Context, client *mongo.Client) {
 	s.coll = client.Database(databaseName).Collection(staticEndpointsCollection)
 	s.cache = gcache.New(0).Simple().LoaderFunc(func(path interface{}) (interface{}, error) {
