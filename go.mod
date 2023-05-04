@@ -3,6 +3,8 @@ module mock-server
 go 1.19
 
 require (
+	github.com/ONSdigital/dp-mongodb-in-memory v1.6.0
+	github.com/bluele/gcache v0.0.2
 	github.com/docker/docker v23.0.5+incompatible
 	github.com/docker/go-connections v0.4.0
 	github.com/gammazero/deque v0.2.1
@@ -12,6 +14,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/rabbitmq/amqp091-go v1.8.0
 	github.com/rs/zerolog v1.29.1
+	go.mongodb.org/mongo-driver v1.11.4
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -21,10 +24,8 @@ require golang.org/x/sys v0.7.0 // indirect
 require (
 	github.com/Microsoft/go-winio v0.6.1 // indirect
 	github.com/ONSdigital/dp-api-clients-go/v2 v2.252.0 // indirect
-	github.com/ONSdigital/dp-mongodb-in-memory v1.6.0 // indirect
 	github.com/ONSdigital/dp-net/v2 v2.9.1 // indirect
 	github.com/ONSdigital/log.go/v2 v2.4.1 // indirect
-	github.com/bluele/gcache v0.0.2 // indirect
 	github.com/bytedance/sonic v1.8.8 // indirect
 	github.com/chenzhuoyu/base64x v0.0.0-20221115062448-fe3a3abad311 // indirect
 	github.com/containerd/containerd v1.7.0 // indirect
@@ -64,7 +65,6 @@ require (
 	github.com/xdg-go/scram v1.1.2 // indirect
 	github.com/xdg-go/stringprep v1.0.4 // indirect
 	github.com/youmark/pkcs8 v0.0.0-20201027041543-1326539a0a0a // indirect
-	go.mongodb.org/mongo-driver v1.11.4 // indirect
 	golang.org/x/arch v0.3.0 // indirect
 	golang.org/x/crypto v0.8.0 // indirect
 	golang.org/x/mod v0.10.0 // indirect
