@@ -40,8 +40,8 @@ type qWriteTask interface {
 }
 
 type TaskError struct {
-	task_id TaskId
-	err     error
+	Task_id TaskId
+	Err     error
 }
 
 type mpTaskScheduler struct {
@@ -99,8 +99,8 @@ func (mps *mpTaskScheduler) submitWriteTask(task qWriteTask) TaskId {
 func (mps *mpTaskScheduler) submitError(id TaskId, err error) {
 	zlog.Error().Str("task", string(id)).Err(err).Msg("task failed")
 	qerr := TaskError{
-		task_id: id,
-		err:     err,
+		Task_id: id,
+		Err:     err,
 	}
 	select {
 	case mps.errors <- qerr:

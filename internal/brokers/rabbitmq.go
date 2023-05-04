@@ -75,7 +75,7 @@ func (t *rabbitMQTask) getTaskId() TaskId {
 	return TaskId(fmt.Sprintf("rabbitmq:%s:%s", t.pool.getName(), t.pool.queue))
 }
 
-func getConnectionString(s *configs.RabbitMQConnectionConfig) string {
+func (t *rabbitMQTask) getConnectionString(s *configs.RabbitMQConnectionConfig) string {
 	return fmt.Sprintf("amqp://%s:%s@%s:%d/", s.Username, s.Password, s.Host, s.Port)
 }
 
@@ -87,7 +87,7 @@ func (t *rabbitMQTask) connectAndPrepare() error {
 		return err
 	}
 
-	conn, err := amqp.Dial(getConnectionString(s))
+	conn, err := amqp.Dial(t.getConnectionString(s))
 	if err != nil {
 		return err
 	}

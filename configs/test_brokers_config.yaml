@@ -16,6 +16,12 @@ brokers:
         username: "guest"
         password: "guest"
 
+    kafka:
+        host: "localhost"
+        port: 9092
+        client_id: "client"
+        group_id: "group"
+
 coderun:
     worker_cnt: 1
     worker:

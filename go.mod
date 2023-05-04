@@ -5,6 +5,7 @@ go 1.19
 require (
 	github.com/ONSdigital/dp-mongodb-in-memory v1.6.0
 	github.com/bluele/gcache v0.0.2
+	github.com/confluentinc/confluent-kafka-go v1.9.2
 	github.com/docker/docker v23.0.5+incompatible
 	github.com/docker/go-connections v0.4.0
 	github.com/gammazero/deque v0.2.1
