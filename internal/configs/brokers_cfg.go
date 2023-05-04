@@ -23,6 +23,13 @@ type RabbitMQConnectionConfig struct {
 	Password string `yaml:"password"`
 }
 
+type KafkaConnectionConfig struct {
+	Host     string `yaml:"host"`
+	Port     int    `yaml:"port"`
+	ClientId string `yaml:"client_id"`
+	GroupId  string `yaml:"group_id"`
+}
+
 type MPTaskSchedulerConfig struct {
 	R_workers     uint32        `yaml:"r_workers"`
 	W_workers     uint32        `yaml:"w_workers"`
@@ -33,6 +40,7 @@ type MPTaskSchedulerConfig struct {
 type BrokersConfig struct {
 	Scheduler MPTaskSchedulerConfig    `yaml:"scheduler"`
 	Rabbitmq  RabbitMQConnectionConfig `yaml:"rabbitmq"`
+	Kafka     KafkaConnectionConfig    `yaml:"kafka"`
 }
 
 func GetMPTaskSchedulerConfig() *MPTaskSchedulerConfig {
@@ -73,4 +81,40 @@ func GetRabbitMQConnectionConfig() (*RabbitMQConnectionConfig, error) {
 	}
 
 	return &config.Brokers.Rabbitmq, nil
+}
+
+var kafka_init sync.Once
+
+func KafkaConnectionConfigInit() {
+	host, ok := os.LookupEnv("KAFKA_HOST")
+	if ok {
+		config.Brokers.Kafka.Host = host
+	}
+
+	s, ok := os.LookupEnv("KAFKA_PORT")
+	if port, err := strconv.Atoi(s); ok && err != nil {
+		config.Brokers.Kafka.Port = port
+	}
+
+	client_id, ok := os.LookupEnv("CLIENT_ID")
+	if ok {
+		config.Brokers.Kafka.ClientId = client_id
+	}
+
+	group_id, ok := os.LookupEnv("GROUP_ID")
+	if ok {
+		config.Brokers.Kafka.GroupId = group_id
+	}
+}
+
+func GetKafkaConnectionConfig() (*KafkaConnectionConfig, error) {
+	kafka_init.Do(KafkaConnectionConfigInit)
+
+	if config.Brokers.Kafka.Host == "" {
+		return nil, &UndefinedConnection{
+			broker: "kafka",
+		}
+	}
+
+	return &config.Brokers.Kafka, nil
 }

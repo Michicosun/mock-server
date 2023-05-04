@@ -20,16 +20,7 @@ func TestScheduler(t *testing.T) {
 		}
 	}()
 
-	handler, err := brokers.MPRegistry.AddMessagePool(brokers.NewRabbitMQMessagePool("test-pool", "test-mock-queue"))
-	if err != nil {
-		t.Error(err)
-	}
-
-	handler.NewReadTask().Schedule()
-
-	time.Sleep(1 * time.Second)
-
-	handler, err = brokers.MPRegistry.GetMessagePool("test-pool")
+	handler, err := brokers.MPRegistry.AddMessagePool(brokers.NewKafkaMessagePool("test-pool", "test-topic"))
 	if err != nil {
 		t.Error(err)
 	}
@@ -40,7 +31,16 @@ func TestScheduler(t *testing.T) {
 		[]byte(fmt.Sprintf("%d", 42)),
 	}).Schedule()
 
-	time.Sleep(1 * time.Second)
+	time.Sleep(3 * time.Second)
+
+	handler, err = brokers.MPRegistry.GetMessagePool("test-pool")
+	if err != nil {
+		t.Error(err)
+	}
+
+	handler.NewReadTask().Schedule()
+
+	time.Sleep(3 * time.Second)
 
 	// TODO check database for read records
 }
