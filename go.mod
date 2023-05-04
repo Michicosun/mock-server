@@ -13,18 +13,18 @@ require (
 	github.com/kavu/go_reuseport v1.5.0
 	github.com/moznion/go-optional v0.10.0
 	github.com/pkg/errors v0.9.1
-	github.com/rabbitmq/amqp091-go v1.8.0
+	github.com/rabbitmq/amqp091-go v1.8.1
 	github.com/rs/zerolog v1.29.1
-	go.mongodb.org/mongo-driver v1.11.4
+	go.mongodb.org/mongo-driver v1.11.6
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gopkg.in/yaml.v3 v3.0.1
 )
 
-require golang.org/x/sys v0.7.0 // indirect
+require golang.org/x/sys v0.8.0 // indirect
 
 require (
 	github.com/Microsoft/go-winio v0.6.1 // indirect
-	github.com/ONSdigital/dp-api-clients-go/v2 v2.252.0 // indirect
+	github.com/ONSdigital/dp-api-clients-go/v2 v2.253.0 // indirect
 	github.com/ONSdigital/dp-net/v2 v2.9.1 // indirect
 	github.com/ONSdigital/log.go/v2 v2.4.1 // indirect
 	github.com/bytedance/sonic v1.8.8 // indirect
@@ -49,7 +49,7 @@ require (
 	github.com/mattn/go-isatty v0.0.18 // indirect
 	github.com/moby/patternmatcher v0.5.0 // indirect
 	github.com/moby/sys/sequential v0.5.0 // indirect
-	github.com/moby/term v0.0.0-20221205130635-1aeaba878587 // indirect
+	github.com/moby/term v0.5.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/montanaflynn/stats v0.7.0 // indirect
@@ -70,7 +70,7 @@ require (
 	golang.org/x/crypto v0.8.0 // indirect
 	golang.org/x/mod v0.10.0 // indirect
 	golang.org/x/net v0.9.0 // indirect
-	golang.org/x/sync v0.1.0 // indirect
+	golang.org/x/sync v0.2.0 // indirect
 	golang.org/x/text v0.9.0 // indirect
 	golang.org/x/tools v0.8.0 // indirect
 	google.golang.org/protobuf v1.30.0 // indirect

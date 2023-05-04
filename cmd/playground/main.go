@@ -240,7 +240,6 @@ func play_server_api() {
 	}
 }
 
-
 func play_database() {
 	endpoint := database.StaticEndpoint{
 		Path:     "/test",
@@ -251,11 +250,12 @@ func play_database() {
 		panic(err)
 	}
 	fmt.Printf("Add endpoint %s\n", endpoint)
-	res, _ := database.ListAllStaticEndpoints()
+	res, _ := database.ListAllStaticEndpointPaths()
 	fmt.Println("Found endpoints:")
 	for _, endpoint := range res {
 		fmt.Println(endpoint)
 	}
+}
 
 func play_kafka() {
 	go func() {
