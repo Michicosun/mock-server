@@ -110,7 +110,7 @@ func TestStaticRoutes(t *testing.T) {
 	// create route /test_url with reponse `hello`
 	requestBody := []byte(`{
 		"path": "/test_url",
-		"expected_response": "hello"
+		"response": "hello"
 	}`)
 	code = do_post(staticApiEndpoint, requestBody, t)
 	if code != 200 {

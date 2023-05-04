@@ -40,3 +40,6 @@ logs:
     maxSize: 500
     maxBackups: 5
     maxAge: 30
+
+database:
+    inmemory: true
