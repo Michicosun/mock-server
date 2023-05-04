@@ -7,5 +7,5 @@ type StaticEndpoint struct {
 
 type DynamicEndpoint struct {
 	Path       string `bson:"path" json:"path"`
-	ScriptName string `bson:"code" json:"code"`
+	ScriptName string `bson:"script_name" json:"script_name"`
 }
