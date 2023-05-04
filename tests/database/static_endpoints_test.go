@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func comparePaths(paths []string, expected []database.StaticEndpoint) bool {
+func compareStaticEndpointPaths(paths []string, expected []database.StaticEndpoint) bool {
 	if len(paths) != len(expected) {
 		return false
 	}
@@ -41,10 +41,10 @@ func TestStaticEndpoints(t *testing.T) {
 
 	res, err := database.ListAllStaticEndpointPaths()
 	if err != nil {
-		t.Errorf("ListAllStaticEndpoints return err: %s", err.Error())
+		t.Errorf("ListAllStaticEndpointPaths return err: %s", err.Error())
 	}
 
-	if !comparePaths(res, endpoints) {
+	if !compareStaticEndpointPaths(res, endpoints) {
 		t.Errorf("res != expected: %s != %s", res, endpoints)
 	}
 
@@ -71,7 +71,7 @@ func TestStaticEndpoints(t *testing.T) {
 			t.Errorf("ListAllStaticEndpoints return err: %s", err.Error())
 		}
 
-		if !comparePaths(res, endpoints) {
+		if !compareStaticEndpointPaths(res, endpoints) {
 			t.Errorf("res != expected: %s != %s", res, endpoints)
 		}
 	}

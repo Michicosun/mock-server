@@ -11,23 +11,23 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-const staticEndpointsCollection string = "static_endpoints"
+const dynamicEndpointsCollection string = "dynamic_endpoints"
 
-type staticEndpoints struct {
+type dynamicEndpoints struct {
 	coll  *mongo.Collection
 	cache gcache.Cache
 }
 
-func createStaticEndpoints(ctx context.Context, client *mongo.Client) *staticEndpoints {
-	se := &staticEndpoints{}
-	se.init(ctx, client)
-	return se
+func createDynamicEndpoints(ctx context.Context, client *mongo.Client) *dynamicEndpoints {
+	de := &dynamicEndpoints{}
+	de.init(ctx, client)
+	return de
 }
 
-func (s *staticEndpoints) init(ctx context.Context, client *mongo.Client) {
-	s.coll = client.Database(databaseName).Collection(staticEndpointsCollection)
+func (s *dynamicEndpoints) init(ctx context.Context, client *mongo.Client) {
+	s.coll = client.Database(databaseName).Collection(dynamicEndpointsCollection)
 	s.cache = gcache.New(0).Simple().LoaderFunc(func(path interface{}) (interface{}, error) {
-		var res StaticEndpoint
+		var res DynamicEndpoint
 		err := s.coll.FindOne(
 			ctx,
 			bson.D{primitive.E{Key: "path", Value: path.(string)}},
@@ -36,19 +36,19 @@ func (s *staticEndpoints) init(ctx context.Context, client *mongo.Client) {
 	}).Build()
 }
 
-func (s *staticEndpoints) addStaticEndpoint(ctx context.Context, staticEndpoint StaticEndpoint) error {
-	err := s.cache.Set(staticEndpoint.Path, staticEndpoint)
+func (s *dynamicEndpoints) addDynamicEndpoint(ctx context.Context, dynamicEndpoint DynamicEndpoint) error {
+	err := s.cache.Set(dynamicEndpoint.Path, dynamicEndpoint)
 	if err != nil {
 		return err
 	}
 	_, err = s.coll.InsertOne(
 		ctx,
-		staticEndpoint,
+		dynamicEndpoint,
 	)
 	return err
 }
 
-func (s *staticEndpoints) removeStaticEndpoint(ctx context.Context, path string) error {
+func (s *dynamicEndpoints) removeDynamicEndpoint(ctx context.Context, path string) error {
 	s.cache.Remove(path)
 	_, err := s.coll.DeleteOne(
 		ctx,
@@ -58,7 +58,7 @@ func (s *staticEndpoints) removeStaticEndpoint(ctx context.Context, path string)
 	return err
 }
 
-func (s *staticEndpoints) getStaticEndpointResponse(ctx context.Context, path string) (string, error) {
+func (s *dynamicEndpoints) getDynamicEndpointScriptName(ctx context.Context, path string) (string, error) {
 	// if key doesn't exist in cache, it will be fetched via LoadFunc from database
 	res, err := s.cache.Get(path)
 	if err != nil {
@@ -68,10 +68,10 @@ func (s *staticEndpoints) getStaticEndpointResponse(ctx context.Context, path st
 			return "", err
 		}
 	}
-	return res.(StaticEndpoint).Response, nil
+	return res.(DynamicEndpoint).ScriptName, nil
 }
 
-func (s *staticEndpoints) listAllStaticEndpointPaths(ctx context.Context) ([]string, error) {
+func (s *dynamicEndpoints) listAllDynamicEndpointPaths(ctx context.Context) ([]string, error) {
 	opts := options.Find()
 	opts = opts.SetSort(bson.D{{Key: "timestamp", Value: 1}, {Key: "_id", Value: 1}})
 	opts = opts.SetProjection(bson.D{{Key: "path", Value: 1}})
@@ -79,7 +79,7 @@ func (s *staticEndpoints) listAllStaticEndpointPaths(ctx context.Context) ([]str
 	if err != nil {
 		return nil, err
 	}
-	var results = []StaticEndpoint{}
+	var results = []DynamicEndpoint{}
 	if err = cursor.All(ctx, &results); err != nil {
 		return nil, err
 	}
