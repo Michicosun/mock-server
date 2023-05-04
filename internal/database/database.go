@@ -25,7 +25,7 @@ func initInMemoryDB(ctx context.Context) {
 	db.init(ctx, client)
 }
 
-func InitDB(cfg *configs.DatabaseConfig, ctx context.Context) {
+func InitDB(ctx context.Context, cfg *configs.DatabaseConfig) {
 	if cfg.InMemory {
 		initInMemoryDB(ctx)
 	} else {
