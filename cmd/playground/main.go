@@ -313,11 +313,11 @@ func main() {
 	control.Components.Start()
 	defer control.Components.Stop()
 
-	// play_brokers()
-	// play_file_storage()
-	// play_coderun()
+	play_brokers()
+	play_file_storage()
+	play_coderun()
 	play_esb()
-	// play_server_api()
-	// play_database()
-	// play_kafka()
+	play_server_api()
+	play_database()
+	play_kafka()
 }
