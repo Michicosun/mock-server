@@ -132,7 +132,8 @@ func TestDynamicRoutesSimple(t *testing.T) {
 func TestDynamicRoutesScriptWithArgs(t *testing.T) {
 	testBodyScript := []byte(`{
 		"path": "/test_url",
-		"code": "def func(A, B, C):\n    print(A)\n    print(B - 3)\n    print(list(reversed(C)))\n"}`)
+		"code": "def func(A, B, C):\n    print(A)\n    print(B - 3)\n    print(list(reversed(C)))\n"
+	}`)
 	testScriptArgs := []byte(`{
 		"A": "hello, it's me",
 		"B": 42,
@@ -161,5 +162,39 @@ func TestDynamicRoutesScriptWithArgs(t *testing.T) {
 	}
 	if bytes.Equal(body, expectedResponse) {
 		t.Errorf(`dynamic data mismatch: %s != %s`, body, expectedResponse)
+	}
+}
+
+func TestDynamicRoutesDoublePost(t *testing.T) {
+	t.Setenv("CONFIG_PATH", "/configs/test_server_config.yaml")
+
+	control.Components.Start()
+	defer control.Components.Stop()
+
+	cfg := configs.GetServerConfig()
+	endpoint := fmt.Sprintf("http://%s", cfg.Addr)
+	dynamicApiEndpoint := endpoint + "/api/routes/dynamic"
+
+	testBodyScript := []byte(`{
+		"path": "/test_url",
+		"code": "def func(A, B, C):\n    pass"
+	}`)
+	code := hlp.DoPost(dynamicApiEndpoint, testBodyScript, t)
+	if code != 200 {
+		t.Errorf("create route failed: Expected 200 != %d", code)
+	}
+
+	code = hlp.DoPost(dynamicApiEndpoint, testBodyScript, t)
+	if code != 409 {
+		t.Errorf("expected to receive conflict: expected 409 != %d", code)
+	}
+
+	otherTestBodyScript := []byte(`{
+		"path": "/test_url",
+		"code": "def func(A, B, C):\n    pass"
+	}`)
+	code = hlp.DoPut(dynamicApiEndpoint, otherTestBodyScript, t)
+	if code != 204 {
+		t.Errorf("expected to be possible to update already created endpoint: expected 204 != %d", code)
 	}
 }

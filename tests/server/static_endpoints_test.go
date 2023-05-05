@@ -99,3 +99,37 @@ func TestStaticRoutesSimple(t *testing.T) {
 		t.Errorf(`expected empty response after deletion: %s != {"endpoints":[]}`, body)
 	}
 }
+
+func TestStaticRoutesDoublePost(t *testing.T) {
+	t.Setenv("CONFIG_PATH", "/configs/test_server_config.yaml")
+
+	control.Components.Start()
+	defer control.Components.Stop()
+
+	cfg := configs.GetServerConfig()
+	endpoint := fmt.Sprintf("http://%s", cfg.Addr)
+	staticApiEndpoint := endpoint + "/api/routes/static"
+
+	requestBody := []byte(`{
+		"path": "/test_url",
+		"expected_response": "hello"
+	}`)
+	code := hlp.DoPost(staticApiEndpoint, requestBody, t)
+	if code != 200 {
+		t.Errorf("create route failed: expected 200 != %d", code)
+	}
+
+	code = hlp.DoPost(staticApiEndpoint, requestBody, t)
+	if code != 409 {
+		t.Errorf("expected to receive conflict: expected 409 != %d", code)
+	}
+
+	otherRequestBody := []byte(`{
+		"path": "/test_url",
+		"expected_response": "hello"
+	}`)
+	code = hlp.DoPut(staticApiEndpoint, otherRequestBody, t)
+	if code != 204 {
+		t.Errorf("expected to be possible to update already created endpoint: expected 204 != %d", code)
+	}
+}
