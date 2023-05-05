@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"mock-server/internal/configs"
 	"mock-server/internal/control"
-	hlp "mock-server/internal/test_helpers"
 	"testing"
 )
 
@@ -24,7 +23,7 @@ func TestDynamicRoutesSimple(t *testing.T) {
 	testUrl := endpoint + "/test_url"
 
 	// no routes created -> 400
-	code, body := hlp.DoGet(testUrl, t)
+	code, body := DoGet(testUrl, t)
 	if code != 400 {
 		t.Errorf("expected 400 on mismatch get")
 	}
@@ -34,7 +33,7 @@ func TestDynamicRoutesSimple(t *testing.T) {
 	}
 
 	// expects []
-	code, body = hlp.DoGet(dynamicApiEndpoint, t)
+	code, body = DoGet(dynamicApiEndpoint, t)
 	if code != 200 {
 		t.Errorf("expected 200 code response on list all request")
 	}
@@ -48,7 +47,7 @@ func TestDynamicRoutesSimple(t *testing.T) {
 		"path": "/test_url",
 		"code": "def func():\n    print(['noooo way'])"
 	}`)
-	code = hlp.DoPut(dynamicApiEndpoint, updateBody, t)
+	code = DoPut(dynamicApiEndpoint, updateBody, t)
 	if code != 404 {
 		t.Errorf(`expected 404 code on non created path`)
 	}
@@ -58,13 +57,13 @@ func TestDynamicRoutesSimple(t *testing.T) {
 		"path": "/test_url",
 		"code": "def func():\n    print(['noooo way', 123])"
 	}`)
-	code = hlp.DoPost(dynamicApiEndpoint, requestBody, t)
+	code = DoPost(dynamicApiEndpoint, requestBody, t)
 	if code != 200 {
 		t.Errorf("create route failed")
 	}
 
 	// expects `[\"noooo way\", 123]\n`
-	code, body = hlp.DoGet(testUrl, t)
+	code, body = DoGet(testUrl, t)
 	if code != 200 {
 		t.Errorf("expected to be possible make request to new route")
 	}
@@ -74,13 +73,13 @@ func TestDynamicRoutesSimple(t *testing.T) {
 	}
 
 	// update code
-	code = hlp.DoPut(dynamicApiEndpoint, updateBody, t)
+	code = DoPut(dynamicApiEndpoint, updateBody, t)
 	if code != 204 {
 		t.Errorf("update route's code failed")
 	}
 
 	// expects `['noooo way]`
-	code, body = hlp.DoGet(testUrl, t)
+	code, body = DoGet(testUrl, t)
 	if code != 200 {
 		t.Errorf("expected to be possible make request to an updated route")
 	}
@@ -90,7 +89,7 @@ func TestDynamicRoutesSimple(t *testing.T) {
 	}
 
 	// expects ["/test_url"]
-	code, body = hlp.DoGet(dynamicApiEndpoint, t)
+	code, body = DoGet(dynamicApiEndpoint, t)
 	if code != 200 {
 		t.Errorf("expected 200 code response on list all request")
 	}
@@ -100,13 +99,13 @@ func TestDynamicRoutesSimple(t *testing.T) {
 	}
 
 	// detele /test_url
-	code = hlp.DoDelete(dynamicApiEndpoint+"?path=/test_url", t)
+	code = DoDelete(dynamicApiEndpoint+"?path=/test_url", t)
 	if code != 204 {
 		t.Errorf("it must be possible to delete route")
 	}
 
 	// /test_url deleted -> 400
-	code, body = hlp.DoGet(testUrl, t)
+	code, body = DoGet(testUrl, t)
 	if code != 400 {
 		t.Errorf("expected to be impossible to request deleted route: %d != 400", code)
 	}
@@ -116,7 +115,7 @@ func TestDynamicRoutesSimple(t *testing.T) {
 	}
 
 	// expects []
-	code, body = hlp.DoGet(dynamicApiEndpoint, t)
+	code, body = DoGet(dynamicApiEndpoint, t)
 	if code != 200 {
 		t.Errorf("expected 200 code response on list all request")
 	}
@@ -151,12 +150,12 @@ func TestDynamicRoutesScriptWithArgs(t *testing.T) {
 	dynamicApiEndpoint := endpoint + "/api/routes/dynamic"
 	testUrl := endpoint + "/test_url"
 
-	code := hlp.DoPost(dynamicApiEndpoint, testBodyScript, t)
+	code := DoPost(dynamicApiEndpoint, testBodyScript, t)
 	if code != 200 {
 		t.Errorf("failed to add new dynamic route")
 	}
 
-	code, body := hlp.DoGetWithBody(testUrl, testScriptArgs, t)
+	code, body := DoGetWithBody(testUrl, testScriptArgs, t)
 	if code != 200 {
 		t.Errorf("failed to query created dynamic route")
 	}
@@ -179,12 +178,12 @@ func TestDynamicRoutesDoublePost(t *testing.T) {
 		"path": "/test_url",
 		"code": "def func(A, B, C):\n    pass"
 	}`)
-	code := hlp.DoPost(dynamicApiEndpoint, testBodyScript, t)
+	code := DoPost(dynamicApiEndpoint, testBodyScript, t)
 	if code != 200 {
 		t.Errorf("create route failed: Expected 200 != %d", code)
 	}
 
-	code = hlp.DoPost(dynamicApiEndpoint, testBodyScript, t)
+	code = DoPost(dynamicApiEndpoint, testBodyScript, t)
 	if code != 409 {
 		t.Errorf("expected to receive conflict: expected 409 != %d", code)
 	}
@@ -193,7 +192,7 @@ func TestDynamicRoutesDoublePost(t *testing.T) {
 		"path": "/test_url",
 		"code": "def func(A, B, C):\n    pass"
 	}`)
-	code = hlp.DoPut(dynamicApiEndpoint, otherTestBodyScript, t)
+	code = DoPut(dynamicApiEndpoint, otherTestBodyScript, t)
 	if code != 204 {
 		t.Errorf("expected to be possible to update already created endpoint: expected 204 != %d", code)
 	}
