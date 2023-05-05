@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/pkg/errors"
 	zlog "github.com/rs/zerolog/log"
@@ -64,5 +65,5 @@ func RunPythonScript(ctx context.Context, req *RunRequest) (string, error) {
 	}
 
 	zlog.Info().Str("type", req.RunType).Str("script", req.Script).Msg("successfully finished")
-	return stdout.String(), nil
+	return strings.ReplaceAll(strings.TrimSpace(stdout.String()), "'", "\""), nil
 }

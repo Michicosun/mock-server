@@ -7,6 +7,7 @@ import (
 	"io"
 	"mock-server/internal/coderun/docker-provider"
 	"mock-server/internal/configs"
+	"mock-server/internal/util"
 	"net"
 	"net/http"
 	"sync"
@@ -24,10 +25,37 @@ type worker struct {
 	cId     string
 }
 
-func (w *worker) RunScript(run_type string, script string, args []byte) ([]byte, error) {
+type Args struct {
+	args [][]byte
+}
+
+func NewDynHandleArgs(args []byte) *Args {
+	return &Args{
+		args: [][]byte{args},
+	}
+}
+
+func NewMapperArgs(msgs [][]byte) *Args {
+	return &Args{
+		args: msgs,
+	}
+}
+
+func (w *worker) RunScript(run_type string, script string, args *Args) ([]byte, error) {
 	zlog.Info().Str("run_type", run_type).Str("script", script).Msg("preparing worker request")
 
-	bodyReader := bytes.NewReader(args)
+	var byteArgs []byte
+	switch run_type {
+	case "dyn_handle":
+		byteArgs = args.args[0]
+	case "mapper":
+		byteArgs = util.WrapArgsForEsb(args.args)
+
+	default:
+		return nil, fmt.Errorf("invalid run type: %s. Expected `dyn_handle` or `mapper`", run_type)
+	}
+
+	bodyReader := bytes.NewReader(byteArgs)
 	requestURL := fmt.Sprintf("http://127.0.0.1:%s/run", w.port)
 	ctx, cancel := context.WithTimeout(w.watcher.ctx, configs.GetCoderunConfig().WorkerConfig.HandleTimeout)
 	defer cancel()

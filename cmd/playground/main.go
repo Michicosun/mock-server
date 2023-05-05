@@ -64,11 +64,13 @@ func play_file_storage() {
 	zlog.Info().Str("text", s).Msg("read file successfuly")
 }
 
-type ComplexArgs struct {
-	A string   `json:"A"`
-	B int      `json:"B"`
-	C []string `json:"C"`
+var TEST_ARGS = coderun.NewDynHandleArgs([]byte(`
+{
+	"A": "sample_A",
+	"B": 42,
+	"C": ["a", "b", "c"]
 }
+`))
 
 func play_coderun() {
 	for i := 0; i < 10; i += 1 {
@@ -78,11 +80,7 @@ func play_coderun() {
 			return
 		}
 
-		out, err := worker.RunScript("mapper", "test.py", ComplexArgs{
-			A: "sample_A",
-			B: 42,
-			C: []string{"a", "b", "c"},
-		})
+		out, err := worker.RunScript("mapper", "test.py", TEST_ARGS)
 		if err != nil {
 			zlog.Error().Err(err).Msg("run script")
 			return

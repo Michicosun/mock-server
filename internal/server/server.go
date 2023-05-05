@@ -20,8 +20,8 @@ import (
 
 var Server = &server{}
 
-const FILE_STORAGE_PATH = "coderun/dyn_handlers"
-const FILE_STORAGE_CODERUN_PATH = "dyn_handlers"
+const FS_ROOT_DIR = "coderun"
+const FS_CODE_DIR = "dyn_handle"
 
 type server struct {
 	server_instance *http.Server
@@ -31,7 +31,7 @@ type server struct {
 
 func (s *server) Init(cfg *configs.ServerConfig) {
 	{
-		fs, err := util.NewFileStorageDriver(FILE_STORAGE_PATH)
+		fs, err := util.NewFileStorageDriver(FS_ROOT_DIR)
 		if err != nil {
 			panic(err)
 		}
@@ -139,7 +139,7 @@ func (s *server) initMainRoutes() {
 				return
 			}
 
-			output, err := worker.RunScript(FILE_STORAGE_CODERUN_PATH, s.db.GetDynamicEndpointScriptName(path), args)
+			output, err := worker.RunScript(FS_CODE_DIR, s.db.GetDynamicEndpointScriptName(path), coderun.NewDynHandleArgs(args))
 			if err != nil {
 
 				zlog.Error().Err(err).Msg("Failed to run script")
@@ -259,7 +259,7 @@ func (s *server) initRoutesApi(apiGroup *gin.RouterGroup) {
 			scriptName := util.GenUniqueFilename("py")
 			zlog.Info().Str("filename", scriptName).Msg("Generated script name")
 
-			if err := s.fs.Write("", scriptName, []byte(util.DecorateCodeForArgExtraction(dynamicEndpoint.Code))); err != nil {
+			if err := s.fs.Write(FS_CODE_DIR, scriptName, util.WrapCodeForDynHandle(dynamicEndpoint.Code)); err != nil {
 				zlog.Error().Err(err).Msg("Failed to write code to file")
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				return
@@ -296,7 +296,7 @@ func (s *server) initRoutesApi(apiGroup *gin.RouterGroup) {
 			scriptName := s.db.GetDynamicEndpointScriptName(dynamicEndpoint.Path)
 			zlog.Info().Str("filename", scriptName).Msg("Script name")
 
-			if err := s.fs.Write("", scriptName, []byte(util.DecorateCodeForArgExtraction(dynamicEndpoint.Code))); err != nil {
+			if err := s.fs.Write(FS_CODE_DIR, scriptName, util.WrapCodeForDynHandle(dynamicEndpoint.Code)); err != nil {
 				zlog.Error().Err(err).Msg("Failed to write code to file")
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				return

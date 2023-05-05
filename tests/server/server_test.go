@@ -10,20 +10,20 @@ import (
 	"testing"
 )
 
-func do_get(url string, t *testing.T) (int, string) {
+func do_get(url string, t *testing.T) (int, []byte) {
 	resp, err := http.Get(url)
 	if err != nil {
 		t.Error(err)
-		return 0, ""
+		return 0, nil
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		t.Error(err)
-		return 0, ""
+		return 0, nil
 	}
 
-	return resp.StatusCode, string(body)
+	return resp.StatusCode, body
 }
 
 func do_get_with_body(url string, content []byte, t *testing.T) (int, []byte) {
@@ -115,13 +115,13 @@ func TestStaticRoutesSimple(t *testing.T) {
 
 	url := endpoint + "/api/ping"
 	code, body := do_get(url, t)
-
 	if code != 200 {
 		t.Errorf("ping status code != 200")
 	}
 
-	if body != `"Ping yourself, I have another work!"` {
-		t.Errorf(`ping: %s != "Ping yourself, I have another work!\n"`, body)
+	if !bytes.Equal(body, []byte(`"Ping yourself, I have another work!"`)) {
+		t.Errorf(`ping: %s != "Ping yourself, I have another work!"`, body)
+		panic(1)
 	}
 
 	//////////////////////////////////////////////////////
@@ -134,7 +134,7 @@ func TestStaticRoutesSimple(t *testing.T) {
 		t.Errorf("expected 400 on mismatch get")
 	}
 
-	if body != `{"error":"no such path: /test_url"}` {
+	if !bytes.Equal(body, []byte(`{"error":"no such path: /test_url"}`)) {
 		t.Errorf(`mismatch get: %s != {"error":"no such path: /test_url"}`, body)
 	}
 
@@ -144,7 +144,7 @@ func TestStaticRoutesSimple(t *testing.T) {
 		t.Errorf("expected 200 code response on list all request")
 	}
 
-	if body != `{"endpoints":[]}` {
+	if !bytes.Equal(body, []byte(`{"endpoints":[]}`)) {
 		t.Errorf(`list request must be empty at the begining: %s != {"endpoints":[]}`, body)
 	}
 
@@ -164,7 +164,7 @@ func TestStaticRoutesSimple(t *testing.T) {
 		t.Errorf("expected to be possible make request to new route")
 	}
 
-	if body != `"hello"` {
+	if !bytes.Equal(body, []byte(`"hello"`)) {
 		t.Errorf(`static data mismatch: %s != "hello"`, body)
 	}
 
@@ -174,7 +174,7 @@ func TestStaticRoutesSimple(t *testing.T) {
 		t.Errorf("expected 200 code response on list all request")
 	}
 
-	if body != `{"endpoints":["/test_url"]}` {
+	if !bytes.Equal(body, []byte(`{"endpoints":["/test_url"]}`)) {
 		t.Errorf(`must be visible new route after creation: %s != {"endpoints":["/test_url"]}`, body)
 	}
 
@@ -190,7 +190,7 @@ func TestStaticRoutesSimple(t *testing.T) {
 		t.Errorf("expected to be impossible to request deleted route: %d != 400", code)
 	}
 
-	if body != `{"error":"no such path: /test_url"}` {
+	if !bytes.Equal(body, []byte(`{"error":"no such path: /test_url"}`)) {
 		t.Errorf("unexpected error description")
 	}
 
@@ -200,7 +200,7 @@ func TestStaticRoutesSimple(t *testing.T) {
 		t.Errorf("expected 200 code response on list all request")
 	}
 
-	if body != `{"endpoints":[]}` {
+	if !bytes.Equal(body, []byte(`{"endpoints":[]}`)) {
 		t.Errorf(`expected empty response after deletion: %s != {"endpoints":[]}`, body)
 	}
 }
@@ -222,7 +222,7 @@ func TestDynamicRoutesSimple(t *testing.T) {
 		t.Errorf("ping status code != 200")
 	}
 
-	if body != `"Ping yourself, I have another work!"` {
+	if !bytes.Equal(body, []byte(`"Ping yourself, I have another work!"`)) {
 		t.Errorf(`ping: %s != "Ping yourself, I have another work!\n"`, body)
 	}
 
@@ -236,7 +236,7 @@ func TestDynamicRoutesSimple(t *testing.T) {
 		t.Errorf("expected 400 on mismatch get")
 	}
 
-	if body != `{"error":"no such path: /test_url"}` {
+	if !bytes.Equal(body, []byte(`{"error":"no such path: /test_url"}`)) {
 		t.Errorf(`mismatch get: %s != {"error":"no such path: /test_url"}`, body)
 	}
 
@@ -246,7 +246,7 @@ func TestDynamicRoutesSimple(t *testing.T) {
 		t.Errorf("expected 200 code response on list all request")
 	}
 
-	if body != `{"endpoints":[]}` {
+	if !bytes.Equal(body, []byte(`{"endpoints":[]}`)) {
 		t.Errorf(`list request must be empty at the begining: %s != {"endpoints":[]}`, body)
 	}
 
@@ -270,14 +270,14 @@ func TestDynamicRoutesSimple(t *testing.T) {
 		t.Errorf("create route failed")
 	}
 
-	// expects `['noooo way', 123]\n`
+	// expects `[\"noooo way\", 123]\n`
 	code, body = do_get(testUrl, t)
 	if code != 200 {
 		t.Errorf("expected to be possible make request to new route")
 	}
 
-	if body != `"['noooo way', 123]\n"` {
-		t.Errorf(`dynamic data mismatch: %s != ['noooo way', 123]`, body)
+	if !bytes.Equal(body, []byte(`"[\"noooo way\", 123]"`)) {
+		t.Errorf(`dynamic data mismatch: %s != ["noooo way", 123]`, body)
 	}
 
 	// update code
@@ -292,8 +292,8 @@ func TestDynamicRoutesSimple(t *testing.T) {
 		t.Errorf("expected to be possible make request to an updated route")
 	}
 
-	if body != `"['noooo way']\n"` {
-		t.Errorf(`dynamic data mismatch: %s != ['noooo way']`, body)
+	if !bytes.Equal(body, []byte(`"[\"noooo way\"]"`)) {
+		t.Errorf(`dynamic data mismatch: %s != [\"noooo way\"]`, body)
 	}
 
 	// expects ["/test_url"]
@@ -302,7 +302,7 @@ func TestDynamicRoutesSimple(t *testing.T) {
 		t.Errorf("expected 200 code response on list all request")
 	}
 
-	if body != `{"endpoints":["/test_url"]}` {
+	if !bytes.Equal(body, []byte(`{"endpoints":["/test_url"]}`)) {
 		t.Errorf(`must be visible new route after creation: %s != {"endpoints":["/test_url"]}`, body)
 	}
 
@@ -318,7 +318,7 @@ func TestDynamicRoutesSimple(t *testing.T) {
 		t.Errorf("expected to be impossible to request deleted route: %d != 400", code)
 	}
 
-	if body != `{"error":"no such path: /test_url"}` {
+	if !bytes.Equal(body, []byte(`{"error":"no such path: /test_url"}`)) {
 		t.Errorf("unexpected error description")
 	}
 
@@ -328,7 +328,7 @@ func TestDynamicRoutesSimple(t *testing.T) {
 		t.Errorf("expected 200 code response on list all request")
 	}
 
-	if body != `{"endpoints":[]}` {
+	if !bytes.Equal(body, []byte(`{"endpoints":[]}`)) {
 		t.Errorf(`expected empty response after deletion: %s != {"endpoints":[]}`, body)
 	}
 }
@@ -345,7 +345,7 @@ func TestDynamicRoutesScriptWithArgs(t *testing.T) {
 		"B": 42,
 		"C": ["a", "b", "c"]
 	}`)
-	expectedResponse := []byte("hello, it's me\n39\n['c', 'b', 'a']\n")
+	expectedResponse := []byte("hello, it's me\n39\n[\"c\", \"b\", \"a\"]")
 
 	t.Setenv("CONFIG_PATH", "/configs/test_server_config.yaml")
 

@@ -1,13 +1,23 @@
 package broker_tests
 
 import (
-	"fmt"
 	"mock-server/internal/brokers"
 	"mock-server/internal/control"
 	"mock-server/internal/util"
 	"testing"
 	"time"
 )
+
+var TEST_SCRIPT = util.WrapCodeForEsb(`
+def func(msgs):
+	print(msgs[::-1])
+`)
+var TEST_ARGS = [][]byte{
+	[]byte("msg1"),
+	[]byte("msg2"),
+	[]byte("msg3"),
+}
+var EXPECTED_OUTPUT = "['msg3', 'msg2', 'msg1']\n"
 
 func TestEsb(t *testing.T) {
 	t.Setenv("CONFIG_PATH", "/configs/test_brokers_config.yaml")
@@ -36,7 +46,7 @@ func TestEsb(t *testing.T) {
 		t.Error(err)
 	}
 
-	err = fs.Write("mapper", "test-mapper.py", []byte(`print([[72, 69, 76, 76, 79], [87, 79, 82, 76, 68], [33]])`))
+	err = fs.Write("mapper", "test-mapper.py", TEST_SCRIPT)
 	if err != nil {
 		t.Error(err)
 	}
@@ -48,18 +58,17 @@ func TestEsb(t *testing.T) {
 
 	///////////////////////////////////////////////////////////////////////////////////////
 
+	// schedule read -- wait for args
 	pool1.NewReadTask().Schedule()
 
 	time.Sleep(2 * time.Second)
 
-	pool1.NewWriteTask([][]byte{
-		[]byte(fmt.Sprintf("%d", 40)),
-		[]byte(fmt.Sprintf("%d", 41)),
-		[]byte(fmt.Sprintf("%d", 42)),
-	}).Schedule()
+	// push args to first pool
+	pool1.NewWriteTask(TEST_ARGS).Schedule()
 
 	time.Sleep(2 * time.Second)
 
+	// schedule read -- pull script invocation result
 	pool2.NewReadTask().Schedule()
 
 	time.Sleep(10 * time.Second)

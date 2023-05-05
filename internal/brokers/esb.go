@@ -26,10 +26,6 @@ func (e *esb) Init() {
 	// fetch db
 }
 
-type MapperArgs struct {
-	msgs [][]byte
-}
-
 func (e *esb) runMapper(mapper_name string, msgs [][]byte) error {
 	worker, err := coderun.WorkerWatcher.BorrowWorker()
 	if err != nil {
@@ -38,8 +34,7 @@ func (e *esb) runMapper(mapper_name string, msgs [][]byte) error {
 
 	defer worker.Return()
 
-	// FIXME!
-	out, err := worker.RunScript("mapper", mapper_name, []byte{})
+	out, err := worker.RunScript("mapper", mapper_name, coderun.NewMapperArgs(msgs))
 	if err != nil {
 		return err
 	}
