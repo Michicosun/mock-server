@@ -9,8 +9,7 @@ import (
 )
 
 var TEST_SCRIPT = util.DecorateCodeForArgExtraction(`
-def func(**args):
-	A, B, C = args['A'], args['B'], args['C']
+def func(A, B, C):
 	print(A)
 	print(B - 3)
 	print(list(reversed(C)))

@@ -26,6 +26,32 @@ func do_get(url string, t *testing.T) (int, string) {
 	return resp.StatusCode, string(body)
 }
 
+func do_get_with_body(url string, content []byte, t *testing.T) (int, []byte) {
+	client := &http.Client{}
+
+	req, err := http.NewRequest(http.MethodGet, url, bytes.NewBuffer(content))
+	req.Header.Set("Content-Type", "application/json")
+	if err != nil {
+		t.Error(err)
+		return 0, nil
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Error(err)
+		return 0, nil
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	defer resp.Body.Close()
+	if err != nil {
+		t.Error(err)
+		return 0, nil
+	}
+
+	return resp.StatusCode, body
+}
+
 func do_post(url string, content []byte, t *testing.T) int {
 	resp, err := http.Post(url, "application/json", bytes.NewBuffer(content))
 	if err != nil {
@@ -227,7 +253,7 @@ func TestDynamicRoutesSimple(t *testing.T) {
 	// try to update non route that is not exists yet
 	updateBody := []byte(`{
 		"path": "/test_url",
-		"code": "def args(**args):\n    print(['noooo way'])"
+		"code": "def func():\n    print(['noooo way'])"
 	}`)
 	code = do_put(dynamicApiEndpoint, updateBody, t)
 	if code != 404 {
@@ -237,7 +263,7 @@ func TestDynamicRoutesSimple(t *testing.T) {
 	// create route /test_url with response `print(['noooo way', 123])`
 	requestBody := []byte(`{
 		"path": "/test_url",
-		"code": "print(['noooo way', 123])"
+		"code": "def func():\n    print(['noooo way', 123])"
 	}`)
 	code = do_post(dynamicApiEndpoint, requestBody, t)
 	if code != 200 {
@@ -313,8 +339,13 @@ func TestDynamicRoutesSimple(t *testing.T) {
 func TestDynamicRoutesScriptWithArgs(t *testing.T) {
 	testBodyScript := []byte(`{
 		"path": "/test_url",
-		"code": "def func(**args):\n    A, B, C = args['A'], args['B'], args['C']\n    print(A)\n    print(B - 3)\n    print(list(reversed(C)))\n"}`)
-	expectedResponse := "sample_A\n39\n['c', 'b', 'a']\n"
+		"code": "def func(A, B, C):\n    print(A)\n    print(B - 3)\n    print(list(reversed(C)))\n"}`)
+	testScriptArgs := []byte(`{
+		"A": "hello, it's me",
+		"B": 42,
+		"C": ["a", "b", "c"]
+	}`)
+	expectedResponse := []byte("hello, it's me\n39\n['c', 'b', 'a']\n")
 
 	t.Setenv("CONFIG_PATH", "/configs/test_server_config.yaml")
 
@@ -331,11 +362,11 @@ func TestDynamicRoutesScriptWithArgs(t *testing.T) {
 		t.Errorf("failed to add new dynamic route")
 	}
 
-	code, body := do_get(testUrl, t)
+	code, body := do_get_with_body(testUrl, testScriptArgs, t)
 	if code != 200 {
 		t.Errorf("failed to query created dynamic route")
 	}
-	if body != expectedResponse {
+	if bytes.Equal(body, expectedResponse) {
 		t.Errorf(`dynamic data mismatch: %s != %s`, body, expectedResponse)
 	}
 }

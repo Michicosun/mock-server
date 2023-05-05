@@ -45,6 +45,11 @@ func RunPythonScript(ctx context.Context, req *RunRequest) (string, error) {
 		return "", fmt.Errorf("script: %s not exists", script_full_path)
 	}
 
+	if len(req.Args) == 0 {
+		zlog.Info().Msg("Empty args. Mapping into empty object: {}")
+		req.Args = []byte("{}")
+	}
+	zlog.Info().Str("args", string(req.Args)).Msg("Saving args")
 	if err = os.WriteFile("data.json", req.Args, 0644); err != nil {
 		return "", errors.Wrap(err, "dump args to file failed")
 	}
