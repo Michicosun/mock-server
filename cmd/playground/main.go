@@ -270,12 +270,12 @@ func play_database() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("Add endpoint %s\n", endpoint)
+	zlog.Info().
+		Str("endpoint", endpoint.Path).
+		Str("response", endpoint.Response).
+		Msg("Added")
 	res, _ := database.ListAllStaticEndpointPaths()
-	fmt.Println("Found endpoints:")
-	for _, endpoint := range res {
-		fmt.Println(endpoint)
-	}
+	zlog.Info().Interface("endpoints", res).Msg("Queried")
 }
 
 func play_kafka() {
