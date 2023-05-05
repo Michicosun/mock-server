@@ -45,7 +45,6 @@ func play_brokers() {
 }
 
 func play_file_storage() {
-	fmt.Println("play_file_storage")
 	fs, err := util.NewFileStorageDriver("coderun")
 	if err != nil {
 		zlog.Error().Err(err).Msg("cannot create filestorage")
@@ -191,7 +190,7 @@ func do_post(url string, content []byte) {
 	zlog.Info().
 		Int("status", resp.StatusCode).
 		Str("body", string(body)).
-		Msg(fmt.Sprintf("POST success with message: %s", body))
+		Msg("POST successfully")
 }
 
 func do_delete(url string) {
