@@ -123,7 +123,7 @@ sudo systemctl start mock-server.service
 sudo systemctl restart mock-server.service
 
 echo "Wait 3 seconds until started"
-sleep 3
+sleep 10
 
 echo "Try ping mock-server locally"
 if curl -s http://localhost:1337/api/ping; then
