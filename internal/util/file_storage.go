@@ -2,11 +2,13 @@ package util
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 )
 
-type fileStorage struct {
+type FileStorage struct {
 	prefix string
 }
 
@@ -23,13 +25,13 @@ func createIfNotExists(path string) error {
 	return nil
 }
 
-func createFileStorage() (*fileStorage, error) {
+func createFileStorage() (*FileStorage, error) {
 	file_storage_root, err := FileStorageRoot()
 	if err != nil {
 		return nil, err
 	}
 
-	return &fileStorage{
+	return &FileStorage{
 		prefix: file_storage_root,
 	}, nil
 }
@@ -52,7 +54,7 @@ func FileStorageRoot() (string, error) {
 	return file_storage_root, nil
 }
 
-func NewFileStorageDriver(prefix string) (*fileStorage, error) {
+func NewFileStorageDriver(prefix string) (*FileStorage, error) {
 	driver, err := createFileStorage()
 	if err != nil {
 		return nil, err
@@ -67,7 +69,7 @@ func NewFileStorageDriver(prefix string) (*fileStorage, error) {
 	return driver, nil
 }
 
-func (fs *fileStorage) Read(prefix string, filename string) (string, error) {
+func (fs *FileStorage) Read(prefix string, filename string) (string, error) {
 	full_path := filepath.Join(fs.prefix, prefix, filename)
 
 	file, err := os.ReadFile(full_path)
@@ -78,7 +80,7 @@ func (fs *fileStorage) Read(prefix string, filename string) (string, error) {
 	return string(file), nil
 }
 
-func (fs *fileStorage) Write(prefix string, filename string, data []byte) error {
+func (fs *FileStorage) Write(prefix string, filename string, data []byte) error {
 	folder := filepath.Join(fs.prefix, prefix)
 	err := createIfNotExists(folder)
 	if err != nil {
@@ -102,4 +104,8 @@ func (fs *fileStorage) Write(prefix string, filename string, data []byte) error 
 	}
 
 	return nil
+}
+
+func GenUniqueFilename(ext string) string {
+	return fmt.Sprintf("script_%s.%s", time.Now().Format("20060102150405"), ext)
 }

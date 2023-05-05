@@ -3,7 +3,6 @@ package configs
 import "time"
 
 type ContainerConfig struct {
-	NeedRebuild   bool    `yaml:"need_rebuild"`
 	CPULimit      float64 `yaml:"cpu_limit"`
 	MemoryLimitMB float64 `yaml:"memory_limit_mb"`
 }

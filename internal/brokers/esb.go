@@ -26,11 +26,7 @@ func (e *esb) Init() {
 	// fetch db
 }
 
-type MapperArgs struct {
-	msgs [][]byte
-}
-
-func (e *esb) runMapper(mapper_name string, msgs [][]byte) error {
+func (e *esb) runMapper(mapper_name string, msgs *[][]byte) error {
 	worker, err := coderun.WorkerWatcher.BorrowWorker()
 	if err != nil {
 		return err
@@ -38,17 +34,20 @@ func (e *esb) runMapper(mapper_name string, msgs [][]byte) error {
 
 	defer worker.Return()
 
-	out, err := worker.RunScript("mapper", mapper_name, MapperArgs{
-		msgs: msgs,
-	})
+	out, err := worker.RunScript("mapper", mapper_name, coderun.NewMapperArgs(*msgs))
 	if err != nil {
 		return err
 	}
 
 	zlog.Debug().Str("mapped_msgs", string(out)).Msg("got mapped data")
 
-	if err = json.Unmarshal(out, &msgs); err != nil {
+	var mappedMsgs []string
+	if err = json.Unmarshal(out, &mappedMsgs); err != nil {
 		return err
+	}
+	*msgs = make([][]byte, 0)
+	for i := range mappedMsgs {
+		*msgs = append(*msgs, []byte(mappedMsgs[i]))
 	}
 
 	return nil
@@ -69,7 +68,7 @@ func (e *esb) submit(pool_name_in string, msgs [][]byte) error {
 	}
 
 	if record.use_mapper {
-		err = e.runMapper(record.mapper, msgs)
+		err = e.runMapper(record.mapper, &msgs)
 		if err != nil {
 			return err
 		}

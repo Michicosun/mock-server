@@ -16,8 +16,8 @@ import (
 
 //// format
 // Headers:
-// - run_type -- {mapper, dyn_handle}
-// - script
+// - RunType -- {mapper, dyn_handle}
+// - Script
 // Body
 // - json -- {arg: argval}
 
@@ -82,8 +82,9 @@ func main() {
 	zlog.Logger = zlog.Logger.With().Str("port", port).Logger()
 
 	http.HandleFunc("/run", runHandle)
-	err := http.ListenAndServe(fmt.Sprintf(":%s", port), nil)
 
-	zlog.Error().Err(err).Msg("server start failed")
-	panic(err)
+	if err := http.ListenAndServe(fmt.Sprintf(":%s", port), nil); err != nil && err != http.ErrServerClosed {
+		zlog.Error().Err(err).Msg("server start failed")
+		panic(err)
+	}
 }

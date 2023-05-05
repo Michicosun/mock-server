@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/pkg/errors"
 	zlog "github.com/rs/zerolog/log"
@@ -45,8 +46,12 @@ func RunPythonScript(ctx context.Context, req *RunRequest) (string, error) {
 		return "", fmt.Errorf("script: %s not exists", script_full_path)
 	}
 
-	err = os.WriteFile("data.json", req.Args, 0644)
-	if err != nil {
+	if len(req.Args) == 0 {
+		zlog.Info().Msg("Empty args. Mapping into empty object: {}")
+		req.Args = []byte("{}")
+	}
+	zlog.Info().Str("args", string(req.Args)).Msg("Saving args")
+	if err = os.WriteFile("data.json", req.Args, 0644); err != nil {
 		return "", errors.Wrap(err, "dump args to file failed")
 	}
 
@@ -60,5 +65,5 @@ func RunPythonScript(ctx context.Context, req *RunRequest) (string, error) {
 	}
 
 	zlog.Info().Str("type", req.RunType).Str("script", req.Script).Msg("successfully finished")
-	return stdout.String(), nil
+	return strings.ReplaceAll(strings.TrimSpace(stdout.String()), "'", "\""), nil
 }

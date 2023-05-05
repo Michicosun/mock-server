@@ -3,11 +3,11 @@ package coderun
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"mock-server/internal/coderun/docker-provider"
 	"mock-server/internal/configs"
+	"mock-server/internal/util"
 	"net"
 	"net/http"
 	"sync"
@@ -25,14 +25,37 @@ type worker struct {
 	cId     string
 }
 
-func (w *worker) RunScript(run_type string, script string, args interface{}) ([]byte, error) {
+type Args struct {
+	args [][]byte
+}
+
+func NewDynHandleArgs(args []byte) *Args {
+	return &Args{
+		args: [][]byte{args},
+	}
+}
+
+func NewMapperArgs(msgs [][]byte) *Args {
+	return &Args{
+		args: msgs,
+	}
+}
+
+func (w *worker) RunScript(run_type string, script string, args *Args) ([]byte, error) {
 	zlog.Info().Str("run_type", run_type).Str("script", script).Msg("preparing worker request")
-	jsonBody, err := json.Marshal(args)
-	if err != nil {
-		return nil, err
+
+	var byteArgs []byte
+	switch run_type {
+	case "dyn_handle":
+		byteArgs = args.args[0]
+	case "mapper":
+		byteArgs = util.WrapArgsForEsb(args.args)
+
+	default:
+		return nil, fmt.Errorf("invalid run type: %s. Expected `dyn_handle` or `mapper`", run_type)
 	}
 
-	bodyReader := bytes.NewReader(jsonBody)
+	bodyReader := bytes.NewReader(byteArgs)
 	requestURL := fmt.Sprintf("http://127.0.0.1:%s/run", w.port)
 	ctx, cancel := context.WithTimeout(w.watcher.ctx, configs.GetCoderunConfig().WorkerConfig.HandleTimeout)
 	defer cancel()
@@ -51,6 +74,7 @@ func (w *worker) RunScript(run_type string, script string, args interface{}) ([]
 	}
 
 	out, err := io.ReadAll(res.Body)
+	defer res.Body.Close()
 	if err != nil {
 		return nil, err
 	}
@@ -177,6 +201,7 @@ func (w *watcher) Init(ctx context.Context, cfg *configs.CoderunConfig) error {
 	for i := 0; i < configs.GetCoderunConfig().WorkerCnt; i += 1 {
 		err = w.startNewWorker()
 		if err != nil {
+			w.Stop()
 			return err
 		}
 	}

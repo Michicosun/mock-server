@@ -125,7 +125,7 @@ func (dp *DockerProvider) BuildWorkerImage() error {
 	}
 
 	if has_worker_images {
-		if dp.cfg.NeedRebuild {
+		if _, set := os.LookupEnv("REBUILD_CONTAINER"); set {
 			if err := dp.PruneWorkerImages(); err != nil {
 				return errors.Wrap(err, "prune old images")
 			}

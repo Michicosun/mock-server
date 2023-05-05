@@ -1,12 +1,20 @@
 use_components:
   server: true
   brokers: false
-  coderun: false
+  coderun: true
 
 server:
     addr: "127.0.0.1:1337"
     accept_timeout: 20s
     response_timeout: 20s
+
+coderun:
+    worker_cnt: 1
+    worker:
+        handle_timeout: 10s
+        container:
+            cpu_limit: 0.5
+            memory_limit_mb: 200
 
 logs:
     level: 0

@@ -2,7 +2,6 @@ package database
 
 import (
 	"context"
-	"errors"
 
 	"github.com/bluele/gcache"
 	"go.mongodb.org/mongo-driver/bson"
@@ -37,6 +36,11 @@ func (s *staticEndpoints) init(ctx context.Context, client *mongo.Client) {
 }
 
 func (s *staticEndpoints) addStaticEndpoint(ctx context.Context, staticEndpoint StaticEndpoint) error {
+	// FIXME (Do not create new element when element with the same path already exists)
+	if err := RemoveStaticEndpoint(staticEndpoint.Path); err != nil {
+		return err
+	}
+
 	err := s.cache.Set(staticEndpoint.Path, staticEndpoint)
 	if err != nil {
 		return err
@@ -63,7 +67,7 @@ func (s *staticEndpoints) getStaticEndpointResponse(ctx context.Context, path st
 	res, err := s.cache.Get(path)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
-			return "", errors.New("no such path")
+			return "", ErrNoSuchPath
 		} else {
 			return "", err
 		}
