@@ -37,7 +37,9 @@ func (s *staticEndpoints) init(ctx context.Context, client *mongo.Client) {
 
 func (s *staticEndpoints) addStaticEndpoint(ctx context.Context, staticEndpoint StaticEndpoint) error {
 	// FIXME (Do not create new element when element with the same path already exists)
-	RemoveStaticEndpoint(staticEndpoint.Path)
+	if err := RemoveStaticEndpoint(staticEndpoint.Path); err != nil {
+		return err
+	}
 
 	err := s.cache.Set(staticEndpoint.Path, staticEndpoint)
 	if err != nil {
