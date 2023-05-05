@@ -73,13 +73,33 @@ func TestStaticRoutesSimple(t *testing.T) {
 		t.Errorf(`must be visible new route after creation: %s != {"endpoints":["/test_url"]}`, body)
 	}
 
+	// update  created route /test_url, set response `hehe`
+	otherRequestBody := []byte(`{
+		"path": "/test_url",
+		"expected_response": "hehe"
+	}`)
+	code = hlp.DoPut(staticApiEndpoint, otherRequestBody, t)
+	if code != 204 {
+		t.Errorf("update route failed")
+	}
+
+	// expects `hehe`
+	code, body = hlp.DoGet(testUrl, t)
+	if code != 200 {
+		t.Errorf("expected to be possible make request to updated route")
+	}
+
+	if !bytes.Equal(body, []byte(`"hehe"`)) {
+		t.Errorf(`static data mismatch: %s != "hehe"`, body)
+	}
+
 	// detele /test_url
 	code = hlp.DoDelete(staticApiEndpoint+"?path=/test_url", t)
 	if code != 204 {
 		t.Errorf("it must be possible to delete route")
 	}
 
-	// /test_url deleted -> 404
+	// /test_url deleted -> 400
 	code, body = hlp.DoGet(testUrl, t)
 	if code != 400 {
 		t.Errorf("expected to be impossible to request deleted route: %d != 400", code)

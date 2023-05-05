@@ -105,7 +105,7 @@ func TestDynamicRoutesSimple(t *testing.T) {
 		t.Errorf("it must be possible to delete route")
 	}
 
-	// /test_url deleted -> 404
+	// /test_url deleted -> 400
 	code, body = hlp.DoGet(testUrl, t)
 	if code != 400 {
 		t.Errorf("expected to be impossible to request deleted route: %d != 400", code)

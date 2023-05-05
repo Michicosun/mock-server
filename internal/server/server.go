@@ -168,28 +168,28 @@ func (s *server) initRoutesApiStatic(routes *gin.RouterGroup) {
 
 		zlog.Info().Str("path", staticEndpoint.Path).Msg("Received update static request")
 
-		expectedResponse, err := database.GetStaticEndpointResponse(staticEndpoint.Path)
-		if err == database.ErrNoSuchPath {
-			zlog.Error().Msg("Update on unexisting path")
-			c.JSON(http.StatusNotFound, gin.H{"error": "Received path was not created before"})
-			return
-		}
+		has, err := database.HasStaticEndpoint(staticEndpoint.Path)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		if !has {
+			zlog.Error().Msg("Update on unexisting path")
+			c.JSON(http.StatusNotFound, gin.H{"error": "Received path was not created before"})
 			return
 		}
 
 		if err := database.AddStaticEndpoint(database.StaticEndpoint{
 			Path:     staticEndpoint.Path,
-			Response: expectedResponse,
+			Response: staticEndpoint.ExpectedResponse,
 		}); err != nil {
 			zlog.Error().Err(err).Msg("Failed to add static endpoint")
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 
-		zlog.Info().Str("path", staticEndpoint.Path).Msg("Static endpoint created")
-		c.JSON(http.StatusNoContent, "Static endpoint successfully added!")
+		zlog.Info().Str("path", staticEndpoint.Path).Msg("Static endpoint updated")
+		c.JSON(http.StatusNoContent, "Static endpoint successfully updated!")
 	})
 
 	routes.DELETE(staticRoutesEndpoint, func(c *gin.Context) {
@@ -304,6 +304,7 @@ func (s *server) initRoutesApiDynamic(routes *gin.RouterGroup) {
 			return
 		}
 
+		zlog.Info().Str("path", dynamicEndpoint.Path).Msg("Dynamic endpoint updated")
 		c.JSON(http.StatusNoContent, "Dynamic endpoint successfully updated")
 	})
 
@@ -317,7 +318,10 @@ func (s *server) initRoutesApiDynamic(routes *gin.RouterGroup) {
 
 		zlog.Info().Str("path", path).Msg("Received delete dynamic request")
 
-		database.RemoveDynamicEndpoint(path)
+		if err := database.RemoveDynamicEndpoint(path); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
 
 		zlog.Info().Str("path", path).Msg("Dynamic endpoint removed")
 		c.JSON(http.StatusNoContent, "Dynamic endpoint successfully removed")

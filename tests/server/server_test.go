@@ -65,7 +65,7 @@ func TestServerSameNamespaceForEndpoints(t *testing.T) {
 	}
 
 	// wipe
-	code = hlp.DoDelete(staticApiEndpoint, t)
+	code = hlp.DoDelete(staticApiEndpoint+"?path=/test_url", t)
 	if code != 204 {
 		t.Errorf("expected to be possible to delete existing endpoint")
 	}
