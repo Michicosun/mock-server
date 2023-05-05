@@ -36,6 +36,9 @@ func (s *dynamicEndpoints) init(ctx context.Context, client *mongo.Client) {
 }
 
 func (s *dynamicEndpoints) addDynamicEndpoint(ctx context.Context, dynamicEndpoint DynamicEndpoint) error {
+	// FIXME (Same as in `addStaticEndpoint`)
+	RemoveDynamicEndpoint(dynamicEndpoint.Path)
+
 	err := s.cache.Set(dynamicEndpoint.Path, dynamicEndpoint)
 	if err != nil {
 		return err
