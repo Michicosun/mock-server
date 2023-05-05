@@ -73,6 +73,7 @@ func (s *server) Start() {
 
 		if err := s.server_instance.Serve(ln); err != nil && err != http.ErrServerClosed {
 			zlog.Error().Err(err).Msg("failure while server working")
+			panic(err)
 		}
 	}()
 

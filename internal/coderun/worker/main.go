@@ -83,7 +83,7 @@ func main() {
 
 	http.HandleFunc("/run", runHandle)
 
-	if err := http.ListenAndServe(fmt.Sprintf(":%s", port), nil); err != nil {
+	if err := http.ListenAndServe(fmt.Sprintf(":%s", port), nil); err != nil && err != http.ErrServerClosed {
 		zlog.Error().Err(err).Msg("server start failed")
 		panic(err)
 	}
