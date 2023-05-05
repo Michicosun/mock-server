@@ -1,4 +1,4 @@
-package broker_tests
+package brokers_test
 
 import (
 	"mock-server/internal/brokers"

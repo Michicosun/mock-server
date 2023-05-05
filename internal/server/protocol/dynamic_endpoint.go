@@ -1,4 +1,4 @@
-package requesttypes
+package protocol
 
 type DynamicEndpoint struct {
 	Path string `json:"path"`
