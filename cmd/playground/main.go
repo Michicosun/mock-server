@@ -64,7 +64,8 @@ func play_file_storage() {
 	zlog.Info().Str("text", s).Msg("read file successfuly")
 }
 
-var TEST_ARGS = coderun.NewDynHandleArgs([]byte(`
+func play_coderun() {
+	var ARGS = coderun.NewDynHandleArgs([]byte(`
 {
 	"A": "sample_A",
 	"B": 42,
@@ -72,7 +73,6 @@ var TEST_ARGS = coderun.NewDynHandleArgs([]byte(`
 }
 `))
 
-func play_coderun() {
 	for i := 0; i < 10; i += 1 {
 		worker, err := coderun.WorkerWatcher.BorrowWorker()
 		if err != nil {
@@ -80,7 +80,7 @@ func play_coderun() {
 			return
 		}
 
-		out, err := worker.RunScript("mapper", "test.py", TEST_ARGS)
+		out, err := worker.RunScript("mapper", "test.py", ARGS)
 		if err != nil {
 			zlog.Error().Err(err).Msg("run script")
 			return
@@ -93,43 +93,66 @@ func play_coderun() {
 }
 
 func play_esb() {
-	pool1, _ := brokers.MPRegistry.AddMessagePool(brokers.NewRabbitMQMessagePool("test-pool-1", "test-mock-queue-1"))
-	pool2, _ := brokers.MPRegistry.AddMessagePool(brokers.NewRabbitMQMessagePool("test-pool-2", "test-mock-queue-2"))
-
-	fs, _ := util.NewFileStorageDriver("coderun")
-	err := fs.Write("mapper", "test-mapper.py", []byte(`print([[72, 69, 76, 76, 79], [87, 79, 82, 76, 68], [33]])`))
-	if err != nil {
-		zlog.Error().Err(err).Msg("write to file")
-		return
-	}
-
-	err = brokers.Esb.AddEsbRecordWithMapper("test-pool-1", "test-pool-2", "test-mapper.py")
-	if err != nil {
-		zlog.Error().Err(err).Msg("add esb record")
-		return
-	}
-
-	///////////////////////////////////////////////////////////////////////////////////////
-
 	go func() {
 		for x := range brokers.MPTaskScheduler.Errors() {
 			fmt.Println(x)
 		}
 	}()
 
-	pool1.NewReadTask().Schedule()
+	var SCRIPT_BASIC = util.WrapCodeForEsb(`
+def func(msgs):
+    print(["Helllo body"])
+`)
+	var ARGS_BASIC = [][]byte{}
 
-	time.Sleep(2 * time.Second)
+	var SCRIPT_HARD = util.WrapCodeForEsb(`
+def func(msgs):
+	print(msgs[::-1])
+`)
+	var ARGS_HARD = [][]byte{
+		[]byte("msg1"),
+		[]byte("msg2"),
+		[]byte("msg3"),
+	}
 
-	pool1.NewWriteTask([][]byte{
-		[]byte(fmt.Sprintf("%d", 40)),
-		[]byte(fmt.Sprintf("%d", 41)),
-		[]byte(fmt.Sprintf("%d", 42)),
-	}).Schedule()
+	pool1, _ := brokers.MPRegistry.AddMessagePool(brokers.NewRabbitMQMessagePool("test-pool-1", "test-mock-queue-1"))
+	pool2, _ := brokers.MPRegistry.AddMessagePool(brokers.NewRabbitMQMessagePool("test-pool-2", "test-mock-queue-2"))
+	pool3, _ := brokers.MPRegistry.AddMessagePool(brokers.NewRabbitMQMessagePool("test-pool-3", "test-mock-queue-3"))
 
-	time.Sleep(2 * time.Second)
+	fs, _ := util.NewFileStorageDriver("coderun")
+
+	if err := fs.Write("mapper", "test-mapper-basic.py", SCRIPT_BASIC); err != nil {
+		zlog.Error().Err(err).Msg("write to file")
+		return
+	}
+	if err := fs.Write("mapper", "test-mapper-hard.py", SCRIPT_HARD); err != nil {
+		zlog.Error().Err(err).Msg("write to file")
+		return
+	}
+
+	if err := brokers.Esb.AddEsbRecordWithMapper("test-pool-2", "test-pool-1", "test-mapper-basic.py"); err != nil {
+		zlog.Error().Err(err).Msg("add esb record")
+		return
+	}
+	if err := brokers.Esb.AddEsbRecordWithMapper("test-pool-3", "test-pool-1", "test-mapper-hard.py"); err != nil {
+		zlog.Error().Err(err).Msg("add esb record")
+		return
+	}
+
+	///////////////////////////////////////////////////////////////////////////////////////
 
 	pool2.NewReadTask().Schedule()
+	pool3.NewReadTask().Schedule()
+
+	time.Sleep(2 * time.Second)
+
+	pool2.NewWriteTask(ARGS_BASIC).Schedule()
+	pool3.NewWriteTask(ARGS_HARD).Schedule()
+
+	time.Sleep(2 * time.Second)
+
+	pool1.NewReadTask().Schedule()
+	pool1.NewReadTask().Schedule()
 
 	time.Sleep(10 * time.Second)
 }
@@ -262,7 +285,7 @@ func play_kafka() {
 		}
 	}()
 
-	handler, err := brokers.MPRegistry.AddMessagePool(brokers.NewKafkaMessagePool("test-pool", "test-topic"))
+	handler, err := brokers.MPRegistry.AddMessagePool(brokers.NewKafkaMessagePool("test-pool-kafka", "test-topic"))
 	if err != nil {
 		zlog.Error().Err(err).Msg("add new pool failed")
 	}
@@ -272,7 +295,7 @@ func play_kafka() {
 
 	time.Sleep(1 * time.Second)
 
-	handler, err = brokers.MPRegistry.GetMessagePool("test-pool")
+	handler, err = brokers.MPRegistry.GetMessagePool("test-pool-kafka")
 	if err != nil {
 		zlog.Error().Err(err).Msg("get pool failed")
 	}
@@ -290,11 +313,11 @@ func main() {
 	control.Components.Start()
 	defer control.Components.Stop()
 
-	play_brokers()
-	play_file_storage()
-	play_coderun()
+	// play_brokers()
+	// play_file_storage()
+	// play_coderun()
 	play_esb()
-	play_server_api()
-	play_database()
-	play_kafka()
+	// play_server_api()
+	// play_database()
+	// play_kafka()
 }
