@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func TestScheduler(t *testing.T) {
+func TestKafka(t *testing.T) {
 	t.Setenv("CONFIG_PATH", "/configs/test_brokers_config.yaml")
 
 	control.Components.Start()
@@ -40,7 +40,7 @@ func TestScheduler(t *testing.T) {
 
 	handler.NewReadTask().Schedule()
 
-	time.Sleep(3 * time.Second)
+	time.Sleep(5 * time.Second)
 
 	// TODO check database for read records
 }
