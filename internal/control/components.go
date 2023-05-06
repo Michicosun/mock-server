@@ -35,7 +35,10 @@ func (c *componentsManager) Start() {
 	logger.Init(configs.GetLogConfig())
 	zlog.Info().Msg("starting...")
 
-	database.InitDB(c.ctx, configs.GetDatabaseConfig())
+	err := database.InitDB(c.ctx, configs.GetDatabaseConfig())
+	if err != nil {
+		panic(err)
+	}
 
 	// init pool registry
 	brokers.MPRegistry.Init()
@@ -88,5 +91,8 @@ func (c *componentsManager) Stop() {
 		coderun.WorkerWatcher.Stop()
 	}
 
-	database.Disconnect()
+	err := database.Disconnect(c.ctx)
+	if err != nil {
+		panic(err)
+	}
 }

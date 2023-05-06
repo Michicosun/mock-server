@@ -2,11 +2,16 @@ package database
 
 import (
 	"context"
+	"mock-server/internal/configs"
 
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-const databaseName = "mongo_storage"
+const (
+	DATABASE_NAME                = "mongo_storage"
+	STATIC_ENDPOINTS_COLLECTION  = "static_endpoints"
+	DYNAMIC_ENDPOINTS_COLLECTION = "dynamic_endpoints"
+)
 
 type MongoStorage struct {
 	client           *mongo.Client
@@ -17,11 +22,19 @@ type MongoStorage struct {
 
 var db = &MongoStorage{}
 
-func (db *MongoStorage) init(ctx context.Context, client *mongo.Client) {
+func (db *MongoStorage) init(ctx context.Context, client *mongo.Client, cfg *configs.DatabaseConfig) error {
 	db.client = client
 	db.ctx = ctx
-	db.staticEndpoints = createStaticEndpoints(db.ctx, client)
-	db.dynamicEndpoints = createDynamicEndpoints(db.ctx, client)
+	var err error
+	db.staticEndpoints, err = createStaticEndpoints(db.ctx, client, cfg)
+	if err != nil {
+		return err
+	}
+	db.dynamicEndpoints, err = createDynamicEndpoints(db.ctx, client, cfg)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func AddStaticEndpoint(staticEndpoint StaticEndpoint) error {
@@ -30,6 +43,10 @@ func AddStaticEndpoint(staticEndpoint StaticEndpoint) error {
 
 func RemoveStaticEndpoint(path string) error {
 	return db.staticEndpoints.removeStaticEndpoint(db.ctx, path)
+}
+
+func UpdateStaticEndpoint(staticEndpoint StaticEndpoint) error {
+	return db.staticEndpoints.updateStaticEndpoint(db.ctx, staticEndpoint)
 }
 
 func GetStaticEndpointResponse(path string) (string, error) {
@@ -46,6 +63,10 @@ func AddDynamicEndpoint(dynamicEndpoint DynamicEndpoint) error {
 
 func RemoveDynamicEndpoint(path string) error {
 	return db.dynamicEndpoints.removeDynamicEndpoint(db.ctx, path)
+}
+
+func UpdateDynamicEndpoint(dynamicEndpoint DynamicEndpoint) error {
+	return db.dynamicEndpoints.updateDynamicEndpoint(db.ctx, dynamicEndpoint)
 }
 
 func GetDynamicEndpointScriptName(path string) (string, error) {
