@@ -18,13 +18,13 @@ type staticEndpoints struct {
 	mutex sync.RWMutex
 }
 
-func createStaticEndpoints(ctx context.Context, client *mongo.Client, cfg *configs.DatabaseConfig) *staticEndpoints {
+func createStaticEndpoints(ctx context.Context, client *mongo.Client, cfg *configs.DatabaseConfig) (*staticEndpoints, error) {
 	se := &staticEndpoints{}
-	se.init(ctx, client, cfg)
-	return se
+	err := se.init(ctx, client, cfg)
+	return se, err
 }
 
-func (s *staticEndpoints) init(ctx context.Context, client *mongo.Client, cfg *configs.DatabaseConfig) {
+func (s *staticEndpoints) init(ctx context.Context, client *mongo.Client, cfg *configs.DatabaseConfig) error {
 	s.coll = client.Database(DATABASE_NAME).Collection(STATIC_ENDPOINTS_COLLECTION)
 	s.cache = gcache.New(cfg.CacheSize).Simple().LoaderFunc(func(path interface{}) (interface{}, error) {
 		var res StaticEndpoint
@@ -40,9 +40,7 @@ func (s *staticEndpoints) init(ctx context.Context, client *mongo.Client, cfg *c
 		Options: options.Index().SetUnique(true),
 	}
 	_, err := s.coll.Indexes().CreateOne(ctx, indexModel)
-	if err != nil {
-		panic(err)
-	}
+	return err
 }
 
 func (s *staticEndpoints) addStaticEndpoint(ctx context.Context, staticEndpoint StaticEndpoint) error {

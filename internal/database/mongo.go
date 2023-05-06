@@ -22,11 +22,19 @@ type MongoStorage struct {
 
 var db = &MongoStorage{}
 
-func (db *MongoStorage) init(ctx context.Context, client *mongo.Client, cfg *configs.DatabaseConfig) {
+func (db *MongoStorage) init(ctx context.Context, client *mongo.Client, cfg *configs.DatabaseConfig) error {
 	db.client = client
 	db.ctx = ctx
-	db.staticEndpoints = createStaticEndpoints(db.ctx, client, cfg)
-	db.dynamicEndpoints = createDynamicEndpoints(db.ctx, client, cfg)
+	var err error
+	db.staticEndpoints, err = createStaticEndpoints(db.ctx, client, cfg)
+	if err != nil {
+		return err
+	}
+	db.dynamicEndpoints, err = createDynamicEndpoints(db.ctx, client, cfg)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func AddStaticEndpoint(staticEndpoint StaticEndpoint) error {

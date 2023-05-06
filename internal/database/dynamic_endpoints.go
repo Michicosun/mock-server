@@ -18,13 +18,13 @@ type dynamicEndpoints struct {
 	mutex sync.RWMutex
 }
 
-func createDynamicEndpoints(ctx context.Context, client *mongo.Client, cfg *configs.DatabaseConfig) *dynamicEndpoints {
+func createDynamicEndpoints(ctx context.Context, client *mongo.Client, cfg *configs.DatabaseConfig) (*dynamicEndpoints, error) {
 	de := &dynamicEndpoints{}
-	de.init(ctx, client, cfg)
-	return de
+	err := de.init(ctx, client, cfg)
+	return de, err
 }
 
-func (s *dynamicEndpoints) init(ctx context.Context, client *mongo.Client, cfg *configs.DatabaseConfig) {
+func (s *dynamicEndpoints) init(ctx context.Context, client *mongo.Client, cfg *configs.DatabaseConfig) error {
 	s.coll = client.Database(DATABASE_NAME).Collection(DYNAMIC_ENDPOINTS_COLLECTION)
 	s.cache = gcache.New(cfg.CacheSize).Simple().LoaderFunc(func(path interface{}) (interface{}, error) {
 		var res DynamicEndpoint
@@ -40,9 +40,7 @@ func (s *dynamicEndpoints) init(ctx context.Context, client *mongo.Client, cfg *
 		Options: options.Index().SetUnique(true),
 	}
 	_, err := s.coll.Indexes().CreateOne(ctx, indexModel)
-	if err != nil {
-		panic(err)
-	}
+	return err
 }
 
 func (s *dynamicEndpoints) addDynamicEndpoint(ctx context.Context, dynamicEndpoint DynamicEndpoint) error {

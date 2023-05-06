@@ -11,23 +11,23 @@ import (
 
 var inMemoryServer mim.Server
 
-func initInMemoryDB(ctx context.Context, cfg *configs.DatabaseConfig) {
+func initInMemoryDB(ctx context.Context, cfg *configs.DatabaseConfig) error {
 	inMemoryServer, err := mim.Start(ctx, "5.0.2")
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(inMemoryServer.URI()))
 	if err != nil {
-		panic(err)
+		return err
 	}
 
-	db.init(ctx, client, cfg)
+	return db.init(ctx, client, cfg)
 }
 
-func InitDB(ctx context.Context, cfg *configs.DatabaseConfig) {
+func InitDB(ctx context.Context, cfg *configs.DatabaseConfig) error {
 	if cfg.InMemory {
-		initInMemoryDB(ctx, cfg)
+		return initInMemoryDB(ctx, cfg)
 	} else {
 		panic("Not implemented")
 	}
