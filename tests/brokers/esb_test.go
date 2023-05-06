@@ -12,12 +12,7 @@ var TEST_SCRIPT = util.WrapCodeForEsb(`
 def func(msgs):
 	print(msgs[::-1])
 `)
-var TEST_ARGS = [][]byte{
-	[]byte("msg1"),
-	[]byte("msg2"),
-	[]byte("msg3"),
-}
-var EXPECTED_OUTPUT = "['msg3', 'msg2', 'msg1']\n"
+var TEST_ARGS = []string{"msg1", "msg2", "msg3"}
 
 func TestEsb(t *testing.T) {
 	t.Setenv("CONFIG_PATH", "/configs/test_brokers_config.yaml")
