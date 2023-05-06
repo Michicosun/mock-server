@@ -35,11 +35,7 @@ func play_brokers() {
 		zlog.Error().Err(err).Msg("get pool failed")
 	}
 
-	handler.NewWriteTask([][]byte{
-		[]byte(fmt.Sprintf("%d", 40)),
-		[]byte(fmt.Sprintf("%d", 41)),
-		[]byte(fmt.Sprintf("%d", 42)),
-	}).Schedule()
+	handler.NewWriteTask([]string{"40", "41", "42"}).Schedule()
 
 	time.Sleep(1 * time.Second)
 }
@@ -102,17 +98,13 @@ func play_esb() {
 def func(msgs):
     print(["Helllo body"])
 `)
-	var ARGS_BASIC = [][]byte{}
+	var ARGS_BASIC = []string{}
 
 	var SCRIPT_HARD = util.WrapCodeForEsb(`
 def func(msgs):
 	print(msgs[::-1])
 `)
-	var ARGS_HARD = [][]byte{
-		[]byte("msg1"),
-		[]byte("msg2"),
-		[]byte("msg3"),
-	}
+	var ARGS_HARD = []string{"msg1", "msg2", "msg3"}
 
 	pool1, _ := brokers.MPRegistry.AddMessagePool(brokers.NewRabbitMQMessagePool("test-pool-1", "test-mock-queue-1"))
 	pool2, _ := brokers.MPRegistry.AddMessagePool(brokers.NewRabbitMQMessagePool("test-pool-2", "test-mock-queue-2"))
@@ -299,11 +291,7 @@ func play_kafka() {
 		zlog.Error().Err(err).Msg("get pool failed")
 	}
 
-	handler.NewWriteTask([][]byte{
-		[]byte(fmt.Sprintf("%d", 40)),
-		[]byte(fmt.Sprintf("%d", 41)),
-		[]byte(fmt.Sprintf("%d", 42)),
-	}).Schedule()
+	handler.NewWriteTask([]string{"40", "41", "42"}).Schedule()
 
 	time.Sleep(5 * time.Second)
 }

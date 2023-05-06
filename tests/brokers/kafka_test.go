@@ -1,7 +1,6 @@
 package brokers_test
 
 import (
-	"fmt"
 	"mock-server/internal/brokers"
 	"mock-server/internal/control"
 	"testing"
@@ -25,11 +24,7 @@ func TestKafka(t *testing.T) {
 		t.Error(err)
 	}
 
-	handler.NewWriteTask([][]byte{
-		[]byte(fmt.Sprintf("%d", 40)),
-		[]byte(fmt.Sprintf("%d", 41)),
-		[]byte(fmt.Sprintf("%d", 42)),
-	}).Schedule()
+	handler.NewWriteTask([]string{"40", "41", "42"}).Schedule()
 
 	time.Sleep(3 * time.Second)
 

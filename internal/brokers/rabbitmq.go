@@ -160,11 +160,11 @@ func (t *rabbitMQReadTask) read(ctx context.Context) error {
 	}
 }
 
-func (t *rabbitMQReadTask) messages() ([][]byte, error) {
-	msgs := make([][]byte, 0)
+func (t *rabbitMQReadTask) messages() ([]string, error) {
+	msgs := make([]string, 0)
 
 	for _, msg := range t.msgs {
-		msgs = append(msgs, msg.Body)
+		msgs = append(msgs, string(msg.Body))
 	}
 
 	return msgs, nil
@@ -173,7 +173,7 @@ func (t *rabbitMQReadTask) messages() ([][]byte, error) {
 // RabbitMQ write task
 type rabbitMQWriteTask struct {
 	rabbitMQTask
-	msgs [][]byte
+	msgs []string
 }
 
 func (t *rabbitMQWriteTask) getTaskId() TaskId {
@@ -195,7 +195,7 @@ func (t *rabbitMQWriteTask) write(ctx context.Context) error {
 			t.pool.wcfg.Immediate,
 			amqp.Publishing{
 				ContentType: t.pool.wcfg.ContentType,
-				Body:        msg,
+				Body:        []byte(msg),
 			},
 		)
 		if err != nil {
@@ -206,7 +206,7 @@ func (t *rabbitMQWriteTask) write(ctx context.Context) error {
 	return nil
 }
 
-func (t *rabbitMQWriteTask) messages() [][]byte {
+func (t *rabbitMQWriteTask) messages() []string {
 	return t.msgs
 }
 
@@ -265,7 +265,7 @@ func (h *rabbitMQMessagePoolHandler) NewReadTask() qReadTask {
 	}
 }
 
-func (h *rabbitMQMessagePoolHandler) NewWriteTask(data [][]byte) qWriteTask {
+func (h *rabbitMQMessagePoolHandler) NewWriteTask(data []string) qWriteTask {
 	return &rabbitMQWriteTask{
 		rabbitMQTask: newRabbitMQBaseTask(h.pool),
 		msgs:         data,
