@@ -88,5 +88,5 @@ func (c *componentsManager) Stop() {
 		coderun.WorkerWatcher.Stop()
 	}
 
-	database.Disconnect()
+	database.Disconnect(c.ctx)
 }

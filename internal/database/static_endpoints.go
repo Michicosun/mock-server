@@ -2,6 +2,8 @@ package database
 
 import (
 	"context"
+	"mock-server/internal/configs"
+	"sync"
 
 	"github.com/bluele/gcache"
 	"go.mongodb.org/mongo-driver/bson"
@@ -10,56 +12,63 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-const staticEndpointsCollection string = "static_endpoints"
-
 type staticEndpoints struct {
 	coll  *mongo.Collection
 	cache gcache.Cache
+	mutex sync.Mutex
 }
 
-func createStaticEndpoints(ctx context.Context, client *mongo.Client) *staticEndpoints {
+func createStaticEndpoints(ctx context.Context, client *mongo.Client, cfg *configs.DatabaseConfig) *staticEndpoints {
 	se := &staticEndpoints{}
-	se.init(ctx, client)
+	se.init(ctx, client, cfg)
 	return se
 }
 
-func (s *staticEndpoints) init(ctx context.Context, client *mongo.Client) {
-	s.coll = client.Database(databaseName).Collection(staticEndpointsCollection)
-	s.cache = gcache.New(0).Simple().LoaderFunc(func(path interface{}) (interface{}, error) {
+func (s *staticEndpoints) init(ctx context.Context, client *mongo.Client, cfg *configs.DatabaseConfig) {
+	s.coll = client.Database(DATABASE_NAME).Collection(STATIC_ENDPOINTS_COLLECTION)
+	s.cache = gcache.New(cfg.CacheSize).Simple().LoaderFunc(func(path interface{}) (interface{}, error) {
 		var res StaticEndpoint
 		err := s.coll.FindOne(
 			ctx,
-			bson.D{primitive.E{Key: "path", Value: path.(string)}},
+			bson.D{primitive.E{Key: STATIC_ENDPOINT_PATH, Value: path.(string)}},
 		).Decode(&res)
 		return res, err
 	}).Build()
+
+	indexModel := mongo.IndexModel{
+		Keys:    bson.D{{Key: STATIC_ENDPOINT_PATH, Value: 1}},
+		Options: options.Index().SetUnique(true),
+	}
+	s.coll.Indexes().CreateOne(ctx, indexModel)
 }
 
 func (s *staticEndpoints) addStaticEndpoint(ctx context.Context, staticEndpoint StaticEndpoint) error {
-	// FIXME (Do not create new element when element with the same path already exists)
-	if err := RemoveStaticEndpoint(staticEndpoint.Path); err != nil {
+	return runWithLock(&s.mutex, func() error {
+		err := s.cache.Set(staticEndpoint.Path, staticEndpoint)
+		if err != nil {
+			return err
+		}
+		_, err = s.coll.InsertOne(
+			ctx,
+			staticEndpoint,
+		)
+		if mongo.IsDuplicateKeyError(err) {
+			return nil
+		}
 		return err
-	}
-
-	err := s.cache.Set(staticEndpoint.Path, staticEndpoint)
-	if err != nil {
-		return err
-	}
-	_, err = s.coll.InsertOne(
-		ctx,
-		staticEndpoint,
-	)
-	return err
+	})
 }
 
 func (s *staticEndpoints) removeStaticEndpoint(ctx context.Context, path string) error {
-	s.cache.Remove(path)
-	_, err := s.coll.DeleteOne(
-		ctx,
-		bson.D{primitive.E{Key: "path", Value: path}},
-	)
+	return runWithLock(&s.mutex, func() error {
+		s.cache.Remove(path)
+		_, err := s.coll.DeleteOne(
+			ctx,
+			bson.D{primitive.E{Key: STATIC_ENDPOINT_PATH, Value: path}},
+		)
 
-	return err
+		return err
+	})
 }
 
 func (s *staticEndpoints) getStaticEndpointResponse(ctx context.Context, path string) (string, error) {
@@ -77,8 +86,8 @@ func (s *staticEndpoints) getStaticEndpointResponse(ctx context.Context, path st
 
 func (s *staticEndpoints) listAllStaticEndpointPaths(ctx context.Context) ([]string, error) {
 	opts := options.Find()
-	opts = opts.SetSort(bson.D{{Key: "timestamp", Value: 1}, {Key: "_id", Value: 1}})
-	opts = opts.SetProjection(bson.D{{Key: "path", Value: 1}})
+	opts = opts.SetSort(bson.D{{Key: "timestamp", Value: 1}})
+	opts = opts.SetProjection(bson.D{{Key: STATIC_ENDPOINT_PATH, Value: 1}})
 	cursor, err := s.coll.Find(ctx, bson.D{}, opts)
 	if err != nil {
 		return nil, err

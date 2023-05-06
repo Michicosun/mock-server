@@ -11,7 +11,7 @@ import (
 
 var inMemoryServer mim.Server
 
-func initInMemoryDB(ctx context.Context) {
+func initInMemoryDB(ctx context.Context, cfg *configs.DatabaseConfig) {
 	inMemoryServer, err := mim.Start(ctx, "5.0.2")
 	if err != nil {
 		panic(err)
@@ -22,21 +22,21 @@ func initInMemoryDB(ctx context.Context) {
 		panic(err)
 	}
 
-	db.init(ctx, client)
+	db.init(ctx, client, cfg)
 }
 
 func InitDB(ctx context.Context, cfg *configs.DatabaseConfig) {
 	if cfg.InMemory {
-		initInMemoryDB(ctx)
+		initInMemoryDB(ctx, cfg)
 	} else {
 		panic("Not implemented")
 	}
 }
 
-func Disconnect() {
-	err := db.client.Disconnect(context.Background())
+func Disconnect(ctx context.Context) {
+	err := db.client.Disconnect(ctx)
 	if err != nil {
 		panic(err)
 	}
-	inMemoryServer.Stop(context.Background())
+	inMemoryServer.Stop(ctx)
 }

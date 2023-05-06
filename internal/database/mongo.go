@@ -2,11 +2,16 @@ package database
 
 import (
 	"context"
+	"mock-server/internal/configs"
 
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-const databaseName = "mongo_storage"
+const (
+	DATABASE_NAME                = "mongo_storage"
+	STATIC_ENDPOINTS_COLLECTION  = "static_endpoints"
+	DYNAMIC_ENDPOINTS_COLLECTION = "dynamic_endpoints"
+)
 
 type MongoStorage struct {
 	client           *mongo.Client
@@ -17,11 +22,11 @@ type MongoStorage struct {
 
 var db = &MongoStorage{}
 
-func (db *MongoStorage) init(ctx context.Context, client *mongo.Client) {
+func (db *MongoStorage) init(ctx context.Context, client *mongo.Client, cfg *configs.DatabaseConfig) {
 	db.client = client
 	db.ctx = ctx
-	db.staticEndpoints = createStaticEndpoints(db.ctx, client)
-	db.dynamicEndpoints = createDynamicEndpoints(db.ctx, client)
+	db.staticEndpoints = createStaticEndpoints(db.ctx, client, cfg)
+	db.dynamicEndpoints = createDynamicEndpoints(db.ctx, client, cfg)
 }
 
 func AddStaticEndpoint(staticEndpoint StaticEndpoint) error {
