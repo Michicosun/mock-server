@@ -75,11 +75,11 @@ func (t *kafkaTask) connectAndPrepare() error {
 		return err
 	}
 
-	zlog.Info().Str("addr", t.pool.tcfg.Addr).Msg("using addr for kafka connection")
-
 	t.pool.tcfg.Addr = t.getConnectionString(cfg)
 	t.pool.tcfg.ClientId = cfg.ClientId
 	t.pool.tcfg.GroupId = cfg.GroupId
+
+	zlog.Info().Str("addr", t.pool.tcfg.Addr).Msg("using addr for kafka connection")
 
 	return err
 }
@@ -118,6 +118,7 @@ func (t *kafkaReadTask) read(ctx context.Context) error {
 
 	err = nil
 	run := atomic.Bool{}
+	run.Store(true)
 	read_canceled := make(chan struct{}, 1)
 
 	go func() {
