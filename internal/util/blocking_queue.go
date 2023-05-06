@@ -25,7 +25,7 @@ func (q *BlockingQueue[T]) Put(el T) bool {
 	q.mtx.Lock()
 	defer q.mtx.Unlock()
 
-	if !q.closed && q.isFull() {
+	for !q.closed && q.isFull() {
 		q.full.Wait()
 	}
 
@@ -42,7 +42,7 @@ func (q *BlockingQueue[T]) Get() optional.Option[T] {
 	q.mtx.Lock()
 	defer q.mtx.Unlock()
 
-	if !q.closed && q.elems.Len() == 0 {
+	for !q.closed && q.elems.Len() == 0 {
 		q.empty.Wait()
 	}
 
