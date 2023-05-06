@@ -113,6 +113,20 @@ func TestStaticEndpoints(t *testing.T) {
 			if response != "one" {
 				t.Errorf("response != expected: %s != one", response)
 			}
+
+			if err = database.UpdateStaticEndpoint(database.StaticEndpoint{
+				Path:     "/path",
+				Response: "two",
+			}); err != nil {
+				t.Errorf("UpdateStaticEndpoint return err: %s", err.Error())
+			}
+			response, err = database.GetStaticEndpointResponse("/path")
+			if err != nil {
+				t.Errorf("GetStaticEndpointResponse return err: %s", err.Error())
+			}
+			if response != "two" {
+				t.Errorf("response != expected: %s != two", response)
+			}
 		})
 	}
 }
@@ -211,6 +225,20 @@ func TestDynamicEndpoints(t *testing.T) {
 			}
 			if response != "one" {
 				t.Errorf("response != expected: %s != one", response)
+			}
+
+			if err = database.UpdateDynamicEndpoint(database.DynamicEndpoint{
+				Path:       "/path",
+				ScriptName: "two",
+			}); err != nil {
+				t.Errorf("UpdateDynamicEndpoint return err: %s", err.Error())
+			}
+			response, err = database.GetDynamicEndpointScriptName("/path")
+			if err != nil {
+				t.Errorf("GetDynamicEndpointScriptName return err: %s", err.Error())
+			}
+			if response != "two" {
+				t.Errorf("response != expected: %s != two", response)
 			}
 		})
 	}

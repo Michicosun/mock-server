@@ -74,6 +74,23 @@ func (s *staticEndpoints) removeStaticEndpoint(ctx context.Context, path string)
 	})
 }
 
+func (s *staticEndpoints) updateStaticEndpoint(ctx context.Context, staticEndpoint StaticEndpoint) error {
+	return util.RunWithWriteLock(&s.mutex, func() error {
+		_, err := s.coll.UpdateOne(
+			ctx,
+			bson.D{primitive.E{Key: STATIC_ENDPOINT_PATH_FIELD, Value: staticEndpoint}},
+			bson.D{{Key: "$set", Value: bson.D{{Key: STATIC_ENDPOINT_RESPONSE_FIELD, Value: staticEndpoint.Response}}}},
+		)
+		if err == mongo.ErrNoDocuments {
+			return ErrNoSuchPath
+		} else if err != nil {
+			return err
+		}
+		err = s.cache.Set(staticEndpoint.Path, staticEndpoint)
+		return err
+	})
+}
+
 func (s *staticEndpoints) getStaticEndpointResponse(ctx context.Context, path string) (string, error) {
 	return util.RunWithReadLock(&s.mutex, func() (string, error) {
 		// if key doesn't exist in cache, it will be fetched via LoadFunc from database

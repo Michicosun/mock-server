@@ -45,6 +45,10 @@ func RemoveStaticEndpoint(path string) error {
 	return db.staticEndpoints.removeStaticEndpoint(db.ctx, path)
 }
 
+func UpdateStaticEndpoint(staticEndpoint StaticEndpoint) error {
+	return db.staticEndpoints.updateStaticEndpoint(db.ctx, staticEndpoint)
+}
+
 func GetStaticEndpointResponse(path string) (string, error) {
 	return db.staticEndpoints.getStaticEndpointResponse(db.ctx, path)
 }
@@ -59,6 +63,10 @@ func AddDynamicEndpoint(dynamicEndpoint DynamicEndpoint) error {
 
 func RemoveDynamicEndpoint(path string) error {
 	return db.dynamicEndpoints.removeDynamicEndpoint(db.ctx, path)
+}
+
+func UpdateDynamicEndpoint(dynamicEndpoint DynamicEndpoint) error {
+	return db.dynamicEndpoints.updateDynamicEndpoint(db.ctx, dynamicEndpoint)
 }
 
 func GetDynamicEndpointScriptName(path string) (string, error) {

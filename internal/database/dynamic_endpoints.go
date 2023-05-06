@@ -74,6 +74,23 @@ func (s *dynamicEndpoints) removeDynamicEndpoint(ctx context.Context, path strin
 	})
 }
 
+func (s *dynamicEndpoints) updateDynamicEndpoint(ctx context.Context, dynamicEndpoint DynamicEndpoint) error {
+	return util.RunWithWriteLock(&s.mutex, func() error {
+		_, err := s.coll.UpdateOne(
+			ctx,
+			bson.D{{Key: DYNAMIC_ENDPOINT_PATH_FIELD, Value: dynamicEndpoint}},
+			bson.D{{Key: "$set", Value: bson.D{{Key: DYNAMIC_ENDPOINT_SCRIPT_NAME_FIELD, Value: dynamicEndpoint.ScriptName}}}},
+		)
+		if err == mongo.ErrNoDocuments {
+			return ErrNoSuchPath
+		} else if err != nil {
+			return err
+		}
+		err = s.cache.Set(dynamicEndpoint.Path, dynamicEndpoint)
+		return err
+	})
+}
+
 func (s *dynamicEndpoints) getDynamicEndpointScriptName(ctx context.Context, path string) (string, error) {
 	return util.RunWithReadLock(&s.mutex, func() (string, error) {
 		// if key doesn't exist in cache, it will be fetched via LoadFunc from database

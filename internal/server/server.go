@@ -182,7 +182,7 @@ func (s *server) initRoutesApiStatic(routes *gin.RouterGroup) {
 			return
 		}
 
-		if err := database.AddStaticEndpoint(database.StaticEndpoint{
+		if err := database.UpdateStaticEndpoint(database.StaticEndpoint{
 			Path:     staticEndpoint.Path,
 			Response: staticEndpoint.ExpectedResponse,
 		}); err != nil {
