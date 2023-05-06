@@ -35,10 +35,16 @@ func NewDynHandleArgs(args []byte) *Args {
 	}
 }
 
-func NewMapperArgs(msgs [][]byte) *Args {
-	return &Args{
-		args: msgs,
+func NewMapperArgs(msgs []string) *Args {
+	args := &Args{
+		args: make([][]byte, 0),
 	}
+
+	for _, msg := range msgs {
+		args.args = append(args.args, []byte(msg))
+	}
+
+	return args
 }
 
 func (w *worker) RunScript(run_type string, script string, args *Args) ([]byte, error) {
@@ -47,9 +53,9 @@ func (w *worker) RunScript(run_type string, script string, args *Args) ([]byte, 
 	var byteArgs []byte
 	switch run_type {
 	case "dyn_handle":
-		byteArgs = args.args[0]
+		byteArgs = []byte(args.args[0])
 	case "mapper":
-		byteArgs = util.WrapArgsForEsb(args.args)
+		byteArgs = []byte(util.WrapArgsForEsb(args.args))
 
 	default:
 		return nil, fmt.Errorf("invalid run type: %s. Expected `dyn_handle` or `mapper`", run_type)

@@ -9,7 +9,7 @@ var MPRegistry = &mpRegistry{}
 
 type MessagePoolHandler interface {
 	NewReadTask() qReadTask
-	NewWriteTask(data [][]byte) qWriteTask
+	NewWriteTask(data []string) qWriteTask
 }
 
 type MessagePool interface {

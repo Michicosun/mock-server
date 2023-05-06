@@ -147,11 +147,11 @@ func (t *kafkaReadTask) read(ctx context.Context) error {
 	return err
 }
 
-func (t *kafkaReadTask) messages() ([][]byte, error) {
-	msgs := make([][]byte, 0)
+func (t *kafkaReadTask) messages() ([]string, error) {
+	msgs := make([]string, 0)
 
 	for _, msg := range t.msgs {
-		msgs = append(msgs, msg.Value)
+		msgs = append(msgs, string(msg.Value))
 	}
 
 	return msgs, nil
@@ -160,7 +160,7 @@ func (t *kafkaReadTask) messages() ([][]byte, error) {
 // Kafka write task
 type kafkaWriteTask struct {
 	kafkaTask
-	msgs [][]byte
+	msgs []string
 }
 
 func (t *kafkaWriteTask) getTaskId() TaskId {
@@ -191,7 +191,7 @@ func (t *kafkaWriteTask) write(ctx context.Context) error {
 					Topic:     &t.pool.topic,
 					Partition: kafka.PartitionAny,
 				},
-				Value: msg,
+				Value: []byte(msg),
 			},
 			delivery_chan,
 		)
@@ -223,7 +223,7 @@ func (t *kafkaWriteTask) write(ctx context.Context) error {
 	return nil
 }
 
-func (t *kafkaWriteTask) messages() [][]byte {
+func (t *kafkaWriteTask) messages() []string {
 	return t.msgs
 }
 
@@ -263,7 +263,7 @@ func (h *kafkaMessagePoolHandler) NewReadTask() qReadTask {
 	}
 }
 
-func (h *kafkaMessagePoolHandler) NewWriteTask(data [][]byte) qWriteTask {
+func (h *kafkaMessagePoolHandler) NewWriteTask(data []string) qWriteTask {
 	return &kafkaWriteTask{
 		kafkaTask: newKafkaBaseTask(h.pool),
 		msgs:      data,
