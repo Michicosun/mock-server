@@ -100,7 +100,7 @@ func TestStaticEndpoints(t *testing.T) {
 			}); err != nil {
 				t.Errorf("AddStaticEndpoint return err: %s", err.Error())
 			}
-			if database.AddStaticEndpoint(database.StaticEndpoint{
+			if err := database.AddStaticEndpoint(database.StaticEndpoint{
 				Path:     "/path",
 				Response: "two",
 			}); err != nil {
@@ -199,7 +199,7 @@ func TestDynamicEndpoints(t *testing.T) {
 			}); err != nil {
 				t.Errorf("AddDynamicEndpoint return err: %s", err.Error())
 			}
-			if database.AddDynamicEndpoint(database.DynamicEndpoint{
+			if err := database.AddDynamicEndpoint(database.DynamicEndpoint{
 				Path:       "/path",
 				ScriptName: "two",
 			}); err != nil {
