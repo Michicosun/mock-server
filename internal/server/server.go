@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	reuseport "github.com/kavu/go_reuseport"
 	zlog "github.com/rs/zerolog/log"
@@ -42,6 +43,7 @@ func (s *server) Init(cfg *configs.ServerConfig) {
 
 	s.router.Use(logger.GinLogger()) // use custom logger (zerolog)
 	s.router.Use(gin.Recovery())     // recovery from all panics
+	s.router.Use(cors.Default())
 
 	s.initMainRoutes()
 

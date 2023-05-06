@@ -122,7 +122,7 @@ echo "Starting mock-server.service"
 sudo systemctl start mock-server.service
 sudo systemctl restart mock-server.service
 
-echo "Wait 3 seconds until started"
+echo "Wait 10 seconds until started"
 sleep 10
 
 echo "Try ping mock-server locally"
