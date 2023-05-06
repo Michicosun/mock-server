@@ -15,7 +15,7 @@ import (
 type dynamicEndpoints struct {
 	coll  *mongo.Collection
 	cache gcache.Cache
-	mutex sync.Mutex
+	mutex sync.RWMutex
 }
 
 func createDynamicEndpoints(ctx context.Context, client *mongo.Client, cfg *configs.DatabaseConfig) *dynamicEndpoints {
@@ -46,7 +46,7 @@ func (s *dynamicEndpoints) init(ctx context.Context, client *mongo.Client, cfg *
 }
 
 func (s *dynamicEndpoints) addDynamicEndpoint(ctx context.Context, dynamicEndpoint DynamicEndpoint) error {
-	return runWithLock(&s.mutex, func() error {
+	return runWithWriteLock(&s.mutex, func() error {
 		err := s.cache.Set(dynamicEndpoint.Path, dynamicEndpoint)
 		if err != nil {
 			return err
@@ -63,7 +63,7 @@ func (s *dynamicEndpoints) addDynamicEndpoint(ctx context.Context, dynamicEndpoi
 }
 
 func (s *dynamicEndpoints) removeDynamicEndpoint(ctx context.Context, path string) error {
-	return runWithLock(&s.mutex, func() error {
+	return runWithWriteLock(&s.mutex, func() error {
 		s.cache.Remove(path)
 		_, err := s.coll.DeleteOne(
 			ctx,
@@ -74,33 +74,37 @@ func (s *dynamicEndpoints) removeDynamicEndpoint(ctx context.Context, path strin
 }
 
 func (s *dynamicEndpoints) getDynamicEndpointScriptName(ctx context.Context, path string) (string, error) {
-	// if key doesn't exist in cache, it will be fetched via LoadFunc from database
-	res, err := s.cache.Get(path)
-	if err != nil {
-		if err == mongo.ErrNoDocuments {
-			return "", ErrNoSuchPath
-		} else {
-			return "", err
+	return runWithReadLock(&s.mutex, func() (string, error) {
+		// if key doesn't exist in cache, it will be fetched via LoadFunc from database
+		res, err := s.cache.Get(path)
+		if err != nil {
+			if err == mongo.ErrNoDocuments {
+				return "", ErrNoSuchPath
+			} else {
+				return "", err
+			}
 		}
-	}
-	return res.(DynamicEndpoint).ScriptName, nil
+		return res.(DynamicEndpoint).ScriptName, nil
+	})
 }
 
 func (s *dynamicEndpoints) listAllDynamicEndpointPaths(ctx context.Context) ([]string, error) {
-	opts := options.Find()
-	opts = opts.SetSort(bson.D{{Key: "timestamp", Value: 1}})
-	opts = opts.SetProjection(bson.D{{Key: DYNAMIC_ENDPOINT_PATH, Value: 1}})
-	cursor, err := s.coll.Find(ctx, bson.D{}, opts)
-	if err != nil {
-		return nil, err
-	}
-	var results = []DynamicEndpoint{}
-	if err = cursor.All(ctx, &results); err != nil {
-		return nil, err
-	}
-	paths := make([]string, len(results))
-	for i := 0; i < len(results); i++ {
-		paths[i] = results[i].Path
-	}
-	return paths, nil
+	return runWithReadLock(&s.mutex, func() ([]string, error) {
+		opts := options.Find()
+		opts = opts.SetSort(bson.D{{Key: "timestamp", Value: 1}})
+		opts = opts.SetProjection(bson.D{{Key: DYNAMIC_ENDPOINT_PATH, Value: 1}})
+		cursor, err := s.coll.Find(ctx, bson.D{}, opts)
+		if err != nil {
+			return nil, err
+		}
+		var results = []DynamicEndpoint{}
+		if err = cursor.All(ctx, &results); err != nil {
+			return nil, err
+		}
+		paths := make([]string, len(results))
+		for i := 0; i < len(results); i++ {
+			paths[i] = results[i].Path
+		}
+		return paths, nil
+	})
 }

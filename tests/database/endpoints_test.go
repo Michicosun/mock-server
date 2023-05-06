@@ -2,6 +2,7 @@ package database_test
 
 import (
 	"math/rand"
+	"mock-server/internal/configs"
 	"mock-server/internal/control"
 	"mock-server/internal/database"
 	"testing"
@@ -32,6 +33,9 @@ func TestStaticEndpoints(t *testing.T) {
 	for _, tt := range endpointsTests {
 		t.Run(tt.testName, func(t *testing.T) {
 			t.Setenv("CONFIG_PATH", "/configs/test_database_config.yaml")
+			configs.SetConfigureForTestingFunc(func(cfg *configs.ServiceConfig) {
+				cfg.Database.CacheSize = tt.cacheSize
+			})
 			control.Components.Start()
 			defer control.Components.Stop()
 
@@ -112,6 +116,9 @@ func TestDynamicEndpoints(t *testing.T) {
 	for _, tt := range endpointsTests {
 		t.Run(tt.testName, func(t *testing.T) {
 			t.Setenv("CONFIG_PATH", "/configs/test_database_config.yaml")
+			configs.SetConfigureForTestingFunc(func(cfg *configs.ServiceConfig) {
+				cfg.Database.CacheSize = tt.cacheSize
+			})
 			control.Components.Start()
 			defer control.Components.Stop()
 

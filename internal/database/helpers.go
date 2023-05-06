@@ -2,8 +2,14 @@ package database
 
 import "sync"
 
-func runWithLock[T any](mutex *sync.Mutex, task func() T) T {
+func runWithWriteLock(mutex *sync.RWMutex, task func() error) error {
 	mutex.Lock()
 	defer mutex.Unlock()
+	return task()
+}
+
+func runWithReadLock[T any](mutex *sync.RWMutex, task func() (T, error)) (T, error) {
+	mutex.RLock()
+	defer mutex.RUnlock()
 	return task()
 }

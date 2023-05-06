@@ -15,7 +15,7 @@ import (
 type staticEndpoints struct {
 	coll  *mongo.Collection
 	cache gcache.Cache
-	mutex sync.Mutex
+	mutex sync.RWMutex
 }
 
 func createStaticEndpoints(ctx context.Context, client *mongo.Client, cfg *configs.DatabaseConfig) *staticEndpoints {
@@ -46,7 +46,7 @@ func (s *staticEndpoints) init(ctx context.Context, client *mongo.Client, cfg *c
 }
 
 func (s *staticEndpoints) addStaticEndpoint(ctx context.Context, staticEndpoint StaticEndpoint) error {
-	return runWithLock(&s.mutex, func() error {
+	return runWithWriteLock(&s.mutex, func() error {
 		err := s.cache.Set(staticEndpoint.Path, staticEndpoint)
 		if err != nil {
 			return err
@@ -63,7 +63,7 @@ func (s *staticEndpoints) addStaticEndpoint(ctx context.Context, staticEndpoint 
 }
 
 func (s *staticEndpoints) removeStaticEndpoint(ctx context.Context, path string) error {
-	return runWithLock(&s.mutex, func() error {
+	return runWithWriteLock(&s.mutex, func() error {
 		s.cache.Remove(path)
 		_, err := s.coll.DeleteOne(
 			ctx,
@@ -75,33 +75,37 @@ func (s *staticEndpoints) removeStaticEndpoint(ctx context.Context, path string)
 }
 
 func (s *staticEndpoints) getStaticEndpointResponse(ctx context.Context, path string) (string, error) {
-	// if key doesn't exist in cache, it will be fetched via LoadFunc from database
-	res, err := s.cache.Get(path)
-	if err != nil {
-		if err == mongo.ErrNoDocuments {
-			return "", ErrNoSuchPath
-		} else {
-			return "", err
+	return runWithReadLock(&s.mutex, func() (string, error) {
+		// if key doesn't exist in cache, it will be fetched via LoadFunc from database
+		res, err := s.cache.Get(path)
+		if err != nil {
+			if err == mongo.ErrNoDocuments {
+				return "", ErrNoSuchPath
+			} else {
+				return "", err
+			}
 		}
-	}
-	return res.(StaticEndpoint).Response, nil
+		return res.(StaticEndpoint).Response, nil
+	})
 }
 
 func (s *staticEndpoints) listAllStaticEndpointPaths(ctx context.Context) ([]string, error) {
-	opts := options.Find()
-	opts = opts.SetSort(bson.D{{Key: "timestamp", Value: 1}})
-	opts = opts.SetProjection(bson.D{{Key: STATIC_ENDPOINT_PATH, Value: 1}})
-	cursor, err := s.coll.Find(ctx, bson.D{}, opts)
-	if err != nil {
-		return nil, err
-	}
-	var results = []StaticEndpoint{}
-	if err = cursor.All(ctx, &results); err != nil {
-		return nil, err
-	}
-	paths := make([]string, len(results))
-	for i := 0; i < len(results); i++ {
-		paths[i] = results[i].Path
-	}
-	return paths, nil
+	return runWithReadLock(&s.mutex, func() ([]string, error) {
+		opts := options.Find()
+		opts = opts.SetSort(bson.D{{Key: "timestamp", Value: 1}})
+		opts = opts.SetProjection(bson.D{{Key: STATIC_ENDPOINT_PATH, Value: 1}})
+		cursor, err := s.coll.Find(ctx, bson.D{}, opts)
+		if err != nil {
+			return nil, err
+		}
+		var results = []StaticEndpoint{}
+		if err = cursor.All(ctx, &results); err != nil {
+			return nil, err
+		}
+		paths := make([]string, len(results))
+		for i := 0; i < len(results); i++ {
+			paths[i] = results[i].Path
+		}
+		return paths, nil
+	})
 }

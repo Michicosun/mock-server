@@ -24,6 +24,14 @@ type ServiceConfig struct {
 
 var config ServiceConfig
 
+type ConfigureForTestingFunc func(*ServiceConfig)
+
+var configureForTesting ConfigureForTestingFunc
+
+func SetConfigureForTestingFunc(f ConfigureForTestingFunc) {
+	configureForTesting = f
+}
+
 func LoadConfig() {
 	cfg_path := os.Getenv("CONFIG_PATH")
 	if cfg_path == "" {
@@ -51,6 +59,10 @@ func LoadConfig() {
 	if err = yaml.Unmarshal(cfg, &config); err != nil {
 		zlog.Err(err).Msg("Unmarshal config failed")
 		panic(err)
+	}
+
+	if configureForTesting != nil {
+		configureForTesting(&config)
 	}
 
 	s, err := json.MarshalIndent(config, "", "\t")
