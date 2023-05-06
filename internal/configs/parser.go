@@ -28,8 +28,8 @@ type ConfigureForTestingFunc func(*ServiceConfig)
 
 var configureForTesting ConfigureForTestingFunc
 
-func SetConfigureForTestingFunc(f ConfigureForTestingFunc) {
-	configureForTesting = f
+func SetConfigureForTestingFunc(configureForTestingFunc ConfigureForTestingFunc) {
+	configureForTesting = configureForTestingFunc
 }
 
 func LoadConfig() {

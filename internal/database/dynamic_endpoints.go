@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"mock-server/internal/configs"
+	"mock-server/internal/util"
 	"sync"
 
 	"github.com/bluele/gcache"
@@ -30,13 +31,13 @@ func (s *dynamicEndpoints) init(ctx context.Context, client *mongo.Client, cfg *
 		var res DynamicEndpoint
 		err := s.coll.FindOne(
 			ctx,
-			bson.D{primitive.E{Key: DYNAMIC_ENDPOINT_PATH, Value: path.(string)}},
+			bson.D{primitive.E{Key: DYNAMIC_ENDPOINT_PATH_FIELD, Value: path.(string)}},
 		).Decode(&res)
 		return res, err
 	}).Build()
 
 	indexModel := mongo.IndexModel{
-		Keys:    bson.D{{Key: DYNAMIC_ENDPOINT_PATH, Value: 1}},
+		Keys:    bson.D{{Key: DYNAMIC_ENDPOINT_PATH_FIELD, Value: 1}},
 		Options: options.Index().SetUnique(true),
 	}
 	_, err := s.coll.Indexes().CreateOne(ctx, indexModel)
@@ -44,53 +45,53 @@ func (s *dynamicEndpoints) init(ctx context.Context, client *mongo.Client, cfg *
 }
 
 func (s *dynamicEndpoints) addDynamicEndpoint(ctx context.Context, dynamicEndpoint DynamicEndpoint) error {
-	return runWithWriteLock(&s.mutex, func() error {
-		err := s.cache.Set(dynamicEndpoint.Path, dynamicEndpoint)
-		if err != nil {
-			return err
-		}
-		_, err = s.coll.InsertOne(
+	return util.RunWithWriteLock(&s.mutex, func() error {
+		_, err := s.coll.InsertOne(
 			ctx,
 			dynamicEndpoint,
 		)
 		if mongo.IsDuplicateKeyError(err) {
 			return nil
+		} else if err != nil {
+			return err
 		}
+		err = s.cache.Set(dynamicEndpoint.Path, dynamicEndpoint)
 		return err
 	})
 }
 
 func (s *dynamicEndpoints) removeDynamicEndpoint(ctx context.Context, path string) error {
-	return runWithWriteLock(&s.mutex, func() error {
-		s.cache.Remove(path)
+	return util.RunWithWriteLock(&s.mutex, func() error {
 		_, err := s.coll.DeleteOne(
 			ctx,
-			bson.D{primitive.E{Key: DYNAMIC_ENDPOINT_PATH, Value: path}},
+			bson.D{primitive.E{Key: DYNAMIC_ENDPOINT_PATH_FIELD, Value: path}},
 		)
-		return err
+		if err != nil {
+			return err
+		}
+		s.cache.Remove(path)
+		return nil
 	})
 }
 
 func (s *dynamicEndpoints) getDynamicEndpointScriptName(ctx context.Context, path string) (string, error) {
-	return runWithReadLock(&s.mutex, func() (string, error) {
+	return util.RunWithReadLock(&s.mutex, func() (string, error) {
 		// if key doesn't exist in cache, it will be fetched via LoadFunc from database
 		res, err := s.cache.Get(path)
-		if err != nil {
-			if err == mongo.ErrNoDocuments {
-				return "", ErrNoSuchPath
-			} else {
-				return "", err
-			}
+		if err == mongo.ErrNoDocuments {
+			return "", ErrNoSuchPath
+		} else if err != nil {
+			return "", err
 		}
 		return res.(DynamicEndpoint).ScriptName, nil
 	})
 }
 
 func (s *dynamicEndpoints) listAllDynamicEndpointPaths(ctx context.Context) ([]string, error) {
-	return runWithReadLock(&s.mutex, func() ([]string, error) {
+	return util.RunWithReadLock(&s.mutex, func() ([]string, error) {
 		opts := options.Find()
 		opts = opts.SetSort(bson.D{{Key: "timestamp", Value: 1}})
-		opts = opts.SetProjection(bson.D{{Key: DYNAMIC_ENDPOINT_PATH, Value: 1}})
+		opts = opts.SetProjection(bson.D{{Key: DYNAMIC_ENDPOINT_PATH_FIELD, Value: 1}})
 		cursor, err := s.coll.Find(ctx, bson.D{}, opts)
 		if err != nil {
 			return nil, err
