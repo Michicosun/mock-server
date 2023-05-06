@@ -39,7 +39,10 @@ func (s *staticEndpoints) init(ctx context.Context, client *mongo.Client, cfg *c
 		Keys:    bson.D{{Key: STATIC_ENDPOINT_PATH, Value: 1}},
 		Options: options.Index().SetUnique(true),
 	}
-	s.coll.Indexes().CreateOne(ctx, indexModel)
+	_, err := s.coll.Indexes().CreateOne(ctx, indexModel)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func (s *staticEndpoints) addStaticEndpoint(ctx context.Context, staticEndpoint StaticEndpoint) error {

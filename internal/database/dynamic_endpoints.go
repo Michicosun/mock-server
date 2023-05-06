@@ -39,7 +39,10 @@ func (s *dynamicEndpoints) init(ctx context.Context, client *mongo.Client, cfg *
 		Keys:    bson.D{{Key: DYNAMIC_ENDPOINT_PATH, Value: 1}},
 		Options: options.Index().SetUnique(true),
 	}
-	s.coll.Indexes().CreateOne(ctx, indexModel)
+	_, err := s.coll.Indexes().CreateOne(ctx, indexModel)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func (s *dynamicEndpoints) addDynamicEndpoint(ctx context.Context, dynamicEndpoint DynamicEndpoint) error {
