@@ -53,9 +53,9 @@ func (w *worker) RunScript(run_type string, script string, args *Args) ([]byte, 
 	var byteArgs []byte
 	switch run_type {
 	case "dyn_handle":
-		byteArgs = []byte(args.args[0])
+		byteArgs = args.args[0]
 	case "mapper":
-		byteArgs = []byte(util.WrapArgsForEsb(args.args))
+		byteArgs = util.WrapArgsForEsb(args.args)
 
 	default:
 		return nil, fmt.Errorf("invalid run type: %s. Expected `dyn_handle` or `mapper`", run_type)
