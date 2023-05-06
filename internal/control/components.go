@@ -91,5 +91,8 @@ func (c *componentsManager) Stop() {
 		coderun.WorkerWatcher.Stop()
 	}
 
-	database.Disconnect(c.ctx)
+	err := database.Disconnect(c.ctx)
+	if err != nil {
+		panic(err)
+	}
 }

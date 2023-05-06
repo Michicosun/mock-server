@@ -33,10 +33,11 @@ func InitDB(ctx context.Context, cfg *configs.DatabaseConfig) error {
 	}
 }
 
-func Disconnect(ctx context.Context) {
+func Disconnect(ctx context.Context) error {
 	err := db.client.Disconnect(ctx)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	inMemoryServer.Stop(ctx)
+	return nil
 }
