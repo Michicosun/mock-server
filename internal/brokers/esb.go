@@ -26,34 +26,30 @@ func (e *esb) Init() {
 	// fetch db
 }
 
-func (e *esb) runMapper(mapper_name string, msgs *[][]byte) error {
+func (e *esb) runMapper(mapper_name string, msgs []string) ([]string, error) {
 	worker, err := coderun.WorkerWatcher.BorrowWorker()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	defer worker.Return()
 
-	out, err := worker.RunScript("mapper", mapper_name, coderun.NewMapperArgs(*msgs))
+	out, err := worker.RunScript("mapper", mapper_name, coderun.NewMapperArgs(msgs))
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	zlog.Debug().Str("mapped_msgs", string(out)).Msg("got mapped data")
 
 	var mappedMsgs []string
 	if err = json.Unmarshal(out, &mappedMsgs); err != nil {
-		return err
-	}
-	*msgs = make([][]byte, 0)
-	for i := range mappedMsgs {
-		*msgs = append(*msgs, []byte(mappedMsgs[i]))
+		return nil, err
 	}
 
-	return nil
+	return mappedMsgs, nil
 }
 
-func (e *esb) submit(pool_name_in string, msgs [][]byte) error {
+func (e *esb) submit(pool_name_in string, msgs []string) error {
 	record, exists := e.records.Get(pool_name_in)
 	if !exists {
 		zlog.Warn().Str("pool_in", pool_name_in).Msg("no registered esb records, skipping")
@@ -68,7 +64,7 @@ func (e *esb) submit(pool_name_in string, msgs [][]byte) error {
 	}
 
 	if record.use_mapper {
-		err = e.runMapper(record.mapper, &msgs)
+		msgs, err = e.runMapper(record.mapper, msgs)
 		if err != nil {
 			return err
 		}

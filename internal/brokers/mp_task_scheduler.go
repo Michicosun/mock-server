@@ -29,14 +29,14 @@ type qReadTask interface {
 	qTask
 	Schedule() TaskId
 	read(ctx context.Context) error
-	messages() ([][]byte, error)
+	messages() ([]string, error)
 }
 
 type qWriteTask interface {
 	qTask
 	Schedule() TaskId
 	write(ctx context.Context) error
-	messages() [][]byte
+	messages() []string
 }
 
 type TaskError struct {

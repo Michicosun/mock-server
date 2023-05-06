@@ -43,7 +43,7 @@ jobs:
           curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
           sudo chmod a+r /etc/apt/keyrings/docker.gpg
 
-      - name: set up the docker repository
+      - name: Set up the docker repository
         run: |
           echo \
             "deb [arch="$(dpkg --print-architecture)" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
@@ -55,14 +55,14 @@ jobs:
           sudo apt-get update
           sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
-      - name: verify docker
+      - name: Verify docker
         run: |
           sudo docker run hello-world
 
-      - name: set up the testing environment
+      - name: Set up the testing environment
         run: |
           docker-compose -f deploy/docker-compose.yml up -d
 
-      - name: run tests
+      - name: Run tests
         run: |
           go test -v ./tests/...
