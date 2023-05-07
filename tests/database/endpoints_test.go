@@ -1,6 +1,7 @@
 package database_test
 
 import (
+	"context"
 	"math/rand"
 	"mock-server/internal/configs"
 	"mock-server/internal/control"
@@ -47,19 +48,19 @@ func TestStaticEndpoints(t *testing.T) {
 			endpoints = append(endpoints, database.StaticEndpoint{Path: "/five", Response: "five"})
 
 			for _, endpoint := range endpoints {
-				if err := database.AddStaticEndpoint(endpoint); err != nil {
+				if err := database.AddStaticEndpoint(context.TODO(), endpoint); err != nil {
 					t.Errorf("AddStaticEndpoint return err: %s", err.Error())
 				}
 			}
 
 			// Check that we store only unique elems
 			for _, endpoint := range endpoints {
-				if err := database.AddStaticEndpoint(endpoint); err != nil {
+				if err := database.AddStaticEndpoint(context.TODO(), endpoint); err != nil {
 					t.Errorf("AddStaticEndpoint return err: %s", err.Error())
 				}
 			}
 
-			res, err := database.ListAllStaticEndpointPaths()
+			res, err := database.ListAllStaticEndpointPaths(context.TODO())
 			if err != nil {
 				t.Errorf("ListAllStaticEndpointPaths return err: %s", err.Error())
 			}
@@ -69,7 +70,7 @@ func TestStaticEndpoints(t *testing.T) {
 			}
 
 			for _, endpoint := range endpoints {
-				res, err := database.GetStaticEndpointResponse(endpoint.Path)
+				res, err := database.GetStaticEndpointResponse(context.TODO(), endpoint.Path)
 				if err != nil {
 					t.Errorf("GetStaticEndpointResponse return err: %s", err.Error())
 				}
@@ -80,11 +81,11 @@ func TestStaticEndpoints(t *testing.T) {
 
 			for i := 0; i < 5; i++ {
 				id := rand.Int() % (5 - i)
-				if err := database.RemoveStaticEndpoint(endpoints[id].Path); err != nil {
+				if err := database.RemoveStaticEndpoint(context.TODO(), endpoints[id].Path); err != nil {
 					t.Errorf("RemoveStaticEndpoint return err: %s", err.Error())
 				}
 				endpoints = append(endpoints[:id], endpoints[id+1:]...)
-				res, err := database.ListAllStaticEndpointPaths()
+				res, err := database.ListAllStaticEndpointPaths(context.TODO())
 				if err != nil {
 					t.Errorf("ListAllStaticEndpoints return err: %s", err.Error())
 				}
@@ -94,19 +95,19 @@ func TestStaticEndpoints(t *testing.T) {
 				}
 			}
 
-			if err := database.AddStaticEndpoint(database.StaticEndpoint{
+			if err := database.AddStaticEndpoint(context.TODO(), database.StaticEndpoint{
 				Path:     "/path",
 				Response: "one",
 			}); err != nil {
 				t.Errorf("AddStaticEndpoint return err: %s", err.Error())
 			}
-			if err := database.AddStaticEndpoint(database.StaticEndpoint{
+			if err := database.AddStaticEndpoint(context.TODO(), database.StaticEndpoint{
 				Path:     "/path",
 				Response: "two",
 			}); err != nil {
 				t.Errorf("AddStaticEndpoint return err: %s", err.Error())
 			}
-			response, err := database.GetStaticEndpointResponse("/path")
+			response, err := database.GetStaticEndpointResponse(context.TODO(), "/path")
 			if err != nil {
 				t.Errorf("GetStaticEndpointResponse return err: %s", err.Error())
 			}
@@ -114,13 +115,13 @@ func TestStaticEndpoints(t *testing.T) {
 				t.Errorf("response != expected: %s != one", response)
 			}
 
-			if err = database.UpdateStaticEndpoint(database.StaticEndpoint{
+			if err = database.UpdateStaticEndpoint(context.TODO(), database.StaticEndpoint{
 				Path:     "/path",
 				Response: "two",
 			}); err != nil {
 				t.Errorf("UpdateStaticEndpoint return err: %s", err.Error())
 			}
-			response, err = database.GetStaticEndpointResponse("/path")
+			response, err = database.GetStaticEndpointResponse(context.TODO(), "/path")
 			if err != nil {
 				t.Errorf("GetStaticEndpointResponse return err: %s", err.Error())
 			}
@@ -161,18 +162,18 @@ func TestDynamicEndpoints(t *testing.T) {
 			endpoints = append(endpoints, database.DynamicEndpoint{Path: "/five", ScriptName: "five"})
 
 			for _, endpoint := range endpoints {
-				if err := database.AddDynamicEndpoint(endpoint); err != nil {
+				if err := database.AddDynamicEndpoint(context.TODO(), endpoint); err != nil {
 					t.Errorf("AddDynamicEndpoint return err: %s", err.Error())
 				}
 			}
 
 			for _, endpoint := range endpoints {
-				if err := database.AddDynamicEndpoint(endpoint); err != nil {
+				if err := database.AddDynamicEndpoint(context.TODO(), endpoint); err != nil {
 					t.Errorf("AddDynamicEndpoint return err: %s", err.Error())
 				}
 			}
 
-			res, err := database.ListAllDynamicEndpointPaths()
+			res, err := database.ListAllDynamicEndpointPaths(context.TODO())
 			if err != nil {
 				t.Errorf("ListAllDynamicEndpointPaths return err: %s", err.Error())
 			}
@@ -182,7 +183,7 @@ func TestDynamicEndpoints(t *testing.T) {
 			}
 
 			for _, endpoint := range endpoints {
-				res, err := database.GetDynamicEndpointScriptName(endpoint.Path)
+				res, err := database.GetDynamicEndpointScriptName(context.TODO(), endpoint.Path)
 				if err != nil {
 					t.Errorf("GetDynamicEndpointScriptName return err: %s", err.Error())
 				}
@@ -193,11 +194,11 @@ func TestDynamicEndpoints(t *testing.T) {
 
 			for i := 0; i < 5; i++ {
 				id := rand.Int() % (5 - i)
-				if err := database.RemoveDynamicEndpoint(endpoints[id].Path); err != nil {
+				if err := database.RemoveDynamicEndpoint(context.TODO(), endpoints[id].Path); err != nil {
 					t.Errorf("RemoveDynamicEndpoint return err: %s", err.Error())
 				}
 				endpoints = append(endpoints[:id], endpoints[id+1:]...)
-				res, err := database.ListAllDynamicEndpointPaths()
+				res, err := database.ListAllDynamicEndpointPaths(context.TODO())
 				if err != nil {
 					t.Errorf("ListAllDynamicEndpointPaths return err: %s", err.Error())
 				}
@@ -207,19 +208,19 @@ func TestDynamicEndpoints(t *testing.T) {
 				}
 			}
 
-			if err := database.AddDynamicEndpoint(database.DynamicEndpoint{
+			if err := database.AddDynamicEndpoint(context.TODO(), database.DynamicEndpoint{
 				Path:       "/path",
 				ScriptName: "one",
 			}); err != nil {
 				t.Errorf("AddDynamicEndpoint return err: %s", err.Error())
 			}
-			if err := database.AddDynamicEndpoint(database.DynamicEndpoint{
+			if err := database.AddDynamicEndpoint(context.TODO(), database.DynamicEndpoint{
 				Path:       "/path",
 				ScriptName: "two",
 			}); err != nil {
 				t.Errorf("AddDynamicEndpoint return err: %s", err.Error())
 			}
-			response, err := database.GetDynamicEndpointScriptName("/path")
+			response, err := database.GetDynamicEndpointScriptName(context.TODO(), "/path")
 			if err != nil {
 				t.Errorf("GetDynamicEndpointScriptName return err: %s", err.Error())
 			}
@@ -227,13 +228,13 @@ func TestDynamicEndpoints(t *testing.T) {
 				t.Errorf("response != expected: %s != one", response)
 			}
 
-			if err = database.UpdateDynamicEndpoint(database.DynamicEndpoint{
+			if err = database.UpdateDynamicEndpoint(context.TODO(), database.DynamicEndpoint{
 				Path:       "/path",
 				ScriptName: "two",
 			}); err != nil {
 				t.Errorf("UpdateDynamicEndpoint return err: %s", err.Error())
 			}
-			response, err = database.GetDynamicEndpointScriptName("/path")
+			response, err = database.GetDynamicEndpointScriptName(context.TODO(), "/path")
 			if err != nil {
 				t.Errorf("GetDynamicEndpointScriptName return err: %s", err.Error())
 			}

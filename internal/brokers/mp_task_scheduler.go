@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"mock-server/internal/configs"
+	"mock-server/internal/database"
 	"mock-server/internal/util"
 
 	zlog "github.com/rs/zerolog/log"
@@ -133,7 +134,15 @@ func qread(ctx context.Context, task qReadTask) error {
 		return err
 	}
 
-	// write to db
+	for _, msg := range msgs {
+		if err = database.AddTaskMessages(ctx, database.TaskMessage{
+			TaskId:  string(task.getTaskId()),
+			Message: msg,
+		}); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -166,7 +175,15 @@ func qwrite(ctx context.Context, task qWriteTask) error {
 		return err
 	}
 
-	// write to db
+	for _, msg := range task.messages() {
+		if err := database.AddTaskMessages(ctx, database.TaskMessage{
+			TaskId:  string(task.getTaskId()),
+			Message: msg,
+		}); err != nil {
+			return err
+		}
+	}
+
 	zlog.Info().Str("task", string(task.getTaskId())).Err(ctx.Err()).Msg("finished")
 	return nil
 }

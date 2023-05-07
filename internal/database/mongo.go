@@ -11,86 +11,91 @@ const (
 	DATABASE_NAME                = "mongo_storage"
 	STATIC_ENDPOINTS_COLLECTION  = "static_endpoints"
 	DYNAMIC_ENDPOINTS_COLLECTION = "dynamic_endpoints"
+	TASK_MESSAGES_COLLECTION     = "task_messages"
 )
 
 type MongoStorage struct {
 	client           *mongo.Client
-	ctx              context.Context
 	staticEndpoints  *staticEndpoints
 	dynamicEndpoints *dynamicEndpoints
+	taskMessages     *taskMessages
 }
 
 var db = &MongoStorage{}
 
 func (db *MongoStorage) init(ctx context.Context, client *mongo.Client, cfg *configs.DatabaseConfig) error {
 	db.client = client
-	db.ctx = ctx
 	var err error
-	db.staticEndpoints, err = createStaticEndpoints(db.ctx, client, cfg)
+	db.staticEndpoints, err = createStaticEndpoints(ctx, client, cfg)
 	if err != nil {
 		return err
 	}
-	db.dynamicEndpoints, err = createDynamicEndpoints(db.ctx, client, cfg)
+	db.dynamicEndpoints, err = createDynamicEndpoints(ctx, client, cfg)
 	if err != nil {
 		return err
 	}
-	return nil
+	db.taskMessages, err = createTaskMessages(ctx, client, cfg)
+	return err
 }
 
-func AddStaticEndpoint(staticEndpoint StaticEndpoint) error {
-	return db.staticEndpoints.addStaticEndpoint(db.ctx, staticEndpoint)
+func AddStaticEndpoint(ctx context.Context, staticEndpoint StaticEndpoint) error {
+	return db.staticEndpoints.addStaticEndpoint(ctx, staticEndpoint)
 }
 
-func RemoveStaticEndpoint(path string) error {
-	return db.staticEndpoints.removeStaticEndpoint(db.ctx, path)
+func RemoveStaticEndpoint(ctx context.Context, path string) error {
+	return db.staticEndpoints.removeStaticEndpoint(ctx, path)
 }
 
-func UpdateStaticEndpoint(staticEndpoint StaticEndpoint) error {
-	return db.staticEndpoints.updateStaticEndpoint(db.ctx, staticEndpoint)
+func UpdateStaticEndpoint(ctx context.Context, staticEndpoint StaticEndpoint) error {
+	return db.staticEndpoints.updateStaticEndpoint(ctx, staticEndpoint)
 }
 
-func GetStaticEndpointResponse(path string) (string, error) {
-	return db.staticEndpoints.getStaticEndpointResponse(db.ctx, path)
+func GetStaticEndpointResponse(ctx context.Context, path string) (string, error) {
+	return db.staticEndpoints.getStaticEndpointResponse(ctx, path)
 }
 
-func ListAllStaticEndpointPaths() ([]string, error) {
-	return db.staticEndpoints.listAllStaticEndpointPaths(db.ctx)
+func ListAllStaticEndpointPaths(ctx context.Context) ([]string, error) {
+	return db.staticEndpoints.listAllStaticEndpointPaths(ctx)
 }
 
-func AddDynamicEndpoint(dynamicEndpoint DynamicEndpoint) error {
-	return db.dynamicEndpoints.addDynamicEndpoint(db.ctx, dynamicEndpoint)
+func AddDynamicEndpoint(ctx context.Context, dynamicEndpoint DynamicEndpoint) error {
+	return db.dynamicEndpoints.addDynamicEndpoint(ctx, dynamicEndpoint)
 }
 
-func RemoveDynamicEndpoint(path string) error {
-	return db.dynamicEndpoints.removeDynamicEndpoint(db.ctx, path)
+func RemoveDynamicEndpoint(ctx context.Context, path string) error {
+	return db.dynamicEndpoints.removeDynamicEndpoint(ctx, path)
 }
 
-func UpdateDynamicEndpoint(dynamicEndpoint DynamicEndpoint) error {
-	return db.dynamicEndpoints.updateDynamicEndpoint(db.ctx, dynamicEndpoint)
+func UpdateDynamicEndpoint(ctx context.Context, dynamicEndpoint DynamicEndpoint) error {
+	return db.dynamicEndpoints.updateDynamicEndpoint(ctx, dynamicEndpoint)
 }
 
-func GetDynamicEndpointScriptName(path string) (string, error) {
-	return db.dynamicEndpoints.getDynamicEndpointScriptName(db.ctx, path)
+func GetDynamicEndpointScriptName(ctx context.Context, path string) (string, error) {
+	return db.dynamicEndpoints.getDynamicEndpointScriptName(ctx, path)
 }
 
-func ListAllDynamicEndpointPaths() ([]string, error) {
-	return db.dynamicEndpoints.listAllDynamicEndpointPaths(db.ctx)
+func ListAllDynamicEndpointPaths(ctx context.Context) ([]string, error) {
+	return db.dynamicEndpoints.listAllDynamicEndpointPaths(ctx)
 }
 
-func HasEndpoint(path string) (bool, error) {
-	static, err1 := HasStaticEndpoint(path)
+func AddTaskMessages(ctx context.Context, taskMessages TaskMessage) error {
+	return db.taskMessages.addTaskMessages(ctx, taskMessages)
+}
+
+func HasEndpoint(ctx context.Context, path string) (bool, error) {
+	static, err1 := HasStaticEndpoint(ctx, path)
 	if err1 != nil {
 		return false, err1
 	}
-	dynamic, err2 := HasDynamicEndpoint(path)
+	dynamic, err2 := HasDynamicEndpoint(ctx, path)
 	if err2 != nil {
 		return false, err2
 	}
 	return static || dynamic, nil
 }
 
-func HasStaticEndpoint(path string) (bool, error) {
-	_, err := GetStaticEndpointResponse(path)
+func HasStaticEndpoint(ctx context.Context, path string) (bool, error) {
+	_, err := GetStaticEndpointResponse(ctx, path)
 	switch err {
 	case nil:
 		return true, nil
@@ -100,8 +105,8 @@ func HasStaticEndpoint(path string) (bool, error) {
 	return false, err
 }
 
-func HasDynamicEndpoint(path string) (bool, error) {
-	_, err := GetDynamicEndpointScriptName(path)
+func HasDynamicEndpoint(ctx context.Context, path string) (bool, error) {
+	_, err := GetDynamicEndpointScriptName(ctx, path)
 	switch err {
 	case nil:
 		return true, nil
