@@ -78,8 +78,12 @@ func ListAllDynamicEndpointPaths(ctx context.Context) ([]string, error) {
 	return db.dynamicEndpoints.listAllDynamicEndpointPaths(ctx)
 }
 
-func AddTaskMessages(ctx context.Context, taskMessages TaskMessage) error {
-	return db.taskMessages.addTaskMessages(ctx, taskMessages)
+func AddTaskMessage(ctx context.Context, taskMessage TaskMessage) error {
+	return db.taskMessages.addTaskMessage(ctx, taskMessage)
+}
+
+func GetTaskMessages(ctx context.Context, taskId string) ([]string, error) {
+	return db.taskMessages.getTaskMessages(ctx, taskId)
 }
 
 func HasEndpoint(ctx context.Context, path string) (bool, error) {

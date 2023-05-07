@@ -1,8 +1,11 @@
 package brokers_test
 
 import (
+	"context"
 	"mock-server/internal/brokers"
 	"mock-server/internal/control"
+	"mock-server/internal/database"
+	"reflect"
 	"testing"
 	"time"
 )
@@ -35,7 +38,21 @@ func TestRabbitMq(t *testing.T) {
 
 	handler.NewWriteTask([]string{"40", "41", "42"}).Schedule()
 
-	time.Sleep(1 * time.Second)
+	brokers.MPTaskScheduler.WaitIdle()
 
-	// TODO check database for read records
+	writeTaskMessages, err := database.GetTaskMessages(context.TODO(), "rabbitmq:test-pool:test-mock-queue:write")
+	if err != nil {
+		t.Error(err)
+	}
+	if !reflect.DeepEqual(writeTaskMessages, []string{"40", "41", "42"}) {
+		t.Errorf("res != expected: %s != %s", writeTaskMessages, []string{"40", "41", "42"})
+	}
+
+	readTaskMessages, err := database.GetTaskMessages(context.TODO(), "rabbitmq:test-pool:test-mock-queue:read")
+	if err != nil {
+		t.Error(err)
+	}
+	if !reflect.DeepEqual(readTaskMessages, []string{"40", "41", "42"}) {
+		t.Errorf("res != expected: %s != %s", readTaskMessages, []string{"40", "41", "42"})
+	}
 }
