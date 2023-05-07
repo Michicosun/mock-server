@@ -372,16 +372,20 @@ func (s *server) initNoRoute() {
 			}
 
 			output, err := worker.RunScript(FS_CODE_DIR, scriptName, coderun.NewDynHandleArgs(args))
-			if err != nil {
-
-				zlog.Error().Err(err).Msg("Failed to run script")
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				return
+			switch err {
+			case nil:
+				c.JSON(http.StatusOK, string(output))
+			case coderun.ErrCodeRunFailed:
+				zlog.Warn().Str("output", string(output)).Msg("Failed to run script")
+				c.JSON(http.StatusBadRequest, gin.H{"error": string(output)})
+			default:
+				zlog.Error().Str("output", string(output)).Msg("Worker failed")
+				c.JSON(http.StatusInternalServerError, gin.H{"error": string(output)})
 			}
 
-			c.JSON(http.StatusOK, string(output))
 			return
 		}
+
 		if err != database.ErrNoSuchPath {
 			zlog.Error().Err(err).Msg("Failed to get dynamic endpoint")
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

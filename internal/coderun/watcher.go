@@ -85,11 +85,16 @@ func (w *worker) RunScript(run_type string, script string, args *Args) ([]byte, 
 		return nil, err
 	}
 
-	if res.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("run script error: %s, code: %d", out, res.StatusCode)
+	switch res.StatusCode {
+	case http.StatusOK:
+		return out, nil
+	case http.StatusBadRequest:
+		zlog.Warn().Str("output", string(out)).Msg("Failed to execute script")
+		return out, ErrCodeRunFailed
+	default:
+		zlog.Error().Str("output", string(out)).Msg("Worker error")
+		return nil, ErrWorkerFailed
 	}
-
-	return out, err
 }
 
 func (w *worker) Return() {
