@@ -1,8 +1,10 @@
 package brokers_test
 
 import (
+	"context"
 	"mock-server/internal/brokers"
 	"mock-server/internal/control"
+	"mock-server/internal/database"
 	"mock-server/internal/util"
 	"testing"
 	"time"
@@ -54,17 +56,33 @@ func TestEsb(t *testing.T) {
 	///////////////////////////////////////////////////////////////////////////////////////
 
 	// schedule read -- wait for args
-	pool1.NewReadTask().Schedule()
+	readTaskId1 := pool1.NewReadTask().Schedule()
 
 	time.Sleep(2 * time.Second)
 
 	// push args to first pool
-	pool1.NewWriteTask(TEST_ARGS).Schedule()
+	writeTaskId := pool1.NewWriteTask(TEST_ARGS).Schedule()
 
 	time.Sleep(2 * time.Second)
 
 	// schedule read -- pull script invocation result
-	pool2.NewReadTask().Schedule()
+	readTaskId2 := pool2.NewReadTask().Schedule()
 
-	time.Sleep(10 * time.Second)
+	time.Sleep(20 * time.Second)
+
+	res, err := database.GetTaskMessages(context.TODO(), string(readTaskId1))
+	if err != nil {
+		t.Error(err)
+	}
+	t.Errorf("%s = %s\n", readTaskId1, res)
+	res, err = database.GetTaskMessages(context.TODO(), string(writeTaskId))
+	if err != nil {
+		t.Error(err)
+	}
+	t.Errorf("%s = %s\n", writeTaskId, res)
+	res, err = database.GetTaskMessages(context.TODO(), string(readTaskId2))
+	if err != nil {
+		t.Error(err)
+	}
+	t.Errorf("%s = %s\n", readTaskId2, res)
 }
