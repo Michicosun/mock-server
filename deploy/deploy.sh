@@ -66,6 +66,14 @@ else
     exit 1
 fi
 
+echo "Building worker docker container"
+if REBUILD_CONTAINER= go run ../cmd/tools/build_worker_image.go; then
+    echo "Worker docker container successfully built"
+else
+    echo "Failed to build worker docker container"
+    exit 1
+fi
+
 
 echo -e "\nSetting up systemd mock-server service..."
 

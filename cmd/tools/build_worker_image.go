@@ -17,11 +17,9 @@ func main() {
 		FileLoggingEnabled:    false,
 	})
 
-	err := coderun.WorkerWatcher.Init(ctx, &configs.CoderunConfig{
+	if err := coderun.WorkerWatcher.Init(ctx, &configs.CoderunConfig{
 		WorkerCnt: 0,
-	})
-
-	if err != nil {
+	}); err != nil {
 		panic(err)
 	}
 }
