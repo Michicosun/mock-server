@@ -11,6 +11,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/pkg/errors"
 	zlog "github.com/rs/zerolog/log"
 )
 
@@ -56,8 +57,8 @@ func runHandle(w http.ResponseWriter, req *http.Request) {
 
 	out, err := scripts.RunPythonScript(run_ctx, run_request)
 	if err != nil {
-		zlog.Error().Err(err).Msg("run error")
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		zlog.Error().Err(err).Str("out", out).Msg("run error")
+		http.Error(w, errors.Wrap(err, out).Error(), http.StatusBadRequest)
 		return
 	}
 
