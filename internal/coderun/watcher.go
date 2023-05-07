@@ -97,7 +97,6 @@ func (w *worker) Return() {
 }
 
 type watcher struct {
-	initialized  bool
 	wg           sync.WaitGroup
 	ctx          context.Context
 	dp           *docker.DockerProvider
@@ -183,10 +182,7 @@ func (w *watcher) repairLoop() {
 
 func (w *watcher) Init(ctx context.Context, cfg *configs.CoderunConfig) error {
 	zlog.Info().Msg("starting watcher")
-	if w.initialized {
-		return fmt.Errorf("watcher has already initialized")
-	}
-	w.initialized = true
+
 	w.ctx = ctx
 
 	provider, err := docker.NewDockerProvider(ctx, &cfg.WorkerConfig.ContainerConfig)
@@ -201,10 +197,10 @@ func (w *watcher) Init(ctx context.Context, cfg *configs.CoderunConfig) error {
 		return err
 	}
 
-	w.workers = make(chan *worker, configs.GetCoderunConfig().WorkerCnt)
-	w.repair = make(chan *worker, configs.GetCoderunConfig().WorkerCnt)
+	w.workers = make(chan *worker, cfg.WorkerCnt)
+	w.repair = make(chan *worker, cfg.WorkerCnt)
 	w.workerByPort = make(map[string]*worker)
-	for i := 0; i < configs.GetCoderunConfig().WorkerCnt; i += 1 {
+	for i := 0; i < cfg.WorkerCnt; i += 1 {
 		err = w.startNewWorker()
 		if err != nil {
 			w.Stop()
@@ -260,8 +256,6 @@ func (w *watcher) Stop() {
 	for _, worker := range w.workerByPort {
 		w.dp.RemoveWorkerContainer(worker.cId, true) // nolint:errcheck
 	}
-
-	w.initialized = false
 
 	zlog.Info().Msg("watcher stopped")
 }
