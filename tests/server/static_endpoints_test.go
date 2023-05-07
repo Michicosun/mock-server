@@ -47,7 +47,7 @@ func TestStaticRoutesSimple(t *testing.T) {
 		"path": "/test_url",
 		"expected_response": "hello"
 	}`)
-	code = DoPost(staticApiEndpoint, requestBody, t)
+	code, _ = DoPost(staticApiEndpoint, requestBody, t)
 	if code != 200 {
 		t.Errorf("create route failed")
 	}
@@ -133,12 +133,12 @@ func TestStaticRoutesDoublePost(t *testing.T) {
 		"path": "/test_url",
 		"expected_response": "hello"
 	}`)
-	code := DoPost(staticApiEndpoint, requestBody, t)
+	code, _ := DoPost(staticApiEndpoint, requestBody, t)
 	if code != 200 {
 		t.Errorf("create route failed: expected 200 != %d", code)
 	}
 
-	code = DoPost(staticApiEndpoint, requestBody, t)
+	code, _ = DoPost(staticApiEndpoint, requestBody, t)
 	if code != 409 {
 		t.Errorf("expected to receive conflict: expected 409 != %d", code)
 	}

@@ -57,7 +57,7 @@ func TestDynamicRoutesSimple(t *testing.T) {
 		"path": "/test_url",
 		"code": "def func():\n    print(['noooo way', 123])"
 	}`)
-	code = DoPost(dynamicApiEndpoint, requestBody, t)
+	code, _ = DoPost(dynamicApiEndpoint, requestBody, t)
 	if code != 200 {
 		t.Errorf("create route failed")
 	}
@@ -150,12 +150,12 @@ func TestDynamicRoutesScriptWithArgs(t *testing.T) {
 	dynamicApiEndpoint := endpoint + "/api/routes/dynamic"
 	testUrl := endpoint + "/test_url"
 
-	code := DoPost(dynamicApiEndpoint, testBodyScript, t)
+	code, _ := DoPost(dynamicApiEndpoint, testBodyScript, t)
 	if code != 200 {
 		t.Errorf("failed to add new dynamic route")
 	}
 
-	code, body := DoGetWithBody(testUrl, testScriptArgs, t)
+	code, body := DoPost(testUrl, testScriptArgs, t)
 	if code != 200 {
 		t.Errorf("failed to query created dynamic route")
 	}
@@ -178,12 +178,12 @@ func TestDynamicRoutesDoublePost(t *testing.T) {
 		"path": "/test_url",
 		"code": "def func(A, B, C):\n    pass"
 	}`)
-	code := DoPost(dynamicApiEndpoint, testBodyScript, t)
+	code, _ := DoPost(dynamicApiEndpoint, testBodyScript, t)
 	if code != 200 {
 		t.Errorf("create route failed: Expected 200 != %d", code)
 	}
 
-	code = DoPost(dynamicApiEndpoint, testBodyScript, t)
+	code, _ = DoPost(dynamicApiEndpoint, testBodyScript, t)
 	if code != 409 {
 		t.Errorf("expected to receive conflict: expected 409 != %d", code)
 	}
