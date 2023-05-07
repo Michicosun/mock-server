@@ -38,14 +38,14 @@ func TestKafka(t *testing.T) {
 
 	handler.NewReadTask().Schedule()
 
-	time.Sleep(10 * time.Second)
+	time.Sleep(15 * time.Second)
 
 	writeTaskMessages, err := database.GetTaskMessages(context.TODO(), "kafka:test-pool:test-topic:write")
 	if err != nil {
 		t.Error(err)
 	}
 	if !reflect.DeepEqual(writeTaskMessages, []string{"40", "41", "42"}) {
-		t.Errorf("res != expected: %s != %s", writeTaskMessages, []string{"40", "41", "42"})
+		t.Errorf("res != expected: %+q != %+q", writeTaskMessages, []string{"40", "41", "42"})
 	}
 
 	readTaskMessages, err := database.GetTaskMessages(context.TODO(), "kafka:test-pool:test-topic:read")
@@ -53,6 +53,6 @@ func TestKafka(t *testing.T) {
 		t.Error(err)
 	}
 	if !reflect.DeepEqual(readTaskMessages, []string{"40", "41", "42"}) {
-		t.Errorf("res != expected: %s != %s", readTaskMessages, []string{"40", "41", "42"})
+		t.Errorf("res != expected: %+q != %+q", readTaskMessages, []string{"40", "41", "42"})
 	}
 }

@@ -45,7 +45,7 @@ func TestRabbitMq(t *testing.T) {
 		t.Error(err)
 	}
 	if !reflect.DeepEqual(writeTaskMessages, []string{"40", "41", "42"}) {
-		t.Errorf("res != expected: %s != %s", writeTaskMessages, []string{"40", "41", "42"})
+		t.Errorf("res != expected: %+q != %+q", writeTaskMessages, []string{"40", "41", "42"})
 	}
 
 	readTaskMessages, err := database.GetTaskMessages(context.TODO(), "rabbitmq:test-pool:test-mock-queue:read")
@@ -53,6 +53,6 @@ func TestRabbitMq(t *testing.T) {
 		t.Error(err)
 	}
 	if !reflect.DeepEqual(readTaskMessages, []string{"40", "41", "42"}) {
-		t.Errorf("res != expected: %s != %s", readTaskMessages, []string{"40", "41", "42"})
+		t.Errorf("res != expected: %+q != %+q", readTaskMessages, []string{"40", "41", "42"})
 	}
 }

@@ -91,7 +91,7 @@ func TestStaticEndpoints(t *testing.T) {
 				}
 
 				if !compareStaticEndpointPaths(res, endpoints) {
-					t.Errorf("res != expected: %s != %s", res, endpoints)
+					t.Errorf("res != expected: %+q != %+q", res, endpoints)
 				}
 			}
 
@@ -204,7 +204,7 @@ func TestDynamicEndpoints(t *testing.T) {
 				}
 
 				if !compareDynamicEndpointPaths(res, endpoints) {
-					t.Errorf("res != expected: %s != %s", res, endpoints)
+					t.Errorf("res != expected: %+q != %+q", res, endpoints)
 				}
 			}
 
