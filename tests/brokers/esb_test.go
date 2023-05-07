@@ -6,6 +6,7 @@ import (
 	"mock-server/internal/control"
 	"mock-server/internal/database"
 	"mock-server/internal/util"
+	"reflect"
 	"testing"
 	"time"
 )
@@ -74,15 +75,21 @@ func TestEsb(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	t.Errorf("%s = %s\n", readTaskId1, res)
+	if !reflect.DeepEqual(res, []string{"msg1", "msg2", "msg3"}) {
+		t.Errorf("res != expected: %+q != %+q", res, []string{"msg1", "msg2", "msg3"})
+	}
 	res, err = database.GetTaskMessages(context.TODO(), string(writeTaskId))
 	if err != nil {
 		t.Error(err)
 	}
-	t.Errorf("%s = %s\n", writeTaskId, res)
+	if !reflect.DeepEqual(res, []string{"msg1", "msg2", "msg3"}) {
+		t.Errorf("res != expected: %+q != %+q", res, []string{"msg1", "msg2", "msg3"})
+	}
 	res, err = database.GetTaskMessages(context.TODO(), string(readTaskId2))
 	if err != nil {
 		t.Error(err)
 	}
-	t.Errorf("%s = %s\n", readTaskId2, res)
+	if !reflect.DeepEqual(res, []string{"msg3", "msg2", "msg1"}) {
+		t.Errorf("res != expected: %+q != %+q", res, []string{"msg3", "msg2", "msg1"})
+	}
 }
