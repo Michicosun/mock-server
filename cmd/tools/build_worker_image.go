@@ -5,6 +5,9 @@ import (
 	"mock-server/internal/coderun"
 	"mock-server/internal/configs"
 	"mock-server/internal/logger"
+	"os"
+
+	zlog "github.com/rs/zerolog/log"
 )
 
 func main() {
@@ -16,6 +19,11 @@ func main() {
 		ConsoleLoggingEnabled: true,
 		FileLoggingEnabled:    false,
 	})
+
+	if _, set := os.LookupEnv("SKIP_REBUILD_CONTAINER"); set {
+		zlog.Warn().Msg("Manually skip rebuild container")
+		return
+	}
 
 	if err := coderun.WorkerWatcher.Init(ctx, &configs.CoderunConfig{
 		WorkerCnt: 0,
