@@ -52,15 +52,15 @@ func TestServerSameNamespaceForEndpoints(t *testing.T) {
 	}`)
 
 	// post static endpoint than try to post same static and dynamic
-	code := DoPost(staticApiEndpoint, requestBody, t)
+	code, _ := DoPost(staticApiEndpoint, requestBody, t)
 	if code != 200 {
 		t.Errorf("create route failed: expected 200 != %d", code)
 	}
-	code = DoPost(dynamicApiEndpoint, testBodyScript, t)
+	code, _ = DoPost(dynamicApiEndpoint, testBodyScript, t)
 	if code != 409 {
 		t.Errorf("expected to receive conflict: expected 409 != %d", code)
 	}
-	code = DoPost(staticApiEndpoint, requestBody, t)
+	code, _ = DoPost(staticApiEndpoint, requestBody, t)
 	if code != 409 {
 		t.Errorf("expected to receive conflict: expected 409 != %d", code)
 	}
@@ -72,15 +72,15 @@ func TestServerSameNamespaceForEndpoints(t *testing.T) {
 	}
 
 	// same as first test but fisrt post dynamic
-	code = DoPost(dynamicApiEndpoint, testBodyScript, t)
+	code, _ = DoPost(dynamicApiEndpoint, testBodyScript, t)
 	if code != 200 {
 		t.Errorf("create route failed: expected 200 != %d", code)
 	}
-	code = DoPost(staticApiEndpoint, requestBody, t)
+	code, _ = DoPost(staticApiEndpoint, requestBody, t)
 	if code != 409 {
 		t.Errorf("expected to receive conflict: expected 409 != %d", code)
 	}
-	code = DoPost(dynamicApiEndpoint, testBodyScript, t)
+	code, _ = DoPost(dynamicApiEndpoint, testBodyScript, t)
 	if code != 409 {
 		t.Errorf("expected to receive conflict: expected 409 != %d", code)
 	}
@@ -92,34 +92,9 @@ func DoGet(url string, t *testing.T) (int, []byte) {
 		t.Error(err)
 		return 0, nil
 	}
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		t.Error(err)
-		return 0, nil
-	}
-
-	return resp.StatusCode, body
-}
-
-func DoGetWithBody(url string, content []byte, t *testing.T) (int, []byte) {
-	client := &http.Client{}
-
-	req, err := http.NewRequest(http.MethodGet, url, bytes.NewBuffer(content))
-	req.Header.Set("Content-Type", "application/json")
-	if err != nil {
-		t.Error(err)
-		return 0, nil
-	}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		t.Error(err)
-		return 0, nil
-	}
-
-	body, err := io.ReadAll(resp.Body)
 	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		t.Error(err)
 		return 0, nil
@@ -128,14 +103,21 @@ func DoGetWithBody(url string, content []byte, t *testing.T) (int, []byte) {
 	return resp.StatusCode, body
 }
 
-func DoPost(url string, content []byte, t *testing.T) int {
+func DoPost(url string, content []byte, t *testing.T) (int, []byte) {
 	resp, err := http.Post(url, "application/json", bytes.NewBuffer(content))
 	if err != nil {
 		t.Error(err)
-		return 0
+		return 0, nil
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Error(err)
+		return 0, nil
 	}
 
-	return resp.StatusCode
+	return resp.StatusCode, body
 }
 
 func DoPut(url string, content []byte, t *testing.T) int {
