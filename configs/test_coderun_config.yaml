@@ -16,7 +16,7 @@ logs:
     consoleLoggingEnabled: true
     fileLoggingEnabled: true
     directory: "/tmp/mock-server-logs"
-    filename: "log"
+    filename: "log-test"
     maxSize: 500
     maxBackups: 5
     maxAge: 30

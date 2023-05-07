@@ -1,7 +1,17 @@
+logs:
+    level: 0
+    consoleLoggingEnabled: true
+    fileLoggingEnabled: true
+    directory: "/tmp/mock-server-logs"
+    filename: "mock-server-log"
+    maxSize: 500
+    maxBackups: 5
+    maxAge: 30
+
 use_components:
-  server: false
-  brokers: true
-  coderun: true
+    server: true
+    brokers: true
+    coderun: true
 
 brokers:
     scheduler:
@@ -30,15 +40,11 @@ coderun:
             cpu_limit: 0.5
             memory_limit_mb: 200
 
-logs:
-    level: 0
-    consoleLoggingEnabled: true
-    fileLoggingEnabled: true
-    directory: "/tmp/mock-server-logs"
-    filename: "log-test"
-    maxSize: 500
-    maxBackups: 5
-    maxAge: 30
+server:
+    addr: "127.0.0.1:1337"
+    accept_timeout: 20s
+    response_timeout: 20s
+    deploy_production: true
 
 database:
     inmemory: true
