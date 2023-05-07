@@ -41,9 +41,15 @@ func (s *server) Init(cfg *configs.ServerConfig) {
 
 	s.router = gin.New()
 
+	if cfg.DeployProduction {
+		gin.SetMode(gin.ReleaseMode)
+	} else {
+		gin.SetMode(gin.DebugMode)
+	}
+
 	s.router.Use(logger.GinLogger()) // use custom logger (zerolog)
 	s.router.Use(gin.Recovery())     // recovery from all panics
-	s.router.Use(cors.Default())
+	s.router.Use(cors.Default())     // needs when routing development-mode frontend app
 
 	s.initMainRoutes()
 

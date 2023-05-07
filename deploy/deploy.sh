@@ -101,7 +101,7 @@ fi
 sudo mkdir -p /etc/mock-server/configs
 
 echo "Copying golang binary config to working directory"
-if sudo cp ../configs/config.yaml /etc/mock-server/configs/; then
+if sudo cp ../configs/production.yaml /etc/mock-server/configs/config.yaml; then
     echo "Successfully copied"
 else
     echo "Failed to copy golang binary config to /etc/mock-server/configs/"
