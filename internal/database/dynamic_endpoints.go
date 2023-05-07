@@ -51,7 +51,7 @@ func (s *dynamicEndpoints) addDynamicEndpoint(ctx context.Context, dynamicEndpoi
 			dynamicEndpoint,
 		)
 		if mongo.IsDuplicateKeyError(err) {
-			return nil
+			return ErrDuplicateKey
 		} else if err != nil {
 			return err
 		}

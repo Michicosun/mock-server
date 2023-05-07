@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -257,7 +258,7 @@ func play_database() {
 		Path:     "/test",
 		Response: "Zdarova",
 	}
-	err := database.AddStaticEndpoint(endpoint)
+	err := database.AddStaticEndpoint(context.TODO(), endpoint)
 	if err != nil {
 		panic(err)
 	}
@@ -265,7 +266,7 @@ func play_database() {
 		Str("endpoint", endpoint.Path).
 		Str("response", endpoint.Response).
 		Msg("Added")
-	res, _ := database.ListAllStaticEndpointPaths()
+	res, _ := database.ListAllStaticEndpointPaths(context.TODO())
 	zlog.Info().Interface("endpoints", res).Msg("Queried")
 }
 

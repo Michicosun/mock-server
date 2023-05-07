@@ -127,7 +127,7 @@ func (s *server) initRoutesApiStatic(routes *gin.RouterGroup) {
 
 	routes.GET(staticRoutesEndpoint, func(c *gin.Context) {
 		zlog.Info().Msg("Get all routes static request")
-		endpoints, err := database.ListAllStaticEndpointPaths()
+		endpoints, err := database.ListAllStaticEndpointPaths(c)
 
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -146,7 +146,7 @@ func (s *server) initRoutesApiStatic(routes *gin.RouterGroup) {
 
 		zlog.Info().Str("path", staticEndpoint.Path).Msg("Received create static request")
 
-		has, err := database.HasEndpoint(staticEndpoint.Path)
+		has, err := database.HasEndpoint(c, staticEndpoint.Path)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -156,7 +156,7 @@ func (s *server) initRoutesApiStatic(routes *gin.RouterGroup) {
 			return
 		}
 
-		if err := database.AddStaticEndpoint(database.StaticEndpoint{
+		if err := database.AddStaticEndpoint(c, database.StaticEndpoint{
 			Path:     staticEndpoint.Path,
 			Response: staticEndpoint.ExpectedResponse,
 		}); err != nil {
@@ -177,7 +177,7 @@ func (s *server) initRoutesApiStatic(routes *gin.RouterGroup) {
 
 		zlog.Info().Str("path", staticEndpoint.Path).Msg("Received update static request")
 
-		has, err := database.HasStaticEndpoint(staticEndpoint.Path)
+		has, err := database.HasStaticEndpoint(c, staticEndpoint.Path)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -188,7 +188,7 @@ func (s *server) initRoutesApiStatic(routes *gin.RouterGroup) {
 			return
 		}
 
-		if err := database.UpdateStaticEndpoint(database.StaticEndpoint{
+		if err := database.UpdateStaticEndpoint(c, database.StaticEndpoint{
 			Path:     staticEndpoint.Path,
 			Response: staticEndpoint.ExpectedResponse,
 		}); err != nil {
@@ -211,7 +211,7 @@ func (s *server) initRoutesApiStatic(routes *gin.RouterGroup) {
 
 		zlog.Info().Str("path", path).Msg("Received delete static request")
 
-		if err := database.RemoveStaticEndpoint(path); err != nil {
+		if err := database.RemoveStaticEndpoint(c, path); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
@@ -228,7 +228,7 @@ func (s *server) initRoutesApiDynamic(routes *gin.RouterGroup) {
 	routes.GET(dynamicRoutesEndpoint, func(c *gin.Context) {
 		zlog.Info().Msg("Get all routes dynamic request")
 
-		endpoints, err := database.ListAllDynamicEndpointPaths()
+		endpoints, err := database.ListAllDynamicEndpointPaths(c)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -247,7 +247,7 @@ func (s *server) initRoutesApiDynamic(routes *gin.RouterGroup) {
 
 		zlog.Info().Str("path", dynamicEndpoint.Path).Msg("Received create dynamic request")
 
-		has, err := database.HasEndpoint(dynamicEndpoint.Path)
+		has, err := database.HasEndpoint(c, dynamicEndpoint.Path)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -266,7 +266,7 @@ func (s *server) initRoutesApiDynamic(routes *gin.RouterGroup) {
 			return
 		}
 
-		if err := database.AddDynamicEndpoint(database.DynamicEndpoint{
+		if err := database.AddDynamicEndpoint(c, database.DynamicEndpoint{
 			Path:       dynamicEndpoint.Path,
 			ScriptName: scriptName,
 		}); err != nil {
@@ -293,7 +293,7 @@ func (s *server) initRoutesApiDynamic(routes *gin.RouterGroup) {
 
 		zlog.Info().Str("path", dynamicEndpoint.Path).Msg("Received update dynamic request")
 
-		scriptName, err := database.GetDynamicEndpointScriptName(dynamicEndpoint.Path)
+		scriptName, err := database.GetDynamicEndpointScriptName(c, dynamicEndpoint.Path)
 		if err == database.ErrNoSuchPath {
 			zlog.Error().Msg("Update on unexisting path")
 			c.JSON(http.StatusNotFound, gin.H{"error": "Received path was not created before"})
@@ -327,7 +327,7 @@ func (s *server) initRoutesApiDynamic(routes *gin.RouterGroup) {
 
 		zlog.Info().Str("path", path).Msg("Received delete dynamic request")
 
-		if err := database.RemoveDynamicEndpoint(path); err != nil {
+		if err := database.RemoveDynamicEndpoint(c, path); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
@@ -342,7 +342,7 @@ func (s *server) initNoRoute() {
 		path := c.Request.URL.Path
 		zlog.Info().Str("path", path).Msg("Received path")
 
-		expectedResponse, err := database.GetStaticEndpointResponse(path)
+		expectedResponse, err := database.GetStaticEndpointResponse(c, path)
 		if err == nil {
 			c.JSON(http.StatusOK, expectedResponse)
 			return
@@ -353,7 +353,7 @@ func (s *server) initNoRoute() {
 			return
 		}
 
-		scriptName, err := database.GetDynamicEndpointScriptName(path)
+		scriptName, err := database.GetDynamicEndpointScriptName(c, path)
 		if err == nil {
 			worker, err := coderun.WorkerWatcher.BorrowWorker()
 			if err != nil {

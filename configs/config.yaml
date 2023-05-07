@@ -48,3 +48,4 @@ server:
 
 database:
     inmemory: true
+    cache_size: 100

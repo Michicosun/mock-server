@@ -51,7 +51,7 @@ func (s *staticEndpoints) addStaticEndpoint(ctx context.Context, staticEndpoint 
 			staticEndpoint,
 		)
 		if mongo.IsDuplicateKeyError(err) {
-			return nil
+			return ErrDuplicateKey
 		} else if err != nil {
 			return err
 		}
