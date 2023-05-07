@@ -11,13 +11,13 @@ const (
 )
 
 type StaticEndpoint struct {
-	Path     string `bson:"path" json:"path"`
-	Response string `bson:"response" json:"response"`
+	Path     string `bson:"path"`
+	Response string `bson:"response"`
 }
 
 type DynamicEndpoint struct {
-	Path       string `bson:"path" json:"path"`
-	ScriptName string `bson:"script_name" json:"script_name"`
+	Path       string `bson:"path"`
+	ScriptName string `bson:"script_name"`
 }
 
 type TaskMessage struct {

@@ -52,7 +52,6 @@ type mpTaskScheduler struct {
 	errors      chan TaskError
 	ctx         context.Context
 	wg          sync.WaitGroup
-	waitForGet  sync.WaitGroup
 }
 
 func (mps *mpTaskScheduler) Init(ctx context.Context, cfg *configs.MPTaskSchedulerConfig) {
@@ -76,18 +75,12 @@ func (mps *mpTaskScheduler) Start() {
 	zlog.Info().Msg("starting broker task scheduler")
 	for i := uint32(0); i < mps.cfg.R_workers; i += 1 {
 		mps.wg.Add(1)
-		mps.waitForGet.Add(1)
 		go mps.rWorkerRoutine()
 	}
 	for i := uint32(0); i < mps.cfg.W_workers; i += 1 {
 		mps.wg.Add(1)
-		mps.waitForGet.Add(1)
 		go mps.wWorkerRoutine()
 	}
-}
-
-func (mps *mpTaskScheduler) WaitIdle() {
-	mps.waitForGet.Wait()
 }
 
 func (mps *mpTaskScheduler) Errors() <-chan TaskError {
@@ -155,14 +148,12 @@ func qread(ctx context.Context, task qReadTask) error {
 
 func (mps *mpTaskScheduler) rWorkerRoutine() {
 	for {
-		mps.waitForGet.Done()
 		elem := mps.read_tasks.Get()
 		if elem.IsNone() {
 			zlog.Debug().Msg("r_worker Done")
 			mps.wg.Done()
 			return
 		}
-		mps.waitForGet.Add(1)
 		task := elem.Unwrap()
 		task_ctx, cancel := context.WithTimeout(mps.ctx, mps.cfg.Read_timeout)
 		if err := qread(task_ctx, task); err != nil {
@@ -199,14 +190,12 @@ func qwrite(ctx context.Context, task qWriteTask) error {
 
 func (mps *mpTaskScheduler) wWorkerRoutine() {
 	for {
-		mps.waitForGet.Done()
 		elem := mps.write_tasks.Get()
 		if elem.IsNone() {
 			zlog.Debug().Msg("w_worker Done")
 			mps.wg.Done()
 			return
 		}
-		mps.waitForGet.Add(1)
 		task := elem.Unwrap()
 		task_ctx, cancel := context.WithTimeout(mps.ctx, mps.cfg.Write_timeout)
 		if err := qwrite(task_ctx, task); err != nil {

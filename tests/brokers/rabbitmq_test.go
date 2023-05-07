@@ -38,7 +38,7 @@ func TestRabbitMq(t *testing.T) {
 
 	handler.NewWriteTask([]string{"40", "41", "42"}).Schedule()
 
-	brokers.MPTaskScheduler.WaitIdle()
+	time.Sleep(10 * time.Second)
 
 	writeTaskMessages, err := database.GetTaskMessages(context.TODO(), "rabbitmq:test-pool:test-mock-queue:write")
 	if err != nil {

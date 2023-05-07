@@ -55,8 +55,8 @@ func TestStaticEndpoints(t *testing.T) {
 
 			// Check that we store only unique elems
 			for _, endpoint := range endpoints {
-				if err := database.AddStaticEndpoint(context.TODO(), endpoint); err != nil {
-					t.Errorf("AddStaticEndpoint return err: %s", err.Error())
+				if err := database.AddStaticEndpoint(context.TODO(), endpoint); err != database.ErrDuplicateKey {
+					t.Errorf("AddStaticEndpoint shoud return ErrDuplicateKey")
 				}
 			}
 
@@ -104,8 +104,8 @@ func TestStaticEndpoints(t *testing.T) {
 			if err := database.AddStaticEndpoint(context.TODO(), database.StaticEndpoint{
 				Path:     "/path",
 				Response: "two",
-			}); err != nil {
-				t.Errorf("AddStaticEndpoint return err: %s", err.Error())
+			}); err != database.ErrDuplicateKey {
+				t.Errorf("AddStaticEndpoint should return ErrDuplicateKey")
 			}
 			response, err := database.GetStaticEndpointResponse(context.TODO(), "/path")
 			if err != nil {
@@ -168,8 +168,8 @@ func TestDynamicEndpoints(t *testing.T) {
 			}
 
 			for _, endpoint := range endpoints {
-				if err := database.AddDynamicEndpoint(context.TODO(), endpoint); err != nil {
-					t.Errorf("AddDynamicEndpoint return err: %s", err.Error())
+				if err := database.AddDynamicEndpoint(context.TODO(), endpoint); err != database.ErrDuplicateKey {
+					t.Error("AddDynamicEndpoint should return ErrDuplicateKey")
 				}
 			}
 
@@ -217,8 +217,8 @@ func TestDynamicEndpoints(t *testing.T) {
 			if err := database.AddDynamicEndpoint(context.TODO(), database.DynamicEndpoint{
 				Path:       "/path",
 				ScriptName: "two",
-			}); err != nil {
-				t.Errorf("AddDynamicEndpoint return err: %s", err.Error())
+			}); err != database.ErrDuplicateKey {
+				t.Errorf("AddDynamicEndpoint should return ErrDuplicateKey: %s", err.Error())
 			}
 			response, err := database.GetDynamicEndpointScriptName(context.TODO(), "/path")
 			if err != nil {

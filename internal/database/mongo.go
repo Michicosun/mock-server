@@ -35,7 +35,10 @@ func (db *MongoStorage) init(ctx context.Context, client *mongo.Client, cfg *con
 		return err
 	}
 	db.taskMessages, err = createTaskMessages(ctx, client, cfg)
-	return err
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func AddStaticEndpoint(ctx context.Context, staticEndpoint StaticEndpoint) error {

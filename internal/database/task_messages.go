@@ -2,7 +2,6 @@ package database
 
 import (
 	"context"
-	"fmt"
 	"mock-server/internal/configs"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -26,13 +25,12 @@ func (s *taskMessages) init(ctx context.Context, client *mongo.Client, cfg *conf
 }
 
 func (s *taskMessages) addTaskMessage(ctx context.Context, taskMessage TaskMessage) error {
-	fmt.Printf("Add task message: %s\n", taskMessage)
 	_, err := s.coll.InsertOne(
 		ctx,
 		taskMessage,
 	)
 	if mongo.IsDuplicateKeyError(err) {
-		return nil
+		return ErrDuplicateKey
 	}
 	return err
 }
@@ -54,8 +52,6 @@ func (s *taskMessages) getTaskMessages(ctx context.Context, taskId string) ([]st
 	if err := cursor.All(ctx, &result); err != nil {
 		return nil, err
 	}
-
-	fmt.Printf("getTaskMessages: taskId=%s, result=%s\n", taskId, result)
 
 	var messages = make([]string, len(result))
 	for i, taskMessage := range result {
