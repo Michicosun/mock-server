@@ -27,7 +27,7 @@ func TestRabbitMq(t *testing.T) {
 		t.Error(err)
 	}
 
-	handler.NewReadTask().Schedule()
+	readTaskId := handler.NewReadTask().Schedule()
 
 	time.Sleep(1 * time.Second)
 
@@ -36,11 +36,11 @@ func TestRabbitMq(t *testing.T) {
 		t.Error(err)
 	}
 
-	handler.NewWriteTask([]string{"40", "41", "42"}).Schedule()
+	writeTaskId := handler.NewWriteTask([]string{"40", "41", "42"}).Schedule()
 
 	time.Sleep(10 * time.Second)
 
-	writeTaskMessages, err := database.GetTaskMessages(context.TODO(), "rabbitmq:test-pool:test-mock-queue:write")
+	writeTaskMessages, err := database.GetTaskMessages(context.TODO(), string(writeTaskId))
 	if err != nil {
 		t.Error(err)
 	}
@@ -48,7 +48,7 @@ func TestRabbitMq(t *testing.T) {
 		t.Errorf("res != expected: %+q != %+q", writeTaskMessages, []string{"40", "41", "42"})
 	}
 
-	readTaskMessages, err := database.GetTaskMessages(context.TODO(), "rabbitmq:test-pool:test-mock-queue:read")
+	readTaskMessages, err := database.GetTaskMessages(context.TODO(), string(readTaskId))
 	if err != nil {
 		t.Error(err)
 	}
