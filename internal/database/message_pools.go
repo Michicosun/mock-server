@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"mock-server/internal/configs"
+	"mock-server/internal/util"
 	"sync"
 
 	"github.com/bluele/gcache"
@@ -26,65 +27,61 @@ func createMessagePools(ctx context.Context, client *mongo.Client, cfg *configs.
 
 func (mp *messagePools) init(ctx context.Context, client *mongo.Client, cfg *configs.DatabaseConfig) error {
 	mp.coll = client.Database(DATABASE_NAME).Collection(MESSAGE_POOLS_COLLECTION)
-	mp.cache = gcache.New(cfg.CacheSize).Simple().LoaderFunc(func(poolNameIn interface{}) (interface{}, error) {
+	mp.cache = gcache.New(cfg.CacheSize).Simple().LoaderFunc(func(poolName interface{}) (interface{}, error) {
 		var res MessagePool
 		err := mp.coll.FindOne(
 			ctx,
-			bson.D{primitive.E{Key: POOL_NAME_IN_FIELD, Value: poolNameIn.(string)}},
+			bson.D{primitive.E{Key: MESSAGE_POOL_NAME, Value: poolName.(string)}},
 		).Decode(&res)
 		return res, err
 	}).Build()
 
 	indexModel := mongo.IndexModel{
-		Keys:    bson.D{{Key: POOL_NAME_IN_FIELD, Value: 1}},
+		Keys:    bson.D{{Key: MESSAGE_POOL_NAME, Value: 1}},
 		Options: options.Index().SetUnique(true),
 	}
 	_, err := mp.coll.Indexes().CreateOne(ctx, indexModel)
 	return err
 }
 
-// func (esb *esbRecords) addESBRecord(ctx context.Context, esbRecord ESBRecord) error {
-// 	return util.RunWithWriteLock(&esb.mutex, func() error {
-// 		_, err := esb.coll.InsertOne(
-// 			ctx,
-// 			esbRecord,
-// 		)
-// 		if mongo.IsDuplicateKeyError(err) {
-// 			return ErrDuplicateKey
-// 		} else if err != nil {
-// 			return err
-// 		}
-// 		err = esb.cache.Set(esbRecord.PoolNameIn, esbRecord)
-// 		return err
-// 	})
-// }
+func (mp *messagePools) addMessagePool(ctx context.Context, messagePool MessagePool) error {
+	return util.RunWithWriteLock(&mp.mutex, func() error {
+		_, err := mp.coll.InsertOne(
+			ctx,
+			messagePool,
+		)
+		if mongo.IsDuplicateKeyError(err) {
+			return ErrDuplicateKey
+		} else if err != nil {
+			return err
+		}
+		err = mp.cache.Set(messagePool.Name, messagePool)
+		return err
+	})
+}
 
-// func (esb *esbRecords) removeESBRecord(ctx context.Context, poolNameIn string) error {
-// 	return util.RunWithWriteLock(&esb.mutex, func() error {
-// 		_, err := esb.coll.DeleteOne(
-// 			ctx,
-// 			bson.D{primitive.E{Key: POOL_NAME_IN_FIELD, Value: poolNameIn}},
-// 		)
-// 		if err != nil {
-// 			return err
-// 		}
-// 		esb.cache.Remove(poolNameIn)
-// 		return nil
-// 	})
-// }
+func (mp *messagePools) removeMessagePool(ctx context.Context, name string) error {
+	return util.RunWithWriteLock(&mp.mutex, func() error {
+		_, err := mp.coll.DeleteOne(
+			ctx,
+			bson.D{primitive.E{Key: MESSAGE_POOL_NAME, Value: name}},
+		)
+		if err != nil {
+			return err
+		}
+		mp.cache.Remove(name)
+		return nil
+	})
+}
 
-// func (esb *esbRecords) getESBRecord(ctx context.Context, poolNameIn string) (ESBRecord, error) {
-// 	return util.RunWithReadLock(&esb.mutex, func() (ESBRecord, error) {
-// 		var res ESBRecord
-// 		err := esb.coll.FindOne(
-// 			ctx,
-// 			bson.D{{Key: POOL_NAME_IN_FIELD, Value: poolNameIn}},
-// 			nil,
-// 		).Decode(&res)
-
-// 		if err == mongo.ErrNoDocuments {
-// 			return res, ErrNoSuchRecord
-// 		}
-// 		return res, err
-// 	})
-// }
+func (mp *messagePools) getMessagePool(ctx context.Context, name string) (MessagePool, error) {
+	return util.RunWithReadLock(&mp.mutex, func() (MessagePool, error) {
+		res, err := mp.cache.Get(name)
+		if err == mongo.ErrNoDocuments {
+			return MessagePool{}, ErrNoSuchPool
+		} else if err != nil {
+			return MessagePool{}, err
+		}
+		return res.(MessagePool), nil
+	})
+}

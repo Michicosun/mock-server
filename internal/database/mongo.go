@@ -22,6 +22,7 @@ type MongoStorage struct {
 	dynamicEndpoints *dynamicEndpoints
 	taskMessages     *taskMessages
 	esbRecords       *esbRecords
+	messagePools     *messagePools
 }
 
 var db = &MongoStorage{}
@@ -42,6 +43,10 @@ func (db *MongoStorage) init(ctx context.Context, client *mongo.Client, cfg *con
 		return err
 	}
 	db.esbRecords, err = createESBRecords(ctx, client, cfg)
+	if err != nil {
+		return err
+	}
+	db.messagePools, err = createMessagePools(ctx, client, cfg)
 	if err != nil {
 		return err
 	}
@@ -109,15 +114,15 @@ func GetESBRecord(ctx context.Context, poolNameIn string) (ESBRecord, error) {
 }
 
 func AddMessagePool(ctx context.Context, messagePool MessagePool) error {
-	return nil
+	return db.messagePools.addMessagePool(ctx, messagePool)
 }
 
 func RemoveMessagePool(ctx context.Context, name string) error {
-	return nil
+	return db.messagePools.removeMessagePool(ctx, name)
 }
 
 func GetMessagePool(ctx context.Context, name string) (MessagePool, error) {
-	return MessagePool{}, nil
+	return db.messagePools.getMessagePool(ctx, name)
 }
 
 func HasEndpoint(ctx context.Context, path string) (bool, error) {

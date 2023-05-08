@@ -36,10 +36,19 @@ type RabbitMQWriteConfig struct {
 }
 
 type RabbitMQPoolConfig struct {
-	queue string              `json:"queue"`
-	qcfg  RabbitMQQueueConfig `json:"qcfg"`
-	rcfg  RabbitMQReadConfig  `json:"rcfg"`
-	wcfg  RabbitMQWriteConfig `json:"wcfg"`
+	Queue string              `json:"queue"`
+	Qcfg  RabbitMQQueueConfig `json:"qcfg"`
+	Rcfg  RabbitMQReadConfig  `json:"rcfg"`
+	Wcfg  RabbitMQWriteConfig `json:"wcfg"`
+}
+
+func GetConfig() RabbitMQPoolConfig {
+	return RabbitMQPoolConfig{
+		"test",
+		RabbitMQQueueConfig{},
+		RabbitMQReadConfig{},
+		RabbitMQWriteConfig{},
+	}
 }
 
 type RabbitMQMessagePool struct {
@@ -60,10 +69,10 @@ func (mp *RabbitMQMessagePool) getBroker() string {
 
 func (mp *RabbitMQMessagePool) getJSONConfig() ([]byte, error) {
 	config := RabbitMQPoolConfig{
-		queue: mp.queue,
-		qcfg:  *mp.qcfg,
-		rcfg:  *mp.rcfg,
-		wcfg:  *mp.wcfg,
+		Queue: mp.queue,
+		Qcfg:  *mp.qcfg,
+		Rcfg:  *mp.rcfg,
+		Wcfg:  *mp.wcfg,
 	}
 	return json.Marshal(config)
 }
@@ -253,10 +262,10 @@ func createRabbitMQPoolFromDatabase(pool database.MessagePool) (*RabbitMQMessage
 	if err != nil {
 		return nil, err
 	}
-	newPool := NewRabbitMQMessagePool(pool.Name, config.queue)
-	newPool.qcfg = &config.qcfg
-	newPool.wcfg = &config.wcfg
-	newPool.rcfg = &config.rcfg
+	newPool := NewRabbitMQMessagePool(pool.Name, config.Queue)
+	newPool.qcfg = &config.Qcfg
+	newPool.wcfg = &config.Wcfg
+	newPool.rcfg = &config.Rcfg
 	return newPool, nil
 }
 

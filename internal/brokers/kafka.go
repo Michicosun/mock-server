@@ -27,10 +27,10 @@ type KafkaWriteConfig struct {
 }
 
 type KafkaMessagePoolConfig struct {
-	topic string           `json:"topic"`
-	tcfg  KafkaTopicConfig `json:"tcfg"`
-	rcfg  KafkaReadConfig  `json:"rcfg"`
-	wcfg  KafkaWriteConfig `json:"wcfg"`
+	Topic string           `json:"topic"`
+	Tcfg  KafkaTopicConfig `json:"tcfg"`
+	Rcfg  KafkaReadConfig  `json:"rcfg"`
+	Wcfg  KafkaWriteConfig `json:"wcfg"`
 }
 
 type KafkaMessagePool struct {
@@ -51,10 +51,10 @@ func (mp *KafkaMessagePool) getBroker() string {
 
 func (mp *KafkaMessagePool) getJSONConfig() ([]byte, error) {
 	config := KafkaMessagePoolConfig{
-		topic: mp.topic,
-		tcfg:  *mp.tcfg,
-		rcfg:  *mp.rcfg,
-		wcfg:  *mp.wcfg,
+		Topic: mp.topic,
+		Tcfg:  *mp.tcfg,
+		Rcfg:  *mp.rcfg,
+		Wcfg:  *mp.wcfg,
 	}
 	return json.Marshal(config)
 }
@@ -256,10 +256,10 @@ func createKafkaPoolFromDatabase(pool database.MessagePool) (*KafkaMessagePool, 
 	if err != nil {
 		return nil, err
 	}
-	newPool := NewKafkaMessagePool(pool.Name, config.topic)
-	newPool.tcfg = &config.tcfg
-	newPool.wcfg = &config.wcfg
-	newPool.rcfg = &config.rcfg
+	newPool := NewKafkaMessagePool(pool.Name, config.Topic)
+	newPool.tcfg = &config.Tcfg
+	newPool.wcfg = &config.Wcfg
+	newPool.rcfg = &config.Rcfg
 	return newPool, nil
 }
 
