@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"mock-server/internal/configs"
+	"mock-server/internal/database"
 	"sync/atomic"
 
 	kafka "github.com/confluentinc/confluent-kafka-go/kafka"
@@ -233,6 +234,19 @@ func (t *kafkaWriteTask) write(ctx context.Context) error {
 
 func (t *kafkaWriteTask) messages() []string {
 	return t.msgs
+}
+
+func createKafkaPoolFromDatabase(pool database.MessagePool) (*KafkaMessagePool, error) {
+	var config KafkaMessagePoolConfig
+	err := json.Unmarshal([]byte(pool.Config), &config)
+	if err != nil {
+		return nil, err
+	}
+	newPool := NewKafkaMessagePool(pool.Name, config.topic)
+	newPool.tcfg = &config.tcfg
+	newPool.wcfg = &config.wcfg
+	newPool.rcfg = &config.rcfg
+	return newPool, nil
 }
 
 func NewKafkaMessagePool(name string, topic string) *KafkaMessagePool {
