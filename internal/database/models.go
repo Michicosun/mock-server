@@ -8,6 +8,9 @@ const (
 	DYNAMIC_ENDPOINT_SCRIPT_NAME_FIELD = "script_name"
 	TASK_ID_FIELD                      = "task_id"
 	MESSAGE_FIELD                      = "message"
+	POOL_NAME_IN_FIELD                 = "pool_name_in"
+	POOL_NAME_OUT_FIELD                = "pool_name_out"
+	MAPPER_SCRIPT_NAME_FIELD           = "mapper_script_name"
 )
 
 type StaticEndpoint struct {
@@ -23,4 +26,10 @@ type DynamicEndpoint struct {
 type TaskMessage struct {
 	TaskId  string `bson:"task_id"`
 	Message string `bson:"message"`
+}
+
+type ESBRecord struct {
+	PoolNameIn       string `bson:"pool_name_in"`
+	PoolNameOut      string `bson:"pool_name_out"`
+	MapperScriptName string `bson:"mapper_script_name"`
 }

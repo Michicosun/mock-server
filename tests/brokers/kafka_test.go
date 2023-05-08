@@ -38,7 +38,7 @@ func TestKafka(t *testing.T) {
 
 	readTaskId := handler.NewReadTask().Schedule()
 
-	time.Sleep(15 * time.Second)
+	time.Sleep(12 * time.Second)
 
 	writeTaskMessages, err := database.GetTaskMessages(context.TODO(), string(writeTaskId))
 	if err != nil {

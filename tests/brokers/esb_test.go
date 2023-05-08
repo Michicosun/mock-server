@@ -49,7 +49,7 @@ func TestEsb(t *testing.T) {
 		t.Error(err)
 	}
 
-	err = brokers.Esb.AddEsbRecordWithMapper("test-pool-1", "test-pool-2", "test-mapper.py")
+	err = brokers.AddEsbRecordWithMapper("test-pool-1", "test-pool-2", "test-mapper.py")
 	if err != nil {
 		t.Error(err)
 	}
@@ -69,7 +69,7 @@ func TestEsb(t *testing.T) {
 	// schedule read -- pull script invocation result
 	readTaskId2 := pool2.NewReadTask().Schedule()
 
-	time.Sleep(20 * time.Second)
+	time.Sleep(12 * time.Second)
 
 	res, err := database.GetTaskMessages(context.TODO(), string(readTaskId1))
 	if err != nil {
