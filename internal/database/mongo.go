@@ -8,21 +8,19 @@ import (
 )
 
 const (
-	DATABASE_NAME                = "mongo_storage"
-	STATIC_ENDPOINTS_COLLECTION  = "static_endpoints"
-	DYNAMIC_ENDPOINTS_COLLECTION = "dynamic_endpoints"
-	TASK_MESSAGES_COLLECTION     = "task_messages"
-	ESB_RECORDS_COLLECTION       = "esb_records"
-	MESSAGE_POOLS_COLLECTION     = "message_pools"
+	DATABASE_NAME            = "mongo_storage"
+	ROUTES_COLLECTION        = "routes"
+	TASK_MESSAGES_COLLECTION = "task_messages"
+	ESB_RECORDS_COLLECTION   = "esb_records"
+	MESSAGE_POOLS_COLLECTION = "message_pools"
 )
 
 type MongoStorage struct {
-	client           *mongo.Client
-	staticEndpoints  *staticEndpoints
-	dynamicEndpoints *dynamicEndpoints
-	taskMessages     *taskMessages
-	esbRecords       *esbRecords
-	messagePools     *messagePools
+	client       *mongo.Client
+	routes       *routes
+	taskMessages *taskMessages
+	esbRecords   *esbRecords
+	messagePools *messagePools
 }
 
 var db = &MongoStorage{}
@@ -30,11 +28,7 @@ var db = &MongoStorage{}
 func (db *MongoStorage) init(ctx context.Context, client *mongo.Client, cfg *configs.DatabaseConfig) error {
 	db.client = client
 	var err error
-	db.staticEndpoints, err = createStaticEndpoints(ctx, client, cfg)
-	if err != nil {
-		return err
-	}
-	db.dynamicEndpoints, err = createDynamicEndpoints(ctx, client, cfg)
+	db.routes, err = createRoutes(ctx, client, cfg)
 	if err != nil {
 		return err
 	}
@@ -53,44 +47,74 @@ func (db *MongoStorage) init(ctx context.Context, client *mongo.Client, cfg *con
 	return nil
 }
 
-func AddStaticEndpoint(ctx context.Context, staticEndpoint StaticEndpoint) error {
-	return db.staticEndpoints.addStaticEndpoint(ctx, staticEndpoint)
+func AddStaticEndpoint(ctx context.Context, path string, response string) error {
+	return db.routes.addRoute(ctx, Route{
+		Path:     path,
+		Type:     STATIC_ENDPOINT_TYPE,
+		Response: response,
+	})
 }
 
 func RemoveStaticEndpoint(ctx context.Context, path string) error {
-	return db.staticEndpoints.removeStaticEndpoint(ctx, path)
+	return db.routes.removeRoute(ctx, path)
 }
 
-func UpdateStaticEndpoint(ctx context.Context, staticEndpoint StaticEndpoint) error {
-	return db.staticEndpoints.updateStaticEndpoint(ctx, staticEndpoint)
+func UpdateStaticEndpoint(ctx context.Context, path string, response string) error {
+	return db.routes.updateRoute(ctx, Route{
+		Path:     path,
+		Type:     STATIC_ENDPOINT_TYPE,
+		Response: response,
+	})
 }
 
 func GetStaticEndpointResponse(ctx context.Context, path string) (string, error) {
-	return db.staticEndpoints.getStaticEndpointResponse(ctx, path)
+	route, err := db.routes.getRoute(ctx, path)
+	if err != nil {
+		return "", err
+	}
+	if route.Type != STATIC_ENDPOINT_TYPE {
+		return "", ErrBadRouteType
+	}
+	return route.Response, nil
 }
 
 func ListAllStaticEndpointPaths(ctx context.Context) ([]string, error) {
-	return db.staticEndpoints.listAllStaticEndpointPaths(ctx)
+	return db.routes.listAllRoutesPathsWithType(ctx, STATIC_ENDPOINT_TYPE)
 }
 
-func AddDynamicEndpoint(ctx context.Context, dynamicEndpoint DynamicEndpoint) error {
-	return db.dynamicEndpoints.addDynamicEndpoint(ctx, dynamicEndpoint)
+func AddDynamicEndpoint(ctx context.Context, path string, scriptName string) error {
+	return db.routes.addRoute(ctx, Route{
+		Path:       path,
+		Type:       DYNAMIC_ENDPOINT_TYPE,
+		ScriptName: scriptName,
+	})
 }
 
 func RemoveDynamicEndpoint(ctx context.Context, path string) error {
-	return db.dynamicEndpoints.removeDynamicEndpoint(ctx, path)
+	return db.routes.removeRoute(ctx, path)
 }
 
-func UpdateDynamicEndpoint(ctx context.Context, dynamicEndpoint DynamicEndpoint) error {
-	return db.dynamicEndpoints.updateDynamicEndpoint(ctx, dynamicEndpoint)
+func UpdateDynamicEndpoint(ctx context.Context, path string, scriptName string) error {
+	return db.routes.updateRoute(ctx, Route{
+		Path:       path,
+		Type:       DYNAMIC_ENDPOINT_TYPE,
+		ScriptName: scriptName,
+	})
 }
 
 func GetDynamicEndpointScriptName(ctx context.Context, path string) (string, error) {
-	return db.dynamicEndpoints.getDynamicEndpointScriptName(ctx, path)
+	route, err := db.routes.getRoute(ctx, path)
+	if err != nil {
+		return "", err
+	}
+	if route.Type != DYNAMIC_ENDPOINT_TYPE {
+		return "", ErrBadRouteType
+	}
+	return route.ScriptName, nil
 }
 
 func ListAllDynamicEndpointPaths(ctx context.Context) ([]string, error) {
-	return db.dynamicEndpoints.listAllDynamicEndpointPaths(ctx)
+	return db.routes.listAllRoutesPathsWithType(ctx, DYNAMIC_ENDPOINT_TYPE)
 }
 
 func AddTaskMessage(ctx context.Context, taskMessage TaskMessage) error {

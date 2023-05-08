@@ -156,10 +156,7 @@ func (s *server) initRoutesApiStatic(routes *gin.RouterGroup) {
 			return
 		}
 
-		if err := database.AddStaticEndpoint(c, database.StaticEndpoint{
-			Path:     staticEndpoint.Path,
-			Response: staticEndpoint.ExpectedResponse,
-		}); err != nil {
+		if err := database.AddStaticEndpoint(c, staticEndpoint.Path, staticEndpoint.ExpectedResponse); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
@@ -188,10 +185,7 @@ func (s *server) initRoutesApiStatic(routes *gin.RouterGroup) {
 			return
 		}
 
-		if err := database.UpdateStaticEndpoint(c, database.StaticEndpoint{
-			Path:     staticEndpoint.Path,
-			Response: staticEndpoint.ExpectedResponse,
-		}); err != nil {
+		if err := database.UpdateStaticEndpoint(c, staticEndpoint.Path, staticEndpoint.ExpectedResponse); err != nil {
 			zlog.Error().Err(err).Msg("Failed to add static endpoint")
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -300,10 +294,7 @@ func (s *server) initRoutesApiDynamic(routes *gin.RouterGroup) {
 			return
 		}
 
-		if err := database.AddDynamicEndpoint(c, database.DynamicEndpoint{
-			Path:       dynamicEndpoint.Path,
-			ScriptName: scriptName,
-		}); err != nil {
+		if err := database.AddDynamicEndpoint(c, dynamicEndpoint.Path, scriptName); err != nil {
 			zlog.Error().Err(err).Msg("Failed to add dynamic endpoint")
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
