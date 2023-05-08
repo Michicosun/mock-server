@@ -13,6 +13,7 @@ const (
 	DYNAMIC_ENDPOINTS_COLLECTION = "dynamic_endpoints"
 	TASK_MESSAGES_COLLECTION     = "task_messages"
 	ESB_RECORDS_COLLECTION       = "esb_records"
+	MESSAGE_POOLS_COLLECTION     = "message_pools"
 )
 
 type MongoStorage struct {

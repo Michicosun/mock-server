@@ -28,7 +28,7 @@ func createESBRecords(ctx context.Context, client *mongo.Client, cfg *configs.Da
 func (esb *esbRecords) init(ctx context.Context, client *mongo.Client, cfg *configs.DatabaseConfig) error {
 	esb.coll = client.Database(DATABASE_NAME).Collection(ESB_RECORDS_COLLECTION)
 	esb.cache = gcache.New(cfg.CacheSize).Simple().LoaderFunc(func(poolNameIn interface{}) (interface{}, error) {
-		var res StaticEndpoint
+		var res ESBRecord
 		err := esb.coll.FindOne(
 			ctx,
 			bson.D{primitive.E{Key: POOL_NAME_IN_FIELD, Value: poolNameIn.(string)}},
@@ -76,16 +76,12 @@ func (esb *esbRecords) removeESBRecord(ctx context.Context, poolNameIn string) e
 
 func (esb *esbRecords) getESBRecord(ctx context.Context, poolNameIn string) (ESBRecord, error) {
 	return util.RunWithReadLock(&esb.mutex, func() (ESBRecord, error) {
-		var res ESBRecord
-		err := esb.coll.FindOne(
-			ctx,
-			bson.D{{Key: POOL_NAME_IN_FIELD, Value: poolNameIn}},
-			nil,
-		).Decode(&res)
-
+		res, err := esb.cache.Get(poolNameIn)
 		if err == mongo.ErrNoDocuments {
-			return res, ErrNoSuchRecord
+			return ESBRecord{}, ErrNoSuchRecord
+		} else if err != nil {
+			return ESBRecord{}, err
 		}
-		return res, err
+		return res.(ESBRecord), nil
 	})
 }

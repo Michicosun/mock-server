@@ -236,19 +236,6 @@ func (t *kafkaWriteTask) messages() []string {
 	return t.msgs
 }
 
-func createKafkaPoolFromDatabase(pool database.MessagePool) (*KafkaMessagePool, error) {
-	var config KafkaMessagePoolConfig
-	err := json.Unmarshal([]byte(pool.Config), &config)
-	if err != nil {
-		return nil, err
-	}
-	newPool := NewKafkaMessagePool(pool.Name, config.topic)
-	newPool.tcfg = &config.tcfg
-	newPool.wcfg = &config.wcfg
-	newPool.rcfg = &config.rcfg
-	return newPool, nil
-}
-
 func NewKafkaMessagePool(name string, topic string) *KafkaMessagePool {
 	return &KafkaMessagePool{
 		name:  name,
@@ -261,6 +248,19 @@ func NewKafkaMessagePool(name string, topic string) *KafkaMessagePool {
 			Acks: "all",
 		},
 	}
+}
+
+func createKafkaPoolFromDatabase(pool database.MessagePool) (*KafkaMessagePool, error) {
+	var config KafkaMessagePoolConfig
+	err := json.Unmarshal([]byte(pool.Config), &config)
+	if err != nil {
+		return nil, err
+	}
+	newPool := NewKafkaMessagePool(pool.Name, config.topic)
+	newPool.tcfg = &config.tcfg
+	newPool.wcfg = &config.wcfg
+	newPool.rcfg = &config.rcfg
+	return newPool, nil
 }
 
 func (mp *KafkaMessagePool) SetReadConfig(cfg KafkaReadConfig) *KafkaMessagePool {

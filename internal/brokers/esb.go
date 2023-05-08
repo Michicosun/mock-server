@@ -58,7 +58,7 @@ func submitToESB(pool_name_in string, msgs []string) error {
 
 	zlog.Info().Str("pool_in", pool_name_in).Str("pool_out", record.PoolNameOut).Msg("found esb record")
 
-	handler, err := MPRegistry.GetMessagePool(record.PoolNameOut)
+	handler, err := GetMessagePool(record.PoolNameOut)
 	if err != nil {
 		return err
 	}

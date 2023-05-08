@@ -22,7 +22,7 @@ func TestRabbitMq(t *testing.T) {
 		}
 	}()
 
-	handler, err := brokers.MPRegistry.AddMessagePool(brokers.NewRabbitMQMessagePool("test-pool", "test-mock-queue"))
+	handler, err := brokers.AddMessagePool(brokers.NewRabbitMQMessagePool("test-pool", "test-mock-queue"))
 	if err != nil {
 		t.Error(err)
 	}
@@ -31,7 +31,7 @@ func TestRabbitMq(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 
-	handler, err = brokers.MPRegistry.GetMessagePool("test-pool")
+	handler, err = brokers.GetMessagePool("test-pool")
 	if err != nil {
 		t.Error(err)
 	}

@@ -11,6 +11,9 @@ const (
 	POOL_NAME_IN_FIELD                 = "pool_name_in"
 	POOL_NAME_OUT_FIELD                = "pool_name_out"
 	MAPPER_SCRIPT_NAME_FIELD           = "mapper_script_name"
+	MESSAGE_POOL_NAME                  = "name"
+	MESSAGE_POOL_BROKER                = "broker"
+	MESSAGE_POOL_CONFIG                = "config"
 )
 
 type StaticEndpoint struct {

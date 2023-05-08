@@ -22,7 +22,7 @@ func TestKafka(t *testing.T) {
 		}
 	}()
 
-	handler, err := brokers.MPRegistry.AddMessagePool(brokers.NewKafkaMessagePool("test-pool", "test-topic"))
+	handler, err := brokers.AddMessagePool(brokers.NewKafkaMessagePool("test-pool", "test-topic"))
 	if err != nil {
 		t.Error(err)
 	}
@@ -31,7 +31,7 @@ func TestKafka(t *testing.T) {
 
 	time.Sleep(3 * time.Second)
 
-	handler, err = brokers.MPRegistry.GetMessagePool("test-pool")
+	handler, err = brokers.GetMessagePool("test-pool")
 	if err != nil {
 		t.Error(err)
 	}
