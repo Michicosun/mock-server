@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -10,7 +9,6 @@ import (
 	"mock-server/internal/coderun"
 	"mock-server/internal/configs"
 	"mock-server/internal/control"
-	"mock-server/internal/database"
 	"mock-server/internal/util"
 	"net/http"
 	"time"
