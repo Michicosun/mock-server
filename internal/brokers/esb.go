@@ -3,7 +3,6 @@ package brokers
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"mock-server/internal/coderun"
 	"mock-server/internal/database"
 
@@ -11,18 +10,6 @@ import (
 )
 
 const EMPTY_MAPPER = ""
-
-type ESBRecordError struct {
-	err string
-}
-
-func NewESBRecordError(err string) *ESBRecordError {
-	return &ESBRecordError{err}
-}
-
-func (err ESBRecordError) Error() string {
-	return err.err
-}
 
 func runMapper(mapper_name string, msgs []string) ([]string, error) {
 	worker, err := coderun.WorkerWatcher.BorrowWorker()
@@ -77,10 +64,6 @@ func submitToESB(pool_name_in string, msgs []string) error {
 
 func addEsbRecord(record database.ESBRecord) error {
 	err := database.AddESBRecord(context.TODO(), record)
-	if err == database.ErrDuplicateKey {
-		return NewESBRecordError(fmt.Sprintf("esb record: %s already exists", record.PoolNameIn))
-	}
-
 	return err
 }
 
@@ -102,8 +85,5 @@ func AddEsbRecordWithMapper(pool_name_in string, pool_name_out string, mapperScr
 
 func RemoveEsbRecord(pool_name_in string) error {
 	err := database.RemoveESBRecord(context.TODO(), pool_name_in)
-	if err == database.ErrNoSuchRecord {
-		return NewESBRecordError(fmt.Sprintf("esb record: %s is not registered", pool_name_in))
-	}
 	return err
 }

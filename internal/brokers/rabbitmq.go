@@ -42,15 +42,6 @@ type RabbitMQPoolConfig struct {
 	Wcfg  RabbitMQWriteConfig `json:"wcfg"`
 }
 
-func GetConfig() RabbitMQPoolConfig {
-	return RabbitMQPoolConfig{
-		"test",
-		RabbitMQQueueConfig{},
-		RabbitMQReadConfig{},
-		RabbitMQWriteConfig{},
-	}
-}
-
 type RabbitMQMessagePool struct {
 	name  string
 	queue string

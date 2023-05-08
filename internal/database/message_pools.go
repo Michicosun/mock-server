@@ -66,6 +66,9 @@ func (mp *messagePools) removeMessagePool(ctx context.Context, name string) erro
 			ctx,
 			bson.D{primitive.E{Key: MESSAGE_POOL_NAME, Value: name}},
 		)
+		if err == mongo.ErrNoDocuments {
+			return ErrNoSuchPool
+		}
 		if err != nil {
 			return err
 		}

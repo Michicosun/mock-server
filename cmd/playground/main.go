@@ -297,33 +297,15 @@ func play_kafka() {
 	time.Sleep(5 * time.Second)
 }
 
-func just_play() {
-	cfg := brokers.GetConfig()
-	fmt.Printf("Befor marshal: %s\n", cfg)
-	b, err := json.Marshal(cfg)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Printf("Marshal: %s\n", b)
-	var res brokers.RabbitMQPoolConfig
-	err = json.Unmarshal(b, &res)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Printf("Unmarshal: %s\n", res)
-}
-
 func main() {
 	control.Components.Start()
 	defer control.Components.Stop()
 
-	just_play()
-
-	// play_brokers()
-	// play_file_storage()
-	// play_coderun()
-	// play_esb()
-	// play_server_api()
-	// play_database()
-	// play_kafka()
+	play_brokers()
+	play_file_storage()
+	play_coderun()
+	play_esb()
+	play_server_api()
+	play_database()
+	play_kafka()
 }

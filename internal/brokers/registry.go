@@ -2,7 +2,6 @@ package brokers
 
 import (
 	"context"
-	"fmt"
 	"mock-server/internal/database"
 )
 
@@ -32,29 +31,19 @@ func AddMessagePool(pool MessagePool) (MessagePool, error) {
 		Broker: pool.getBroker(),
 		Config: jsonConfig,
 	})
-	if err == database.ErrDuplicateKey {
-		return nil, fmt.Errorf("pool: %s is already registered", pool.getName())
-	}
 
 	return pool, err
 }
 
 func RemoveMessagePool(poolName string) error {
 	err := database.RemoveMessagePool(context.TODO(), poolName)
-	if err == database.ErrNoSuchPath {
-		return fmt.Errorf("pool: %s is not registered", poolName)
-	}
-
 	return err
 }
 
 func GetMessagePool(poolName string) (MessagePool, error) {
 	pool, err := database.GetMessagePool(context.TODO(), poolName)
-	if err == database.ErrNoSuchPath {
-		return nil, fmt.Errorf("pool: %s is not registered", poolName)
-	} else if err != nil {
+	if err != nil {
 		return nil, err
 	}
-
 	return createFromDatabase(pool)
 }

@@ -66,6 +66,9 @@ func (esb *esbRecords) removeESBRecord(ctx context.Context, poolNameIn string) e
 			ctx,
 			bson.D{primitive.E{Key: POOL_NAME_IN_FIELD, Value: poolNameIn}},
 		)
+		if err == mongo.ErrNoDocuments {
+			return ErrNoSuchRecord
+		}
 		if err != nil {
 			return err
 		}
