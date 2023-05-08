@@ -130,7 +130,7 @@ func qread(ctx context.Context, task qReadTask) error {
 		return err
 	}
 
-	if err = Esb.submit(task.getMessagePool().getName(), msgs); err != nil {
+	if err = submitToESB(task.getMessagePool().getName(), msgs); err != nil {
 		return err
 	}
 

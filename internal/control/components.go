@@ -43,9 +43,6 @@ func (c *componentsManager) Start() {
 	// init pool registry
 	brokers.MPRegistry.Init()
 
-	// init esb
-	brokers.Esb.Init()
-
 	// start server
 	if c.cfg.Server {
 		server.Server.Init(configs.GetServerConfig())
