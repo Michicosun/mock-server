@@ -99,3 +99,84 @@ func TestCoderunForEsb(t *testing.T) {
 		worker.Return()
 	}
 }
+
+var TEST_SCRIPT_BAD_SCRIPT = util.WrapCodeForDynHandle(`
+def func():
+	print(
+`)
+var TEST_ARGS_BAD_SCRIPT = coderun.NewDynHandleArgs([]byte(`{}`))
+
+func TestCoderunBadScript(t *testing.T) {
+	t.Setenv("CONFIG_PATH", "/configs/test_coderun_config.yaml")
+
+	control.Components.Start()
+	defer control.Components.Stop()
+
+	fs, err := util.NewFileStorageDriver("coderun")
+	if err != nil {
+		t.Error(err)
+	}
+
+	if err = fs.Write("dyn_handle", "test_bad_script.py", TEST_SCRIPT_BAD_SCRIPT); err != nil {
+		t.Error(err)
+	}
+
+	for i := 0; i < 10; i += 1 {
+		worker, err := coderun.WorkerWatcher.BorrowWorker()
+		if err != nil {
+			t.Error(err)
+		}
+
+		out, err := worker.RunScript("dyn_handle", "test_dyn_handle.py", TEST_ARGS_BAD_SCRIPT)
+		t.Logf("Run output: %s", out)
+		if err != coderun.ErrCodeRunFailed {
+			t.Errorf("Expected `ErrCodeRunFailed` got: %s", err.Error())
+			return
+		}
+
+		worker.Return()
+	}
+}
+
+var TEST_SCRIPT_BAD_ARGS = util.WrapCodeForDynHandle(`
+def func(a, b, c):
+	print(c, b, a)
+`)
+var TEST_ARGS_BAD_ARGS = coderun.NewDynHandleArgs([]byte(`
+{
+	"a": 1,
+	"b": 2,
+	"d": 3
+}`))
+
+func TestCoderunBadArgs(t *testing.T) {
+	t.Setenv("CONFIG_PATH", "/configs/test_coderun_config.yaml")
+
+	control.Components.Start()
+	defer control.Components.Stop()
+
+	fs, err := util.NewFileStorageDriver("coderun")
+	if err != nil {
+		t.Error(err)
+	}
+
+	if err = fs.Write("dyn_handle", "test_bad_script.py", TEST_SCRIPT_BAD_ARGS); err != nil {
+		t.Error(err)
+	}
+
+	for i := 0; i < 10; i += 1 {
+		worker, err := coderun.WorkerWatcher.BorrowWorker()
+		if err != nil {
+			t.Error(err)
+		}
+
+		out, err := worker.RunScript("dyn_handle", "test_dyn_handle.py", TEST_ARGS_BAD_ARGS)
+		t.Logf("Run output: %s", out)
+		if err != coderun.ErrCodeRunFailed {
+			t.Errorf("Expected `ErrCodeRunFailed` got: %s", err.Error())
+			return
+		}
+
+		worker.Return()
+	}
+}

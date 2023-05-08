@@ -125,9 +125,6 @@ func TestDynamicRoutesSimple(t *testing.T) {
 	}
 }
 
-// TODO: Add test that examines run request on bad python code (e.g. with syntax errors)
-// N.B. Currently, such request will cause an interanl error (500), but client error is needed
-
 func TestDynamicRoutesScriptWithArgs(t *testing.T) {
 	testBodyScript := []byte(`{
 		"path": "/test_url",
@@ -139,6 +136,38 @@ func TestDynamicRoutesScriptWithArgs(t *testing.T) {
 		"C": ["a", "b", "c"]
 	}`)
 	expectedResponse := []byte("hello, it's me\n39\n[\"c\", \"b\", \"a\"]")
+
+	t.Setenv("CONFIG_PATH", "/configs/test_server_config.yaml")
+
+	control.Components.Start()
+	defer control.Components.Stop()
+
+	cfg := configs.GetServerConfig()
+	endpoint := fmt.Sprintf("http://%s", cfg.Addr)
+	dynamicApiEndpoint := endpoint + "/api/routes/dynamic"
+	testUrl := endpoint + "/test_url"
+
+	code, _ := DoPost(dynamicApiEndpoint, testBodyScript, t)
+	if code != 200 {
+		t.Errorf("failed to add new dynamic route")
+	}
+
+	code, body := DoPost(testUrl, testScriptArgs, t)
+	if code != 200 {
+		t.Errorf("failed to query created dynamic route")
+	}
+	if bytes.Equal(body, expectedResponse) {
+		t.Errorf(`dynamic data mismatch: %s != %s`, body, expectedResponse)
+	}
+}
+
+func TestDynamiRoutesWithEmptyArgs(t *testing.T) {
+	testBodyScript := []byte(`{
+		"path": "/test_url",
+		"code": "def func():\n    for i in range(3):\n        print(i)\n"
+	}`)
+	testScriptArgs := []byte(`{}`)
+	expectedResponse := []byte("0\n1\n2\n")
 
 	t.Setenv("CONFIG_PATH", "/configs/test_server_config.yaml")
 
@@ -195,5 +224,68 @@ func TestDynamicRoutesDoublePost(t *testing.T) {
 	code = DoPut(dynamicApiEndpoint, otherTestBodyScript, t)
 	if code != 204 {
 		t.Errorf("expected to be possible to update already created endpoint: expected 204 != %d", code)
+	}
+}
+
+func TestDynamiRoutesBadScript(t *testing.T) {
+	testBodyScriptBad := []byte(`{
+		"path": "/test_url",
+		"code": "def func(A):print(A\n"
+	}`)
+	testScriptArgs := []byte(`{
+		"A": 1
+	}`)
+
+	t.Setenv("CONFIG_PATH", "/configs/test_server_config.yaml")
+
+	control.Components.Start()
+	defer control.Components.Stop()
+
+	cfg := configs.GetServerConfig()
+	endpoint := fmt.Sprintf("http://%s", cfg.Addr)
+	dynamicApiEndpoint := endpoint + "/api/routes/dynamic"
+	testUrl := endpoint + "/test_url"
+
+	code, _ := DoPost(dynamicApiEndpoint, testBodyScriptBad, t)
+	if code != 200 {
+		t.Errorf("failed to add new dynamic route")
+	}
+
+	code, body := DoPost(testUrl, testScriptArgs, t)
+	t.Logf("Received body: %s", string(body))
+	if code != 400 {
+		t.Errorf("expected to failed: 400 != %d", code)
+	}
+}
+
+func TestDynamiRoutesBadArgs(t *testing.T) {
+	testBodyScript := []byte(`{
+		"path": "/test_url",
+		"code": "def func(A, B, C):\n    print(A, B, C)\n"
+	}`)
+	testScriptArgsBad := []byte(`{
+		"A": 1,
+		"B": 2
+	}`)
+
+	t.Setenv("CONFIG_PATH", "/configs/test_server_config.yaml")
+
+	control.Components.Start()
+	defer control.Components.Stop()
+
+	cfg := configs.GetServerConfig()
+	endpoint := fmt.Sprintf("http://%s", cfg.Addr)
+	dynamicApiEndpoint := endpoint + "/api/routes/dynamic"
+	testUrl := endpoint + "/test_url"
+
+	code, _ := DoPost(dynamicApiEndpoint, testBodyScript, t)
+	if code != 200 {
+		t.Errorf("failed to add new dynamic route")
+	}
+
+	code, body := DoPost(testUrl, testScriptArgsBad, t)
+	t.Logf("Received body: %s", string(body))
+	if code != 400 {
+		t.Errorf("expected to failed: 400 != %d", code)
 	}
 }
