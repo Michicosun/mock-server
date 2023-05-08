@@ -40,9 +40,6 @@ func (c *componentsManager) Start() {
 		panic(err)
 	}
 
-	// init pool registry
-	brokers.MPRegistry.Init()
-
 	// start server
 	if c.cfg.Server {
 		server.Server.Init(configs.GetServerConfig())

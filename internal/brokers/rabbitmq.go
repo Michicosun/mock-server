@@ -2,35 +2,44 @@ package brokers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"mock-server/internal/configs"
+	"mock-server/internal/database"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 	zlog "github.com/rs/zerolog/log"
 )
 
 type RabbitMQQueueConfig struct {
-	Durable    bool
-	AutoDelete bool
-	Exclusive  bool
-	NoWait     bool
-	Args       map[string]interface{}
+	Durable    bool                   `json:"durable"`
+	AutoDelete bool                   `json:"auto_delete"`
+	Exclusive  bool                   `json:"exclusive"`
+	NoWait     bool                   `json:"no_wait"`
+	Args       map[string]interface{} `json:"args"`
 }
 
 type RabbitMQReadConfig struct {
-	Consumer  string
-	AutoAck   bool
-	Exclusive bool
-	NoLocal   bool
-	NoWait    bool
-	Args      map[string]interface{}
+	Consumer  string                 `json:"consumer"`
+	AutoAck   bool                   `json:"auto_ack"`
+	Exclusive bool                   `json:"exclusive"`
+	NoLocal   bool                   `json:"no_local"`
+	NoWait    bool                   `json:"no_wait"`
+	Args      map[string]interface{} `json:"args"`
 }
 
 type RabbitMQWriteConfig struct {
-	Exchange    string
-	Mandatory   bool
-	Immediate   bool
-	ContentType string
+	Exchange    string `json:"exchange"`
+	Mandatory   bool   `json:"mandatory"`
+	Immediate   bool   `json:"immediate"`
+	ContentType string `json:"content_type"`
+}
+
+type RabbitMQPoolConfig struct {
+	Queue string              `json:"queue"`
+	Qcfg  RabbitMQQueueConfig `json:"qcfg"`
+	Rcfg  RabbitMQReadConfig  `json:"rcfg"`
+	Wcfg  RabbitMQWriteConfig `json:"wcfg"`
 }
 
 type RabbitMQMessagePool struct {
@@ -41,10 +50,6 @@ type RabbitMQMessagePool struct {
 	wcfg  *RabbitMQWriteConfig
 }
 
-type rabbitMQMessagePoolHandler struct {
-	pool *RabbitMQMessagePool
-}
-
 func (mp *RabbitMQMessagePool) getName() string {
 	return mp.name
 }
@@ -53,10 +58,14 @@ func (mp *RabbitMQMessagePool) getBroker() string {
 	return "rabbitmq"
 }
 
-func (mp *RabbitMQMessagePool) getHandler() MessagePoolHandler {
-	return &rabbitMQMessagePoolHandler{
-		pool: mp,
+func (mp *RabbitMQMessagePool) getJSONConfig() ([]byte, error) {
+	config := RabbitMQPoolConfig{
+		Queue: mp.queue,
+		Qcfg:  *mp.qcfg,
+		Rcfg:  *mp.rcfg,
+		Wcfg:  *mp.wcfg,
 	}
+	return json.Marshal(config)
 }
 
 // RabbitMQ base task
@@ -238,6 +247,19 @@ func NewRabbitMQMessagePool(name string, queue string) *RabbitMQMessagePool {
 	}
 }
 
+func createRabbitMQPoolFromDatabase(pool database.MessagePool) (*RabbitMQMessagePool, error) {
+	var config RabbitMQPoolConfig
+	err := json.Unmarshal([]byte(pool.Config), &config)
+	if err != nil {
+		return nil, err
+	}
+	newPool := NewRabbitMQMessagePool(pool.Name, config.Queue)
+	newPool.qcfg = &config.Qcfg
+	newPool.wcfg = &config.Wcfg
+	newPool.rcfg = &config.Rcfg
+	return newPool, nil
+}
+
 func (mp *RabbitMQMessagePool) SetQueueConfig(cfg RabbitMQQueueConfig) *RabbitMQMessagePool {
 	mp.qcfg = &cfg
 	return mp
@@ -259,15 +281,15 @@ func newRabbitMQBaseTask(pool *RabbitMQMessagePool) rabbitMQTask {
 	}
 }
 
-func (h *rabbitMQMessagePoolHandler) NewReadTask() qReadTask {
+func (mp *RabbitMQMessagePool) NewReadTask() qReadTask {
 	return &rabbitMQReadTask{
-		rabbitMQTask: newRabbitMQBaseTask(h.pool),
+		rabbitMQTask: newRabbitMQBaseTask(mp),
 	}
 }
 
-func (h *rabbitMQMessagePoolHandler) NewWriteTask(data []string) qWriteTask {
+func (mp *RabbitMQMessagePool) NewWriteTask(data []string) qWriteTask {
 	return &rabbitMQWriteTask{
-		rabbitMQTask: newRabbitMQBaseTask(h.pool),
+		rabbitMQTask: newRabbitMQBaseTask(mp),
 		msgs:         data,
 	}
 }

@@ -1,60 +1,49 @@
 package brokers
 
 import (
-	"fmt"
-	"mock-server/internal/util"
+	"context"
+	"mock-server/internal/database"
 )
-
-var MPRegistry = &mpRegistry{}
-
-type MessagePoolHandler interface {
-	NewReadTask() qReadTask
-	NewWriteTask(data []string) qWriteTask
-}
 
 type MessagePool interface {
 	getName() string
 	getBroker() string
-	getHandler() MessagePoolHandler
+	getJSONConfig() ([]byte, error)
+	NewReadTask() qReadTask
+	NewWriteTask(data []string) qWriteTask
 }
 
-type mpRegistry struct {
-	registry util.SyncMap[string, MessagePool]
-}
-
-func (r *mpRegistry) Init() {
-	r.registry = util.NewSyncMap[string, MessagePool]()
-	// fetch db
-}
-
-func (r *mpRegistry) AddMessagePool(pool MessagePool) (MessagePoolHandler, error) {
-	if r.registry.Contains(pool.getName()) {
-		return nil, fmt.Errorf("pool: %s is already registered", pool.getName())
+func createFromDatabase(pool database.MessagePool) (MessagePool, error) {
+	if pool.Broker == "rabbitmq" {
+		return createRabbitMQPoolFromDatabase(pool)
+	} else {
+		return createKafkaPoolFromDatabase(pool)
 	}
-
-	r.registry.Add(pool.getName(), pool)
-	// save to db
-
-	return pool.getHandler(), nil
 }
 
-func (r *mpRegistry) RemoveMessagePool(pool_name string) error {
-	if !r.registry.Contains(pool_name) {
-		return fmt.Errorf("pool: %s is not registered", pool_name)
+func AddMessagePool(pool MessagePool) (MessagePool, error) {
+	jsonConfig, err := pool.getJSONConfig()
+	if err != nil {
+		return nil, err
 	}
+	err = database.AddMessagePool(context.TODO(), database.MessagePool{
+		Name:   pool.getName(),
+		Broker: pool.getBroker(),
+		Config: jsonConfig,
+	})
 
-	r.registry.Remove(pool_name)
-	// remove from db
-
-	return nil
+	return pool, err
 }
 
-func (r *mpRegistry) GetMessagePool(pool_name string) (MessagePoolHandler, error) {
-	value, contains := r.registry.Get(pool_name)
+func RemoveMessagePool(poolName string) error {
+	err := database.RemoveMessagePool(context.TODO(), poolName)
+	return err
+}
 
-	if !contains {
-		return nil, fmt.Errorf("pool: %s is not registered", pool_name)
+func GetMessagePool(poolName string) (MessagePool, error) {
+	pool, err := database.GetMessagePool(context.TODO(), poolName)
+	if err != nil {
+		return nil, err
 	}
-
-	return value.getHandler(), nil
+	return createFromDatabase(pool)
 }

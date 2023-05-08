@@ -13,6 +13,7 @@ const (
 	DYNAMIC_ENDPOINTS_COLLECTION = "dynamic_endpoints"
 	TASK_MESSAGES_COLLECTION     = "task_messages"
 	ESB_RECORDS_COLLECTION       = "esb_records"
+	MESSAGE_POOLS_COLLECTION     = "message_pools"
 )
 
 type MongoStorage struct {
@@ -21,6 +22,7 @@ type MongoStorage struct {
 	dynamicEndpoints *dynamicEndpoints
 	taskMessages     *taskMessages
 	esbRecords       *esbRecords
+	messagePools     *messagePools
 }
 
 var db = &MongoStorage{}
@@ -41,6 +43,10 @@ func (db *MongoStorage) init(ctx context.Context, client *mongo.Client, cfg *con
 		return err
 	}
 	db.esbRecords, err = createESBRecords(ctx, client, cfg)
+	if err != nil {
+		return err
+	}
+	db.messagePools, err = createMessagePools(ctx, client, cfg)
 	if err != nil {
 		return err
 	}
@@ -105,6 +111,18 @@ func RemoveESBRecord(ctx context.Context, poolNameIn string) error {
 
 func GetESBRecord(ctx context.Context, poolNameIn string) (ESBRecord, error) {
 	return db.esbRecords.getESBRecord(ctx, poolNameIn)
+}
+
+func AddMessagePool(ctx context.Context, messagePool MessagePool) error {
+	return db.messagePools.addMessagePool(ctx, messagePool)
+}
+
+func RemoveMessagePool(ctx context.Context, name string) error {
+	return db.messagePools.removeMessagePool(ctx, name)
+}
+
+func GetMessagePool(ctx context.Context, name string) (MessagePool, error) {
+	return db.messagePools.getMessagePool(ctx, name)
 }
 
 func HasEndpoint(ctx context.Context, path string) (bool, error) {

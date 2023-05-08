@@ -21,7 +21,7 @@ import (
 func play_brokers() {
 	// broker example
 
-	handler, err := brokers.MPRegistry.AddMessagePool(brokers.NewRabbitMQMessagePool("test-pool", "test-mock-queue"))
+	handler, err := brokers.AddMessagePool(brokers.NewRabbitMQMessagePool("test-pool", "test-mock-queue"))
 	if err != nil {
 		zlog.Error().Err(err).Msg("add new pool failed")
 	}
@@ -31,7 +31,7 @@ func play_brokers() {
 
 	time.Sleep(1 * time.Second)
 
-	handler, err = brokers.MPRegistry.GetMessagePool("test-pool")
+	handler, err = brokers.GetMessagePool("test-pool")
 	if err != nil {
 		zlog.Error().Err(err).Msg("get pool failed")
 	}
@@ -107,9 +107,9 @@ def func(msgs):
 `)
 	var ARGS_HARD = []string{"msg1", "msg2", "msg3"}
 
-	pool1, _ := brokers.MPRegistry.AddMessagePool(brokers.NewRabbitMQMessagePool("test-pool-1", "test-mock-queue-1"))
-	pool2, _ := brokers.MPRegistry.AddMessagePool(brokers.NewRabbitMQMessagePool("test-pool-2", "test-mock-queue-2"))
-	pool3, _ := brokers.MPRegistry.AddMessagePool(brokers.NewRabbitMQMessagePool("test-pool-3", "test-mock-queue-3"))
+	pool1, _ := brokers.AddMessagePool(brokers.NewRabbitMQMessagePool("test-pool-1", "test-mock-queue-1"))
+	pool2, _ := brokers.AddMessagePool(brokers.NewRabbitMQMessagePool("test-pool-2", "test-mock-queue-2"))
+	pool3, _ := brokers.AddMessagePool(brokers.NewRabbitMQMessagePool("test-pool-3", "test-mock-queue-3"))
 
 	fs, _ := util.NewFileStorageDriver("coderun")
 
@@ -277,7 +277,7 @@ func play_kafka() {
 		}
 	}()
 
-	handler, err := brokers.MPRegistry.AddMessagePool(brokers.NewKafkaMessagePool("test-pool-kafka", "test-topic"))
+	handler, err := brokers.AddMessagePool(brokers.NewKafkaMessagePool("test-pool-kafka", "test-topic"))
 	if err != nil {
 		zlog.Error().Err(err).Msg("add new pool failed")
 	}
@@ -287,7 +287,7 @@ func play_kafka() {
 
 	time.Sleep(1 * time.Second)
 
-	handler, err = brokers.MPRegistry.GetMessagePool("test-pool-kafka")
+	handler, err = brokers.GetMessagePool("test-pool-kafka")
 	if err != nil {
 		zlog.Error().Err(err).Msg("get pool failed")
 	}

@@ -30,6 +30,7 @@ func TestESBRecords(t *testing.T) {
 			esbRecords := []database.ESBRecord{
 				{PoolNameIn: "test_pool_in_1", PoolNameOut: "test_pool_out_1", MapperScriptName: "mapper_script_name1"},
 				{PoolNameIn: "test_pool_in_2", PoolNameOut: "test_pool_out_2", MapperScriptName: "mapper_script_name2"},
+				{PoolNameIn: "test_pool_in_3", PoolNameOut: "test_pool_out_3", MapperScriptName: "mapper_script_name3"},
 			}
 
 			for _, esbRecord := range esbRecords {
@@ -55,6 +56,10 @@ func TestESBRecords(t *testing.T) {
 				if err != database.ErrNoSuchRecord {
 					t.Error(err)
 				}
+				err = database.AddESBRecord(context.TODO(), esbRecords[1])
+				if err != nil {
+					t.Error(err)
+				}
 			}
 
 			{
@@ -66,6 +71,19 @@ func TestESBRecords(t *testing.T) {
 					t.Errorf("res != expected: %s != %s", esbRecord, esbRecords[0])
 				}
 			}
+
+			{
+				for _, expectedESBRecord := range esbRecords {
+					esbRecord, err := database.GetESBRecord(context.TODO(), expectedESBRecord.PoolNameIn)
+					if err != nil {
+						t.Error(err)
+					}
+					if esbRecord != expectedESBRecord {
+						t.Errorf("res != expected: %s != %s", esbRecord, expectedESBRecord)
+					}
+				}
+			}
+
 		})
 	}
 }

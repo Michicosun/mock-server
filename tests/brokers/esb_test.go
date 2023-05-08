@@ -29,12 +29,12 @@ func TestEsb(t *testing.T) {
 		}
 	}()
 
-	pool1, err := brokers.MPRegistry.AddMessagePool(brokers.NewRabbitMQMessagePool("test-pool-1", "test-mock-queue-1"))
+	pool1, err := brokers.AddMessagePool(brokers.NewRabbitMQMessagePool("test-pool-1", "test-mock-queue-1"))
 	if err != nil {
 		t.Error(err)
 	}
 
-	pool2, err := brokers.MPRegistry.AddMessagePool(brokers.NewRabbitMQMessagePool("test-pool-2", "test-mock-queue-2"))
+	pool2, err := brokers.AddMessagePool(brokers.NewRabbitMQMessagePool("test-pool-2", "test-mock-queue-2"))
 	if err != nil {
 		t.Error(err)
 	}
