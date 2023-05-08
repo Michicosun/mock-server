@@ -97,6 +97,7 @@ func (w *worker) Return() {
 }
 
 type watcher struct {
+	cfg          *configs.CoderunConfig
 	wg           sync.WaitGroup
 	ctx          context.Context
 	dp           *docker.DockerProvider
@@ -184,6 +185,7 @@ func (w *watcher) Init(ctx context.Context, cfg *configs.CoderunConfig) error {
 	zlog.Info().Msg("starting watcher")
 
 	w.ctx = ctx
+	w.cfg = cfg
 
 	provider, err := docker.NewDockerProvider(ctx, &cfg.WorkerConfig.ContainerConfig)
 	if err != nil {
@@ -219,7 +221,7 @@ func (w *watcher) Init(ctx context.Context, cfg *configs.CoderunConfig) error {
 
 func (w *watcher) BorrowWorker() (*worker, error) {
 	zlog.Info().Msg("trying to borrow worker")
-	ctx, cancel := context.WithTimeout(w.ctx, configs.GetCoderunConfig().WorkerConfig.HandleTimeout)
+	ctx, cancel := context.WithTimeout(w.ctx, w.cfg.WorkerConfig.HandleTimeout)
 	defer cancel()
 
 	for {
