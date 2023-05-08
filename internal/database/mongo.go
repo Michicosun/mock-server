@@ -107,6 +107,18 @@ func GetESBRecord(ctx context.Context, poolNameIn string) (ESBRecord, error) {
 	return db.esbRecords.getESBRecord(ctx, poolNameIn)
 }
 
+func AddMessagePool(ctx context.Context, messagePool MessagePool) error {
+	return nil
+}
+
+func RemoveMessagePool(ctx context.Context, name string) error {
+	return nil
+}
+
+func GetMessagePool(ctx context.Context, name string) (MessagePool, error) {
+	return MessagePool{}, nil
+}
+
 func HasEndpoint(ctx context.Context, path string) (bool, error) {
 	static, err1 := HasStaticEndpoint(ctx, path)
 	if err1 != nil {

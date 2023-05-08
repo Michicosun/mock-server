@@ -2,6 +2,7 @@ package brokers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"mock-server/internal/configs"
 	"sync/atomic"
@@ -11,17 +12,24 @@ import (
 )
 
 type KafkaTopicConfig struct {
-	Addr     string
-	ClientId string
-	GroupId  string
+	Addr     string `json:"addr"`
+	ClientId string `json:"client_id"`
+	GroupId  string `json:"group_id"`
 }
 
 type KafkaReadConfig struct {
-	OffsetReset string
+	OffsetReset string `json:"offset_reset"`
 }
 
 type KafkaWriteConfig struct {
-	Acks string
+	Acks string `json:"acks"`
+}
+
+type KafkaMessagePoolConfig struct {
+	topic string           `json:"topic"`
+	tcfg  KafkaTopicConfig `json:"tcfg"`
+	rcfg  KafkaReadConfig  `json:"rcfg"`
+	wcfg  KafkaWriteConfig `json:"wcfg"`
 }
 
 type KafkaMessagePool struct {
@@ -32,10 +40,6 @@ type KafkaMessagePool struct {
 	wcfg  *KafkaWriteConfig
 }
 
-type kafkaMessagePoolHandler struct {
-	pool *KafkaMessagePool
-}
-
 func (mp *KafkaMessagePool) getName() string {
 	return mp.name
 }
@@ -44,10 +48,14 @@ func (mp *KafkaMessagePool) getBroker() string {
 	return "kafka"
 }
 
-func (mp *KafkaMessagePool) getHandler() MessagePoolHandler {
-	return &kafkaMessagePoolHandler{
-		pool: mp,
+func (mp *KafkaMessagePool) getJSONConfig() ([]byte, error) {
+	config := KafkaMessagePoolConfig{
+		topic: mp.topic,
+		tcfg:  *mp.tcfg,
+		rcfg:  *mp.rcfg,
+		wcfg:  *mp.wcfg,
 	}
+	return json.Marshal(config)
 }
 
 // Kafka base task
@@ -257,15 +265,15 @@ func newKafkaBaseTask(pool *KafkaMessagePool) kafkaTask {
 	}
 }
 
-func (h *kafkaMessagePoolHandler) NewReadTask() qReadTask {
+func (mp *KafkaMessagePool) NewReadTask() qReadTask {
 	return &kafkaReadTask{
-		kafkaTask: newKafkaBaseTask(h.pool),
+		kafkaTask: newKafkaBaseTask(mp),
 	}
 }
 
-func (h *kafkaMessagePoolHandler) NewWriteTask(data []string) qWriteTask {
+func (mp *KafkaMessagePool) NewWriteTask(data []string) qWriteTask {
 	return &kafkaWriteTask{
-		kafkaTask: newKafkaBaseTask(h.pool),
+		kafkaTask: newKafkaBaseTask(mp),
 		msgs:      data,
 	}
 }

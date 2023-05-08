@@ -33,3 +33,9 @@ type ESBRecord struct {
 	PoolNameOut      string `bson:"pool_name_out"`
 	MapperScriptName string `bson:"mapper_script_name"`
 }
+
+type MessagePool struct {
+	Name   string `bson:"name"`
+	Broker string `bson:"broker"`
+	Config []byte `bson:"config"`
+}
