@@ -84,7 +84,7 @@ func (esb *esbRecords) getESBRecord(ctx context.Context, poolNameIn string) (ESB
 		).Decode(&res)
 
 		if err == mongo.ErrNoDocuments {
-			return res, ErrNoSuchPath
+			return res, ErrNoSuchRecord
 		}
 		return res, err
 	})

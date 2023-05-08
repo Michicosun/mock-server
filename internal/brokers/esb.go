@@ -10,6 +10,20 @@ import (
 	zlog "github.com/rs/zerolog/log"
 )
 
+const EMPTY_MAPPER = ""
+
+type ESBRecordError struct {
+	err string
+}
+
+func NewESBRecordError(err string) *ESBRecordError {
+	return &ESBRecordError{err}
+}
+
+func (err ESBRecordError) Error() string {
+	return err.err
+}
+
 func runMapper(mapper_name string, msgs []string) ([]string, error) {
 	worker, err := coderun.WorkerWatcher.BorrowWorker()
 	if err != nil {
@@ -33,9 +47,9 @@ func runMapper(mapper_name string, msgs []string) ([]string, error) {
 	return mappedMsgs, nil
 }
 
-func submit(pool_name_in string, msgs []string) error {
+func submitToESB(pool_name_in string, msgs []string) error {
 	record, err := database.GetESBRecord(context.TODO(), pool_name_in)
-	if err == database.ErrNoSuchPath {
+	if err == database.ErrNoSuchRecord {
 		zlog.Warn().Str("pool_in", pool_name_in).Msg("no registered esb records, skipping")
 		return nil
 	} else if err != nil {
@@ -49,7 +63,7 @@ func submit(pool_name_in string, msgs []string) error {
 		return err
 	}
 
-	if record.MapperScriptName != "" {
+	if record.MapperScriptName != EMPTY_MAPPER {
 		msgs, err = runMapper(record.MapperScriptName, msgs)
 		if err != nil {
 			return err
@@ -64,7 +78,7 @@ func submit(pool_name_in string, msgs []string) error {
 func addEsbRecord(record database.ESBRecord) error {
 	err := database.AddESBRecord(context.TODO(), record)
 	if err == database.ErrDuplicateKey {
-		return fmt.Errorf("esb record: %s already exists", record.PoolNameIn)
+		return NewESBRecordError(fmt.Sprintf("esb record: %s already exists", record.PoolNameIn))
 	}
 
 	return err
@@ -74,7 +88,7 @@ func AddEsbRecord(pool_name_in string, pool_name_out string) error {
 	return addEsbRecord(database.ESBRecord{
 		PoolNameIn:       pool_name_in,
 		PoolNameOut:      pool_name_out,
-		MapperScriptName: "",
+		MapperScriptName: EMPTY_MAPPER,
 	})
 }
 
@@ -88,8 +102,8 @@ func AddEsbRecordWithMapper(pool_name_in string, pool_name_out string, mapperScr
 
 func RemoveEsbRecord(pool_name_in string) error {
 	err := database.RemoveESBRecord(context.TODO(), pool_name_in)
-	if err == database.ErrNoSuchPath {
-		return fmt.Errorf("esb record: %s is not registered", pool_name_in)
+	if err == database.ErrNoSuchRecord {
+		return NewESBRecordError(fmt.Sprintf("esb record: %s is not registered", pool_name_in))
 	}
 	return err
 }

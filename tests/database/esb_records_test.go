@@ -52,7 +52,7 @@ func TestESBRecords(t *testing.T) {
 					t.Error(err)
 				}
 				_, err = database.GetESBRecord(context.TODO(), esbRecords[1].PoolNameIn)
-				if err != database.ErrNoSuchPath {
+				if err != database.ErrNoSuchRecord {
 					t.Error(err)
 				}
 			}
