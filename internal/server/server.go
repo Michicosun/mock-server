@@ -237,6 +237,40 @@ func (s *server) initRoutesApiDynamic(routes *gin.RouterGroup) {
 		c.JSON(http.StatusOK, gin.H{"endpoints": endpoints})
 	})
 
+	routes.GET(dynamicRoutesEndpoint+"/code", func(c *gin.Context) {
+		var dynamicEndpointQuery protocol.DynamicEndpointCodeQuery
+		if err := c.Bind(&dynamicEndpointQuery); err != nil {
+			zlog.Error().Err(err).Msg("Failed to bind request")
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		zlog.Info().Str("path", dynamicEndpointQuery.Path).Msg("Received get code dynamic request")
+
+		scriptName, err := database.GetDynamicEndpointScriptName(c, dynamicEndpointQuery.Path)
+		switch err {
+		case nil:
+			zlog.Info().Str("script name", scriptName).Msg("Got script")
+		case database.ErrNoSuchPath:
+			zlog.Error().Msg("Request for unexisting script")
+			c.JSON(http.StatusNotFound, gin.H{"error": "Received path was not created before"})
+			return
+		default:
+			zlog.Error().Err(err).Msg("Failed to query script name")
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		code, err := s.fs.Read(FS_CODE_DIR, scriptName)
+		if err != nil {
+			zlog.Error().Err(err).Str("script name", scriptName).Msg("Failed to read script code")
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"code": util.UnwrapCodeForDynHandle(code)})
+	})
+
 	routes.POST(dynamicRoutesEndpoint, func(c *gin.Context) {
 		var dynamicEndpoint protocol.DynamicEndpoint
 		if err := c.Bind(&dynamicEndpoint); err != nil {

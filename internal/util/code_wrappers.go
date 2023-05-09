@@ -20,6 +20,12 @@ func WrapCodeForDynHandle(code string) []byte {
 	return []byte(fmt.Sprintf("%s\n%s\n%s", LOAD_ARGS, code, INVOKE_DYN_HANDLE))
 }
 
+func UnwrapCodeForDynHandle(code string) string {
+	splitted := strings.Split(code, "\n")
+	splitted = splitted[1 : len(splitted)-1]
+	return strings.Join(splitted, "\n")
+}
+
 func WrapCodeForEsb(code string) []byte {
 	return []byte(fmt.Sprintf("%s\n%s\n%s", LOAD_ARGS, code, INVOKE_ESB))
 }
