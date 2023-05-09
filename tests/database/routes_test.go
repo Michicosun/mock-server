@@ -68,19 +68,19 @@ func TestRoutes(t *testing.T) {
 				// Check that we store only unique elems
 				for _, route := range staticRoutes {
 					if err := database.AddStaticEndpoint(context.TODO(), route.Path, route.Response); err != database.ErrDuplicateKey {
-						t.Errorf("AddRoute shoud return ErrDuplicateKey")
+						t.Errorf("AddRoute should return ErrDuplicateKey")
 					}
 					if err := database.AddDynamicEndpoint(context.TODO(), route.Path, route.ScriptName); err != database.ErrDuplicateKey {
-						t.Errorf("AddRoute shoud return ErrDuplicateKey")
+						t.Errorf("AddRoute should return ErrDuplicateKey")
 					}
 				}
 
 				for _, route := range dynamicRoutes {
 					if err := database.AddStaticEndpoint(context.TODO(), route.Path, route.Response); err != database.ErrDuplicateKey {
-						t.Errorf("AddRoute shoud return ErrDuplicateKey")
+						t.Errorf("AddRoute should return ErrDuplicateKey")
 					}
 					if err := database.AddDynamicEndpoint(context.TODO(), route.Path, route.ScriptName); err != database.ErrDuplicateKey {
-						t.Errorf("AddRoute shoud return ErrDuplicateKey")
+						t.Errorf("AddRoute should return ErrDuplicateKey")
 					}
 				}
 			}
@@ -196,7 +196,7 @@ func TestRoutes(t *testing.T) {
 
 			{
 				if err := database.UpdateDynamicEndpoint(context.TODO(), "/path", "two"); err != database.ErrNoSuchPath {
-					t.Errorf("UpdateDynamicEndpoint shoud return ErrNoSuchPath, but returns %s", err)
+					t.Errorf("UpdateDynamicEndpoint should return ErrNoSuchPath, but returns %s", err)
 				}
 				if err := database.UpdateStaticEndpoint(context.TODO(), "/path", "two"); err != nil {
 					t.Error(err)
