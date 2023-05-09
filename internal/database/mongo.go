@@ -113,6 +113,10 @@ func GetDynamicEndpointScriptName(ctx context.Context, path string) (string, err
 	return route.ScriptName, nil
 }
 
+func GetRoute(ctx context.Context, path string) (Route, error) {
+	return db.routes.getRoute(ctx, path)
+}
+
 func ListAllDynamicEndpointPaths(ctx context.Context) ([]string, error) {
 	return db.routes.listAllRoutesPathsWithType(ctx, DYNAMIC_ENDPOINT_TYPE)
 }
@@ -147,38 +151,4 @@ func RemoveMessagePool(ctx context.Context, name string) error {
 
 func GetMessagePool(ctx context.Context, name string) (MessagePool, error) {
 	return db.messagePools.getMessagePool(ctx, name)
-}
-
-func HasEndpoint(ctx context.Context, path string) (bool, error) {
-	static, err1 := HasStaticEndpoint(ctx, path)
-	if err1 != nil {
-		return false, err1
-	}
-	dynamic, err2 := HasDynamicEndpoint(ctx, path)
-	if err2 != nil {
-		return false, err2
-	}
-	return static || dynamic, nil
-}
-
-func HasStaticEndpoint(ctx context.Context, path string) (bool, error) {
-	_, err := GetStaticEndpointResponse(ctx, path)
-	switch err {
-	case nil:
-		return true, nil
-	case ErrNoSuchPath:
-		return false, nil
-	}
-	return false, err
-}
-
-func HasDynamicEndpoint(ctx context.Context, path string) (bool, error) {
-	_, err := GetDynamicEndpointScriptName(ctx, path)
-	switch err {
-	case nil:
-		return true, nil
-	case ErrNoSuchPath:
-		return false, nil
-	}
-	return false, err
 }

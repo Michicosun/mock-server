@@ -101,7 +101,7 @@ func TestStaticRoutesSimple(t *testing.T) {
 	// /test_url deleted -> 400
 	code, body = DoGet(testUrl, t)
 	if code != 400 {
-		t.Errorf("expected to be impossible to request deleted route: %d != 400", code)
+		t.Errorf("expected to be impossible to request deleted route: %d != 400, body = %s", code, body)
 	}
 
 	if !bytes.Equal(body, []byte(`{"error":"no such path: /test_url"}`)) {
