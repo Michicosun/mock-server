@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -10,7 +9,6 @@ import (
 	"mock-server/internal/coderun"
 	"mock-server/internal/configs"
 	"mock-server/internal/control"
-	"mock-server/internal/database"
 	"mock-server/internal/util"
 	"net/http"
 	"time"
@@ -253,23 +251,6 @@ func play_server_api() {
 	}
 }
 
-func play_database() {
-	endpoint := database.StaticEndpoint{
-		Path:     "/test",
-		Response: "Zdarova",
-	}
-	err := database.AddStaticEndpoint(context.TODO(), endpoint)
-	if err != nil {
-		panic(err)
-	}
-	zlog.Info().
-		Str("endpoint", endpoint.Path).
-		Str("response", endpoint.Response).
-		Msg("Added")
-	res, _ := database.ListAllStaticEndpointPaths(context.TODO())
-	zlog.Info().Interface("endpoints", res).Msg("Queried")
-}
-
 func play_kafka() {
 	go func() {
 		for x := range brokers.MPTaskScheduler.Errors() {
@@ -306,6 +287,5 @@ func main() {
 	play_coderun()
 	play_esb()
 	play_server_api()
-	play_database()
 	play_kafka()
 }

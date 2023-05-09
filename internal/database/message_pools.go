@@ -88,3 +88,19 @@ func (mp *messagePools) getMessagePool(ctx context.Context, name string) (Messag
 		return res.(MessagePool), nil
 	})
 }
+
+func (mp *messagePools) listMessagePools(ctx context.Context) ([]MessagePool, error) {
+	return util.RunWithReadLock(&mp.mutex, func() ([]MessagePool, error) {
+		opts := options.Find()
+		opts = opts.SetSort(bson.D{{Key: "timestamp", Value: 1}})
+		cursor, err := mp.coll.Find(ctx, bson.D{}, opts)
+		if err != nil {
+			return nil, err
+		}
+		var results = []MessagePool{}
+		if err = cursor.All(ctx, &results); err != nil {
+			return nil, err
+		}
+		return results, nil
+	})
+}

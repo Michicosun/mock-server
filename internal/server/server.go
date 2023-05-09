@@ -130,6 +130,7 @@ func (s *server) initRoutesApiStatic(routes *gin.RouterGroup) {
 		endpoints, err := database.ListAllStaticEndpointPaths(c)
 
 		if err != nil {
+			zlog.Error().Err(err).Msg("Failed to list all static endpoints paths")
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
@@ -146,26 +147,19 @@ func (s *server) initRoutesApiStatic(routes *gin.RouterGroup) {
 
 		zlog.Info().Str("path", staticEndpoint.Path).Msg("Received create static request")
 
-		has, err := database.HasEndpoint(c, staticEndpoint.Path)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-		if has {
+		err := database.AddStaticEndpoint(c, staticEndpoint.Path, staticEndpoint.ExpectedResponse)
+
+		switch err {
+		case nil:
+			zlog.Info().Str("path", staticEndpoint.Path).Msg("Static endpoint created")
+			c.JSON(http.StatusOK, "Static endpoint successfully added!")
+		case database.ErrDuplicateKey:
+			zlog.Error().Str("path", staticEndpoint.Path).Msg("Endpoint with this path already exists")
 			c.JSON(http.StatusConflict, gin.H{"error": "The same endpoint already exists"})
-			return
-		}
-
-		if err := database.AddStaticEndpoint(c, database.StaticEndpoint{
-			Path:     staticEndpoint.Path,
-			Response: staticEndpoint.ExpectedResponse,
-		}); err != nil {
+		default:
+			zlog.Error().Err(err).Msg("Failed to add static endpoint")
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
 		}
-
-		zlog.Info().Str("path", staticEndpoint.Path).Msg("Static endpoint created")
-		c.JSON(http.StatusOK, "Static endpoint successfully added!")
 	})
 
 	routes.PUT(staticRoutesEndpoint, func(c *gin.Context) {
@@ -177,28 +171,18 @@ func (s *server) initRoutesApiStatic(routes *gin.RouterGroup) {
 
 		zlog.Info().Str("path", staticEndpoint.Path).Msg("Received update static request")
 
-		has, err := database.HasStaticEndpoint(c, staticEndpoint.Path)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-		if !has {
+		err := database.UpdateStaticEndpoint(c, staticEndpoint.Path, staticEndpoint.ExpectedResponse)
+		switch err {
+		case nil:
+			zlog.Info().Str("path", staticEndpoint.Path).Msg("Static endpoint updated")
+			c.JSON(http.StatusNoContent, "Static endpoint successfully updated!")
+		case database.ErrNoSuchPath:
 			zlog.Error().Msg("Update on unexisting path")
 			c.JSON(http.StatusNotFound, gin.H{"error": "Received path was not created before"})
-			return
-		}
-
-		if err := database.UpdateStaticEndpoint(c, database.StaticEndpoint{
-			Path:     staticEndpoint.Path,
-			Response: staticEndpoint.ExpectedResponse,
-		}); err != nil {
+		default:
 			zlog.Error().Err(err).Msg("Failed to add static endpoint")
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
 		}
-
-		zlog.Info().Str("path", staticEndpoint.Path).Msg("Static endpoint updated")
-		c.JSON(http.StatusNoContent, "Static endpoint successfully updated!")
 	})
 
 	routes.DELETE(staticRoutesEndpoint, func(c *gin.Context) {
@@ -211,13 +195,19 @@ func (s *server) initRoutesApiStatic(routes *gin.RouterGroup) {
 
 		zlog.Info().Str("path", path).Msg("Received delete static request")
 
-		if err := database.RemoveStaticEndpoint(c, path); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
+		err := database.RemoveStaticEndpoint(c, path)
 
-		zlog.Info().Str("path", path).Msg("Static endpoint removed")
-		c.JSON(http.StatusNoContent, "Static endpoint successfully removed!")
+		switch err {
+		case nil:
+			zlog.Info().Str("path", path).Msg("Static endpoint removed")
+			c.JSON(http.StatusNoContent, "Static endpoint successfully removed!")
+		case database.ErrNoSuchPath:
+			zlog.Error().Msg("Delete on unexisting path")
+			c.JSON(http.StatusNotFound, gin.H{"error": "Received path was not created before"})
+		default:
+			zlog.Error().Err(err).Msg("Failed to remove static endpoint")
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		}
 	})
 }
 
@@ -230,6 +220,7 @@ func (s *server) initRoutesApiDynamic(routes *gin.RouterGroup) {
 
 		endpoints, err := database.ListAllDynamicEndpointPaths(c)
 		if err != nil {
+			zlog.Error().Err(err).Msg("Failed to list all dynamic endpoint paths")
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
@@ -247,16 +238,6 @@ func (s *server) initRoutesApiDynamic(routes *gin.RouterGroup) {
 
 		zlog.Info().Str("path", dynamicEndpoint.Path).Msg("Received create dynamic request")
 
-		has, err := database.HasEndpoint(c, dynamicEndpoint.Path)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-		if has {
-			c.JSON(http.StatusConflict, gin.H{"error": "The same endpoint already exists"})
-			return
-		}
-
 		scriptName := util.GenUniqueFilename("py")
 		zlog.Info().Str("filename", scriptName).Msg("Generated script name")
 
@@ -266,21 +247,22 @@ func (s *server) initRoutesApiDynamic(routes *gin.RouterGroup) {
 			return
 		}
 
-		if err := database.AddDynamicEndpoint(c, database.DynamicEndpoint{
-			Path:       dynamicEndpoint.Path,
-			ScriptName: scriptName,
-		}); err != nil {
+		err := database.AddDynamicEndpoint(c, dynamicEndpoint.Path, scriptName)
+
+		switch err {
+		case nil:
+			zlog.Info().
+				Str("path", dynamicEndpoint.Path).
+				Str("script name", scriptName).
+				Msg("Dynamic endpoint added")
+			c.JSON(http.StatusOK, "Dynamic endpoint successfully added")
+		case database.ErrDuplicateKey:
+			zlog.Error().Err(err).Msg("Failed to add dynamic endpoint")
+			c.JSON(http.StatusConflict, gin.H{"error": "The same endpoint already exists"})
+		default:
 			zlog.Error().Err(err).Msg("Failed to add dynamic endpoint")
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
 		}
-
-		zlog.Info().
-			Str("path", dynamicEndpoint.Path).
-			Str("sciprt name", scriptName).
-			Msg("Dynamic endpoint added")
-
-		c.JSON(http.StatusOK, "Dynamic endpoint successfully added")
 	})
 
 	routes.PUT(dynamicRoutesEndpoint, func(c *gin.Context) {
@@ -294,12 +276,19 @@ func (s *server) initRoutesApiDynamic(routes *gin.RouterGroup) {
 		zlog.Info().Str("path", dynamicEndpoint.Path).Msg("Received update dynamic request")
 
 		scriptName, err := database.GetDynamicEndpointScriptName(c, dynamicEndpoint.Path)
-		if err == database.ErrNoSuchPath {
+		switch err {
+		case nil:
+			zlog.Info().Str("path", dynamicEndpoint.Path).Msg("Dynamic endpoint updated")
+			c.JSON(http.StatusNoContent, "Dynamic endpoint successfully updated")
+		case database.ErrNoSuchPath:
 			zlog.Error().Msg("Update on unexisting path")
 			c.JSON(http.StatusNotFound, gin.H{"error": "Received path was not created before"})
 			return
-		}
-		if err != nil {
+		case database.ErrBadRouteType:
+			zlog.Error().Msg("Update on route with different type")
+			c.JSON(http.StatusNotFound, gin.H{"error": "Received path has different route type"})
+			return
+		default:
 			zlog.Error().Err(err).Msg("Failed to get script name")
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -312,9 +301,6 @@ func (s *server) initRoutesApiDynamic(routes *gin.RouterGroup) {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
-
-		zlog.Info().Str("path", dynamicEndpoint.Path).Msg("Dynamic endpoint updated")
-		c.JSON(http.StatusNoContent, "Dynamic endpoint successfully updated")
 	})
 
 	routes.DELETE(dynamicRoutesEndpoint, func(c *gin.Context) {
@@ -328,6 +314,7 @@ func (s *server) initRoutesApiDynamic(routes *gin.RouterGroup) {
 		zlog.Info().Str("path", path).Msg("Received delete dynamic request")
 
 		if err := database.RemoveDynamicEndpoint(c, path); err != nil {
+			zlog.Error().Err(err).Msg("Failed to dynamic endpoint")
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
@@ -337,63 +324,68 @@ func (s *server) initRoutesApiDynamic(routes *gin.RouterGroup) {
 	})
 }
 
+func (s *server) handleStaticRouteRequest(c *gin.Context, route database.Route) {
+	c.JSON(http.StatusOK, route.Response)
+}
+
+func (s *server) handleDynamicRouteRequest(c *gin.Context, route database.Route) {
+
+	worker, err := coderun.WorkerWatcher.BorrowWorker()
+	if err != nil {
+		zlog.Error().Err(err).Msg("Failed to borrow worker")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer worker.Return()
+
+	args, err := io.ReadAll(c.Request.Body)
+	defer c.Request.Body.Close()
+	if err != nil {
+		zlog.Error().Err(err).Msg("Failed to read request body")
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	output, err := worker.RunScript(FS_CODE_DIR, route.ScriptName, coderun.NewDynHandleArgs(args))
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, string(output))
+	case coderun.ErrCodeRunFailed:
+		zlog.Warn().Str("output", string(output)).Msg("Failed to run script")
+		c.JSON(http.StatusBadRequest, gin.H{"error": string(output)})
+	default:
+		zlog.Error().Str("output", string(output)).Msg("Worker failed")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": string(output)})
+	}
+}
+
 func (s *server) initNoRoute() {
 	s.router.NoRoute(func(c *gin.Context) {
 		path := c.Request.URL.Path
 		zlog.Info().Str("path", path).Msg("Received path")
 
-		expectedResponse, err := database.GetStaticEndpointResponse(c, path)
-		if err == nil {
-			c.JSON(http.StatusOK, expectedResponse)
+		route, err := database.GetRoute(c, path)
+		if err == database.ErrNoSuchPath {
+			zlog.Info().Str("path", path).Msg("No such path")
+			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("no such path: %s", path)})
 			return
 		}
-		if err != database.ErrNoSuchPath {
-			zlog.Error().Err(err).Msg("Failed to get static endpoint")
+		if err != nil {
+			zlog.Error().Err(err).Msg("Failed to find path")
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 
-		scriptName, err := database.GetDynamicEndpointScriptName(c, path)
-		if err == nil {
-			worker, err := coderun.WorkerWatcher.BorrowWorker()
-			if err != nil {
-				zlog.Error().Err(err).Msg("Failed to borrow worker")
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				return
-			}
-			defer worker.Return()
+		switch route.Type {
+		case database.STATIC_ENDPOINT_TYPE:
+			s.handleStaticRouteRequest(c, route)
 
-			args, err := io.ReadAll(c.Request.Body)
-			defer c.Request.Body.Close()
-			if err != nil {
-				zlog.Error().Err(err).Msg("Failed to read request body")
-				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-				return
-			}
+		case database.DYNAMIC_ENDPOINT_TYPE:
+			s.handleDynamicRouteRequest(c, route)
 
-			output, err := worker.RunScript(FS_CODE_DIR, scriptName, coderun.NewDynHandleArgs(args))
-			switch err {
-			case nil:
-				c.JSON(http.StatusOK, string(output))
-			case coderun.ErrCodeRunFailed:
-				zlog.Warn().Str("output", string(output)).Msg("Failed to run script")
-				c.JSON(http.StatusBadRequest, gin.H{"error": string(output)})
-			default:
-				zlog.Error().Str("output", string(output)).Msg("Worker failed")
-				c.JSON(http.StatusInternalServerError, gin.H{"error": string(output)})
-			}
-
-			return
+		default:
+			zlog.Fatal().Msg(fmt.Sprintf("Can't resolve route type: %s", route.Type))
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Can't resolve route type"})
 		}
-
-		if err != database.ErrNoSuchPath {
-			zlog.Error().Err(err).Msg("Failed to get dynamic endpoint")
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-
-		zlog.Info().Str("path", path).Msg("No such path")
-		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("no such path: %s", path)})
 	})
-
 }
