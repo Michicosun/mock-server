@@ -52,6 +52,18 @@ func TestMessagePools(t *testing.T) {
 			}
 
 			{
+				actualMessagePools, err := database.ListMessagePools(context.TODO())
+				if err != nil {
+					t.Error(err)
+				}
+				for i, expectedMessagePool := range messagePools {
+					if !comparePools(&actualMessagePools[i], &expectedMessagePool) {
+						t.Errorf("res != expected: %s != %s", actualMessagePools[i], expectedMessagePool)
+					}
+				}
+			}
+
+			{
 				err := database.RemoveMessagePool(context.TODO(), messagePools[1].Name)
 				if err != nil {
 					t.Error(err)

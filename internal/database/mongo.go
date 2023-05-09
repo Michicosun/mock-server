@@ -152,3 +152,7 @@ func RemoveMessagePool(ctx context.Context, name string) error {
 func GetMessagePool(ctx context.Context, name string) (MessagePool, error) {
 	return db.messagePools.getMessagePool(ctx, name)
 }
+
+func ListMessagePools(ctx context.Context) ([]MessagePool, error) {
+	return db.messagePools.listMessagePools(ctx)
+}
