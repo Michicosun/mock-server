@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"mock-server/internal/coderun"
 	"mock-server/internal/configs"
 	"mock-server/internal/database"
@@ -576,7 +575,7 @@ func (s *server) handleProxyRouteRequest(c *gin.Context, route *database.Route) 
 				}
 			}
 
-			req.Body = ioutil.NopCloser(bytes.NewBuffer(body.Bytes()))
+			req.Body = io.NopCloser(bytes.NewBuffer(body.Bytes()))
 		}
 
 		{
