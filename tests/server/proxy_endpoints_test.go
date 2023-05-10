@@ -59,7 +59,7 @@ func TestProxyRoutesSimple(t *testing.T) {
 	}
 
 	if !bytes.Equal(body, []byte(`"http://localhost:1337/api/ping"`)) {
-		t.Errorf(`dynamic data mismatch: %s != "http://localhost:1337/api/ping"`, body)
+		t.Errorf(`proxy data mismatch: %s != "http://localhost:1337/api/ping"`, body)
 	}
 
 	// expects `hello`

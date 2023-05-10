@@ -53,6 +53,16 @@ func TestStaticRoutesSimple(t *testing.T) {
 	}
 
 	// expects `hello`
+	code, body = DoGet(staticApiEndpoint+"/expected_response?path=/test_url", t)
+	if code != 200 {
+		t.Errorf("expected to be possible make request for proxy url")
+	}
+
+	if !bytes.Equal(body, []byte(`"hello"`)) {
+		t.Errorf(`static data mismatch: %s != "hello"`, body)
+	}
+
+	// expects `hello`
 	code, body = DoGet(testUrl, t)
 	if code != 200 {
 		t.Errorf("expected to be possible make request to new route")
