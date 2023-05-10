@@ -120,17 +120,44 @@ func DoPost(url string, content []byte, t *testing.T) (int, []byte) {
 	return resp.StatusCode, body
 }
 
-func DoPut(url string, content []byte, t *testing.T) int {
-	client := &http.Client{}
+func DoPostWithHeaders(url string, headers map[string][]string, content []byte, t *testing.T) (int, []byte) {
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(content))
+	if err != nil {
+		t.Error(err)
+		return 0, nil
+	}
+	req.Header.Add("Content-Type", "application/json")
+	for headerName, headerValues := range headers {
+		for _, headerValue := range headerValues {
+			req.Header.Add(headerName, headerValue)
+		}
+	}
 
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Error(err)
+		return 0, nil
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Error(err)
+		return 0, nil
+	}
+
+	return resp.StatusCode, body
+}
+
+func DoPut(url string, content []byte, t *testing.T) int {
 	req, err := http.NewRequest(http.MethodPut, url, bytes.NewBuffer(content))
-	req.Header.Set("Content-Type", "application/json")
 	if err != nil {
 		t.Error(err)
 		return 0
 	}
+	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := client.Do(req)
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Error(err)
 		return 0

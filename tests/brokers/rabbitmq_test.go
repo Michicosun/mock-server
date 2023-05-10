@@ -2,7 +2,6 @@ package brokers_test
 
 import (
 	"context"
-	"fmt"
 	"mock-server/internal/brokers"
 	"mock-server/internal/control"
 	"mock-server/internal/database"
@@ -37,7 +36,7 @@ func TestRabbitMq(t *testing.T) {
 		t.Error(err)
 	}
 
-	fmt.Printf("MessagePool: %s\n", handler)
+	t.Logf("MessagePool: %s\n", handler)
 
 	writeTaskId := handler.NewWriteTask([]string{"40", "41", "42"}).Schedule()
 

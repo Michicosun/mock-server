@@ -1,6 +1,6 @@
 logs:
-    level: 0
-    consoleLoggingEnabled: true
+    level: 1
+    consoleLoggingEnabled: false
     fileLoggingEnabled: true
     directory: "/tmp/mock-server-logs"
     filename: "mock-server-log"

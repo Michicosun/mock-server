@@ -45,7 +45,7 @@ func TestDynamicRoutesSimple(t *testing.T) {
 	// try to update non route that is not exists yet
 	updateBody := []byte(`{
 		"path": "/test_url",
-		"code": "def func():\n    print(['noooo way'])"
+		"code": "def func(headers, body):\n    return['noooo way']"
 	}`)
 	code = DoPut(dynamicApiEndpoint, updateBody, t)
 	if code != 404 {
@@ -55,11 +55,21 @@ func TestDynamicRoutesSimple(t *testing.T) {
 	// create route /test_url with response `print(['noooo way', 123])`
 	requestBody := []byte(`{
 		"path": "/test_url",
-		"code": "def func():\n    print(['noooo way', 123])"
+		"code": "def func(headers, body):\n    return ['noooo way', 123]"
 	}`)
 	code, _ = DoPost(dynamicApiEndpoint, requestBody, t)
 	if code != 200 {
 		t.Errorf("create route failed")
+	}
+
+	// expects `def func():\n    print(['noooo way', 123])`
+	code, body = DoGet(dynamicApiEndpoint+"/code?path=/test_url", t)
+	if code != 200 {
+		t.Errorf("expected to be possible make request for code")
+	}
+
+	if !bytes.Equal(body, []byte(`"def func(headers, body):\n    return ['noooo way', 123]\n"`)) {
+		t.Errorf(`dynamic data mismatch: %s != "def func(headers, body):\n    return ["noooo way", 123]\n"`, body)
 	}
 
 	// expects `[\"noooo way\", 123]\n`
@@ -125,17 +135,26 @@ func TestDynamicRoutesSimple(t *testing.T) {
 	}
 }
 
+var TEST_DYN_HANDLE_CODE = []byte(`"def func(headers, body):\n    hA, hB = headers['A'], headers['B']\n    A, B, C = body['A'], body['B'], body['C']\n    return (hA[1], hB, A, int(B) - 3, list(reversed(C)))\n"`)
+
+var TEST_QUERY_DYN_HANDLE = []byte(`
+{
+	"path": "/test_url",
+	"code": "def func(headers, body):\n    hA, hB = headers['A'], headers['B']\n    A, B, C = body['A'], body['B'], body['C']\n    return (hA[1], hB, A, int(B) - 3, list(reversed(C)))"
+}
+`)
+
 func TestDynamicRoutesScriptWithArgs(t *testing.T) {
-	testBodyScript := []byte(`{
-		"path": "/test_url",
-		"code": "def func(A, B, C):\n    print(A)\n    print(B - 3)\n    print(list(reversed(C)))\n"
-	}`)
-	testScriptArgs := []byte(`{
+	testScriptHeaders := map[string][]string{
+		"A": {"A", "B"},
+		"B": {"C"},
+	}
+	testScriptBody := []byte(`{
 		"A": "hello, it's me",
 		"B": 42,
 		"C": ["a", "b", "c"]
 	}`)
-	expectedResponse := []byte("hello, it's me\n39\n[\"c\", \"b\", \"a\"]")
+	expectedResponse := []byte(`("B", ["C"], "sample_A", 39, ["c", "b", "a"])`)
 
 	t.Setenv("CONFIG_PATH", "/configs/test_server_config.yaml")
 
@@ -147,12 +166,22 @@ func TestDynamicRoutesScriptWithArgs(t *testing.T) {
 	dynamicApiEndpoint := endpoint + "/api/routes/dynamic"
 	testUrl := endpoint + "/test_url"
 
-	code, _ := DoPost(dynamicApiEndpoint, testBodyScript, t)
+	code, _ := DoPost(dynamicApiEndpoint, TEST_QUERY_DYN_HANDLE, t)
 	if code != 200 {
 		t.Errorf("failed to add new dynamic route")
 	}
 
-	code, body := DoPost(testUrl, testScriptArgs, t)
+	// expects TEST_DYN_HANDLE_CODE
+	code, body := DoGet(dynamicApiEndpoint+"/code?path=/test_url", t)
+	if code != 200 {
+		t.Errorf("expected to be possible make request for code")
+	}
+
+	if !bytes.Equal(body, TEST_DYN_HANDLE_CODE) {
+		t.Errorf("dynamic data mismatch:\n%s\n!=\n%s", body, TEST_DYN_HANDLE_CODE)
+	}
+
+	code, body = DoPostWithHeaders(testUrl, testScriptHeaders, testScriptBody, t)
 	if code != 200 {
 		t.Errorf("failed to query created dynamic route")
 	}
@@ -164,10 +193,10 @@ func TestDynamicRoutesScriptWithArgs(t *testing.T) {
 func TestDynamiRoutesWithEmptyArgs(t *testing.T) {
 	testBodyScript := []byte(`{
 		"path": "/test_url",
-		"code": "def func():\n    for i in range(3):\n        print(i)\n"
+		"code": "def func(headers, body):\n    return [1, 2, 3]"
 	}`)
 	testScriptArgs := []byte(`{}`)
-	expectedResponse := []byte("0\n1\n2\n")
+	expectedResponse := []byte(`[1, 2, 3]`)
 
 	t.Setenv("CONFIG_PATH", "/configs/test_server_config.yaml")
 
@@ -230,7 +259,7 @@ func TestDynamicRoutesDoublePost(t *testing.T) {
 func TestDynamiRoutesBadScript(t *testing.T) {
 	testBodyScriptBad := []byte(`{
 		"path": "/test_url",
-		"code": "def func(A):print(A\n"
+		"code": "def func(headers, body):print(A\n"
 	}`)
 	testScriptArgs := []byte(`{
 		"A": 1
@@ -258,10 +287,10 @@ func TestDynamiRoutesBadScript(t *testing.T) {
 	}
 }
 
-func TestDynamiRoutesBadArgs(t *testing.T) {
+func TestDynamicRoutesBadArgs(t *testing.T) {
 	testBodyScript := []byte(`{
 		"path": "/test_url",
-		"code": "def func(A, B, C):\n    print(A, B, C)\n"
+		"code": "def func(headers, body):\n    print(body['A'], body['B'], body['C'])\n"
 	}`)
 	testScriptArgsBad := []byte(`{
 		"A": 1,
