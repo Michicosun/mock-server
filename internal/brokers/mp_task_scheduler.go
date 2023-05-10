@@ -146,7 +146,7 @@ func (mps *mpTaskScheduler) rWorkerRoutine() {
 		}
 		task := elem.Unwrap()
 		task_ctx, cancel := context.WithTimeout(mps.ctx, mps.cfg.Read_timeout)
-		if err := qread(task_ctx, task); err != nil {
+		if err := qread(task_ctx, task); err != nil && err != context.Canceled && err != context.DeadlineExceeded {
 			mps.submitError(task.getTaskId(), err)
 		}
 		cancel()
@@ -179,7 +179,7 @@ func (mps *mpTaskScheduler) wWorkerRoutine() {
 		}
 		task := elem.Unwrap()
 		task_ctx, cancel := context.WithTimeout(mps.ctx, mps.cfg.Write_timeout)
-		if err := qwrite(task_ctx, task); err != nil {
+		if err := qwrite(task_ctx, task); err != nil && err != context.Canceled && err != context.DeadlineExceeded {
 			mps.submitError(task.getTaskId(), err)
 		}
 		cancel()
