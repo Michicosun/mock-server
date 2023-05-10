@@ -55,7 +55,7 @@ func TestStaticRoutesSimple(t *testing.T) {
 	// expects `hello`
 	code, body = DoGet(staticApiEndpoint+"/expected_response?path=/test_url", t)
 	if code != 200 {
-		t.Errorf("expected to be possible make request for proxy url")
+		t.Errorf("expected to be possible make request for expected response")
 	}
 
 	if !bytes.Equal(body, []byte(`"hello"`)) {
