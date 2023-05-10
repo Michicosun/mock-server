@@ -567,8 +567,14 @@ func (s *server) handleProxyRouteRequest(c *gin.Context, route *database.Route) 
 		default:
 			zlog.Info().Msg("Copying request body")
 			var body bytes.Buffer
-			io.Copy(&body, c.Request.Body)
-			c.Request.Body.Close()
+			{
+				defer c.Request.Body.Close()
+				if _, err := io.Copy(&body, c.Request.Body); err != nil {
+					zlog.Error().Err(err).Msg("Failed to copy request body")
+					c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+					return
+				}
+			}
 
 			req.Body = ioutil.NopCloser(bytes.NewBuffer(body.Bytes()))
 		}
