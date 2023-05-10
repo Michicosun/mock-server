@@ -3,6 +3,8 @@ package util
 import (
 	"fmt"
 	"strings"
+
+	zlog "github.com/rs/zerolog/log"
 )
 
 const LOAD_ARGS = `
@@ -62,7 +64,7 @@ func WrapArgsForDynHandle(headers []byte, body []byte) []byte {
 		body = []byte(`{}`)
 	}
 	wrapped := fmt.Sprintf(`{"headers": %s, "body": %s}`, headers, body)
-	fmt.Printf("GOT ARGS: %s\n", wrapped)
+	zlog.Debug().Str("wrapped args", wrapped).Msg("After wrap")
 	return []byte(wrapped)
 }
 
