@@ -11,7 +11,7 @@ with open("data.json") as data:
     args = json.load(data)`
 
 const INVOKE_DYN_HANDLE = `
-func(**args)`
+print(func(**args))`
 const INVOKE_ESB = `
 func(args["msgs"])
 `
@@ -22,12 +22,48 @@ func WrapCodeForDynHandle(code string) []byte {
 
 func UnwrapCodeForDynHandle(code string) string {
 	splitted := strings.Split(code, "\n")
-	splitted = splitted[1 : len(splitted)-1]
+	splitted = splitted[4 : len(splitted)-1]
 	return strings.Join(splitted, "\n")
 }
 
 func WrapCodeForEsb(code string) []byte {
 	return []byte(fmt.Sprintf("%s\n%s\n%s", LOAD_ARGS, code, INVOKE_ESB))
+}
+
+// Example:
+//
+//		headers: json.Marshal(map[string][]string{
+//		 "a":    {"b", "c", "d"},
+//	  "nice": {"1"},
+//		})
+//
+//		body: json.Marshal(map[string]interface{}{
+//			"A": 7,
+//			"B": "9",
+//		})
+//
+// converts to
+//
+//	{
+//		"headers": {
+//			"a": ["b", "c", "d"],
+//			"nice": ["1"]
+//		},
+//		"body": {
+//			"A": 7,
+//			"B": "9"
+//		}
+//	}
+func WrapArgsForDynHandle(headers []byte, body []byte) []byte {
+	if len(headers) == 0 {
+		headers = []byte(`{}`)
+	}
+	if len(body) == 0 {
+		body = []byte(`{}`)
+	}
+	wrapped := fmt.Sprintf(`{"headers": %s, "body": %s}`, headers, body)
+	fmt.Printf("GOT ARGS: %s\n", wrapped)
+	return []byte(wrapped)
 }
 
 // Example:

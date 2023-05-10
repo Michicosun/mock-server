@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"mock-server/internal/coderun"
@@ -229,16 +230,16 @@ func (s *server) initRoutesApiDynamic(routes *gin.RouterGroup) {
 	})
 
 	routes.GET(dynamicRoutesEndpoint+"/code", func(c *gin.Context) {
-		var dynamicEndpointQuery protocol.DynamicEndpointCodeQuery
-		if err := c.Bind(&dynamicEndpointQuery); err != nil {
-			zlog.Error().Err(err).Msg("Failed to bind request")
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		path := c.Query("path")
+		if path == "" {
+			zlog.Error().Msg("Path param not specified")
+			c.JSON(http.StatusBadRequest, gin.H{"error": "specify path param"})
 			return
 		}
 
-		zlog.Info().Str("path", dynamicEndpointQuery.Path).Msg("Received get code dynamic request")
+		zlog.Info().Str("path", path).Msg("Received get code dynamic request")
 
-		scriptName, err := database.GetDynamicEndpointScriptName(c, dynamicEndpointQuery.Path)
+		scriptName, err := database.GetDynamicEndpointScriptName(c, path)
 		switch err {
 		case nil:
 			zlog.Info().Str("script name", scriptName).Msg("Got script")
@@ -259,7 +260,7 @@ func (s *server) initRoutesApiDynamic(routes *gin.RouterGroup) {
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{"code": util.UnwrapCodeForDynHandle(code)})
+		c.JSON(http.StatusOK, util.UnwrapCodeForDynHandle(code))
 	})
 
 	routes.POST(dynamicRoutesEndpoint, func(c *gin.Context) {
@@ -372,7 +373,15 @@ func (s *server) handleDynamicRouteRequest(c *gin.Context, route database.Route)
 	}
 	defer worker.Return()
 
-	args, err := io.ReadAll(c.Request.Body)
+	headers := c.Request.Header.Clone()
+	headersBytes, err := json.Marshal(headers)
+	if err != nil {
+		zlog.Error().Err(err).Msg("Failed to parse headers")
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	bodyBytes, err := io.ReadAll(c.Request.Body)
 	defer c.Request.Body.Close()
 	if err != nil {
 		zlog.Error().Err(err).Msg("Failed to read request body")
@@ -380,7 +389,7 @@ func (s *server) handleDynamicRouteRequest(c *gin.Context, route database.Route)
 		return
 	}
 
-	output, err := worker.RunScript(FS_CODE_DIR, route.ScriptName, coderun.NewDynHandleArgs(args))
+	output, err := worker.RunScript(FS_CODE_DIR, route.ScriptName, coderun.NewDynHandleArgs(headersBytes, bodyBytes))
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, string(output))
