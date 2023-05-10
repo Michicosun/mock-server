@@ -82,6 +82,41 @@ func ListAllStaticEndpointPaths(ctx context.Context) ([]string, error) {
 	return db.routes.listAllRoutesPathsWithType(ctx, STATIC_ENDPOINT_TYPE)
 }
 
+func AddProxyEndpoint(ctx context.Context, path string, proxyUrl string) error {
+	return db.routes.addRoute(ctx, Route{
+		Path:     path,
+		Type:     PROXY_ENDPOINT_TYPE,
+		ProxyURL: proxyUrl,
+	})
+}
+
+func RemoveProxyEndpoint(ctx context.Context, path string) error {
+	return db.routes.removeRoute(ctx, path)
+}
+
+func UpdateProxyEndpoint(ctx context.Context, path string, proxyUrl string) error {
+	return db.routes.updateRoute(ctx, Route{
+		Path:     path,
+		Type:     PROXY_ENDPOINT_TYPE,
+		ProxyURL: proxyUrl,
+	})
+}
+
+func GetProxyEndpointProxyUrl(ctx context.Context, path string) (string, error) {
+	route, err := db.routes.getRoute(ctx, path)
+	if err != nil {
+		return "", err
+	}
+	if route.Type != PROXY_ENDPOINT_TYPE {
+		return "", ErrBadRouteType
+	}
+	return route.ProxyURL, nil
+}
+
+func ListAllProxyEndpointPaths(ctx context.Context) ([]string, error) {
+	return db.routes.listAllRoutesPathsWithType(ctx, PROXY_ENDPOINT_TYPE)
+}
+
 func AddDynamicEndpoint(ctx context.Context, path string, scriptName string) error {
 	return db.routes.addRoute(ctx, Route{
 		Path:       path,
