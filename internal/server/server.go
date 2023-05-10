@@ -243,7 +243,7 @@ func (s *server) initRoutesApiDynamic(routes *gin.RouterGroup) {
 		switch err {
 		case nil:
 			zlog.Info().Str("script name", scriptName).Msg("Got script")
-		case database.ErrNoSuchPath:
+		case database.ErrNoSuchPath, database.ErrBadRouteType:
 			zlog.Error().Msg("Request for unexisting script")
 			c.JSON(http.StatusNotFound, gin.H{"error": "Received path was not created before"})
 			return
@@ -387,7 +387,7 @@ func (s *server) handleDynamicRouteRequest(c *gin.Context, route database.Route)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-  defer c.Request.Body.Close()
+	defer c.Request.Body.Close()
 
 	output, err := worker.RunScript(FS_CODE_DIR, route.ScriptName, coderun.NewDynHandleArgs(headersBytes, bodyBytes))
 	switch err {
