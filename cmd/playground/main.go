@@ -45,7 +45,7 @@ func play_file_storage() {
 		zlog.Error().Err(err).Msg("cannot create filestorage")
 		return
 	}
-	err = fs.Write("mapper", "test.py", []byte(`print("Hello, world!")`))
+	err = fs.Write("mapper", "test.py", []byte(`def func(headers, body):\n    print("Hello, world!")`))
 	if err != nil {
 		zlog.Error().Err(err).Msg("write failed")
 		return
@@ -59,7 +59,7 @@ func play_file_storage() {
 }
 
 func play_coderun() {
-	var ARGS = coderun.NewDynHandleArgs([]byte(`
+	var ARGS = coderun.NewDynHandleArgs([]byte(`{}`), []byte(`
 {
 	"A": "sample_A",
 	"B": 42,
