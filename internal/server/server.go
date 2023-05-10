@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"mock-server/internal/brokers"
 	"mock-server/internal/coderun"
 	"mock-server/internal/configs"
 	"mock-server/internal/database"
@@ -116,15 +117,22 @@ func (s *server) initMainRoutes() {
 	}
 
 	// init routes (static, proxy, dynamic)
-	routes := api.Group("routes")
+	routesApi := api.Group("routes")
 
-	s.initRoutesApiStatic(routes)
-	s.initRoutesApiDynamic(routes)
-	s.initRoutesApiProxy(routes)
+	s.initRoutesApiStatic(routesApi)
+	s.initRoutesApiDynamic(routesApi)
+	s.initRoutesApiProxy(routesApi)
 
 	// route all query to handle dynamically
 	// created user mock endpoints
 	s.initNoRoute()
+
+	// init brokers (message pools, task scheduling and ESB)
+	brokersApi := api.Group("brokers")
+
+	s.initBrokersApiPool(brokersApi)
+	s.initBrokersApiScheduler(brokersApi)
+	s.initBrokersApiEsb(brokersApi)
 }
 
 // static routes with predefined response
@@ -664,4 +672,103 @@ func (s *server) initNoRoute() {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Can't resolve route type"})
 		}
 	})
+}
+
+func (s *server) initBrokersApiPool(brokersApi *gin.RouterGroup) {
+	poolBrokersEndpoint := "/pool"
+
+	brokersApi.GET(poolBrokersEndpoint, func(c *gin.Context) {
+	})
+
+	// list all read and write tasks
+	{
+		tasks := brokersApi.Group("tasks")
+
+		// list all read tasks by pool name
+		tasks.GET("/read", func(c *gin.Context) {
+		})
+
+		// list all write tasks by pool name
+		tasks.GET("/write", func(c *gin.Context) {})
+	}
+
+	brokersApi.POST(poolBrokersEndpoint, func(c *gin.Context) {
+		var messagePool protocol.MessagePool
+		if err := c.Bind(&messagePool); err != nil {
+			zlog.Error().Err(err).Msg("Failed to bind request")
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		switch messagePool.Broker {
+		case "rabbitmq", "kafka":
+			zlog.Info().
+				Str("broker", messagePool.Broker).
+				Str("queue name", messagePool.QueueName).
+				Str("pool name", messagePool.PoolName).
+				Msg("Received create pool request")
+
+		default:
+			zlog.Error().
+				Str("broker", messagePool.Broker).
+				Msg("Received request with unsupported broker")
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Such pool is unsupported"})
+			return
+		}
+
+		var pool brokers.MessagePool
+		switch messagePool.PoolName {
+		case "rabbitmq":
+			pool = brokers.NewRabbitMQMessagePool(messagePool.PoolName, messagePool.QueueName)
+		case "kafka":
+			pool = brokers.NewKafkaMessagePool(messagePool.PoolName, messagePool.QueueName)
+		}
+
+		_, err := brokers.AddMessagePool(pool)
+		switch err {
+		case nil:
+			zlog.Info().
+				Str("broker", messagePool.Broker).
+				Str("pool name", messagePool.PoolName).
+				Msg("Pool created")
+			c.JSON(http.StatusOK, "Message pool successfully created!")
+		case database.ErrDuplicateKey:
+			zlog.Error().Err(err).Msg("Failed to add message")
+			c.JSON(http.StatusConflict, gin.H{"error": "The same message pool already exists"})
+		default:
+			zlog.Error().Err(err).Msg("Failed to add message pool")
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		}
+	})
+
+	brokersApi.DELETE(poolBrokersEndpoint, func(c *gin.Context) {
+	})
+}
+
+func (s *server) initBrokersApiScheduler(brokersApi *gin.RouterGroup) {
+	schedulerBrokersEndpoint := "/scheduler"
+
+	// load task messages by task id
+	brokersApi.GET(schedulerBrokersEndpoint, func(c *gin.Context) {})
+
+	// schedule read task
+	brokersApi.POST(schedulerBrokersEndpoint+"/read", func(c *gin.Context) {
+	})
+
+	// schedule write task from protocol.BrokerTask
+	brokersApi.POST(schedulerBrokersEndpoint+"/write", func(c *gin.Context) {
+	})
+}
+
+func (s *server) initBrokersApiEsb(brokersApi *gin.RouterGroup) {
+	esbBrokersEndpoint := "/esb"
+
+	// get all tasks by esb pair in-pool name
+	brokersApi.GET(esbBrokersEndpoint, func(c *gin.Context) {})
+
+	// create new esb pair
+	brokersApi.POST(esbBrokersEndpoint, func(c *gin.Context) {})
+
+	// create delete esb pair
+	brokersApi.DELETE(esbBrokersEndpoint, func(c *gin.Context) {})
 }
