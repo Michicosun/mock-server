@@ -382,12 +382,12 @@ func (s *server) handleDynamicRouteRequest(c *gin.Context, route database.Route)
 	}
 
 	bodyBytes, err := io.ReadAll(c.Request.Body)
-	defer c.Request.Body.Close()
 	if err != nil {
 		zlog.Error().Err(err).Msg("Failed to read request body")
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+  defer c.Request.Body.Close()
 
 	output, err := worker.RunScript(FS_CODE_DIR, route.ScriptName, coderun.NewDynHandleArgs(headersBytes, bodyBytes))
 	switch err {
