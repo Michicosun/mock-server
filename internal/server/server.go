@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"mock-server/internal/coderun"
@@ -228,6 +229,40 @@ func (s *server) initRoutesApiDynamic(routes *gin.RouterGroup) {
 		c.JSON(http.StatusOK, gin.H{"endpoints": endpoints})
 	})
 
+	routes.GET(dynamicRoutesEndpoint+"/code", func(c *gin.Context) {
+		path := c.Query("path")
+		if path == "" {
+			zlog.Error().Msg("Path param not specified")
+			c.JSON(http.StatusBadRequest, gin.H{"error": "specify path param"})
+			return
+		}
+
+		zlog.Info().Str("path", path).Msg("Received get code dynamic request")
+
+		scriptName, err := database.GetDynamicEndpointScriptName(c, path)
+		switch err {
+		case nil:
+			zlog.Info().Str("script name", scriptName).Msg("Got script")
+		case database.ErrNoSuchPath, database.ErrBadRouteType:
+			zlog.Error().Msg("Request for unexisting script")
+			c.JSON(http.StatusNotFound, gin.H{"error": "Received path was not created before"})
+			return
+		default:
+			zlog.Error().Err(err).Msg("Failed to query script name")
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		code, err := s.fs.Read(FS_CODE_DIR, scriptName)
+		if err != nil {
+			zlog.Error().Err(err).Str("script name", scriptName).Msg("Failed to read script code")
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusOK, util.UnwrapCodeForDynHandle(code))
+	})
+
 	routes.POST(dynamicRoutesEndpoint, func(c *gin.Context) {
 		var dynamicEndpoint protocol.DynamicEndpoint
 		if err := c.Bind(&dynamicEndpoint); err != nil {
@@ -338,15 +373,23 @@ func (s *server) handleDynamicRouteRequest(c *gin.Context, route database.Route)
 	}
 	defer worker.Return()
 
-	args, err := io.ReadAll(c.Request.Body)
-	defer c.Request.Body.Close()
+	headers := c.Request.Header.Clone()
+	headersBytes, err := json.Marshal(headers)
+	if err != nil {
+		zlog.Error().Err(err).Msg("Failed to parse headers")
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	bodyBytes, err := io.ReadAll(c.Request.Body)
 	if err != nil {
 		zlog.Error().Err(err).Msg("Failed to read request body")
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	defer c.Request.Body.Close()
 
-	output, err := worker.RunScript(FS_CODE_DIR, route.ScriptName, coderun.NewDynHandleArgs(args))
+	output, err := worker.RunScript(FS_CODE_DIR, route.ScriptName, coderun.NewDynHandleArgs(headersBytes, bodyBytes))
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, string(output))
