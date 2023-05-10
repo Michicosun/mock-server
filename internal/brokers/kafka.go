@@ -137,6 +137,14 @@ func (t *kafkaReadTask) read(ctx context.Context) error {
 			case *kafka.Message:
 				zlog.Info().Str("task", string(t.getTaskId())).Str("msg", string(e.Value)).Msg("get message")
 				t.msgs = append(t.msgs, e)
+				if databaseErr := database.AddTaskMessage(context.TODO(), database.TaskMessage{
+					TaskId:  string(t.getTaskId()),
+					Message: string(e.Value),
+				}); err != nil {
+					zlog.Err(err).Msg(fmt.Sprintf("Failed to upload message for task: %s", t.getTaskId()))
+					err = databaseErr
+					run.Store(false)
+				}
 			case kafka.Error:
 				err = e
 				run.Store(false)
@@ -223,6 +231,13 @@ func (t *kafkaWriteTask) write(ctx context.Context) error {
 					"Delivered message to topic %s [%d] at offset %v",
 					*m.TopicPartition.Topic, m.TopicPartition.Partition, m.TopicPartition.Offset,
 				)
+				if err = database.AddTaskMessage(context.TODO(), database.TaskMessage{
+					TaskId:  string(t.getTaskId()),
+					Message: string(m.Value),
+				}); err != nil {
+					zlog.Err(err).Msg(fmt.Sprintf("Failed to upload message for task: %s", t.getTaskId()))
+					return err
+				}
 			}
 		}
 	}

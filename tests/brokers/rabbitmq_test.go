@@ -40,7 +40,7 @@ func TestRabbitMq(t *testing.T) {
 
 	writeTaskId := handler.NewWriteTask([]string{"40", "41", "42"}).Schedule()
 
-	time.Sleep(10 * time.Second)
+	time.Sleep(3 * time.Second)
 
 	writeTaskMessages, err := database.GetTaskMessages(context.TODO(), string(writeTaskId))
 	if err != nil {

@@ -165,6 +165,14 @@ func (t *rabbitMQReadTask) read(ctx context.Context) error {
 		case msg := <-msgs:
 			zlog.Debug().Str("task", string(t.getTaskId())).Bytes("msg", msg.Body).Msg("read msg")
 			t.msgs = append(t.msgs, msg)
+
+			if err = database.AddTaskMessage(context.TODO(), database.TaskMessage{
+				TaskId:  string(t.getTaskId()),
+				Message: string(msg.Body),
+			}); err != nil {
+				zlog.Err(err).Msg(fmt.Sprintf("Failed to upload message for task: %s", t.getTaskId()))
+				return err
+			}
 		}
 	}
 }
@@ -197,7 +205,7 @@ func (t *rabbitMQWriteTask) write(ctx context.Context) error {
 	zlog.Info().Str("task", string(t.getTaskId())).Int("msgs_cnt", len(t.msgs)).Msg("preparing to write")
 
 	for _, msg := range t.msgs {
-		err := t.ch.PublishWithContext(ctx,
+		if err := t.ch.PublishWithContext(ctx,
 			t.pool.wcfg.Exchange,
 			t.q.Name,
 			t.pool.wcfg.Mandatory,
@@ -206,8 +214,14 @@ func (t *rabbitMQWriteTask) write(ctx context.Context) error {
 				ContentType: t.pool.wcfg.ContentType,
 				Body:        []byte(msg),
 			},
-		)
-		if err != nil {
+		); err != nil {
+			return err
+		}
+		if err := database.AddTaskMessage(context.TODO(), database.TaskMessage{
+			TaskId:  string(t.getTaskId()),
+			Message: msg,
+		}); err != nil {
+			zlog.Err(err).Msg(fmt.Sprintf("Failed to upload message for task: %s", t.getTaskId()))
 			return err
 		}
 	}

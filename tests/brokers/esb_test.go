@@ -59,17 +59,17 @@ func TestEsb(t *testing.T) {
 	// schedule read -- wait for args
 	readTaskId1 := pool1.NewReadTask().Schedule()
 
-	time.Sleep(2 * time.Second)
+	time.Sleep(3 * time.Second)
 
 	// push args to first pool
 	writeTaskId := pool1.NewWriteTask(TEST_ARGS).Schedule()
 
-	time.Sleep(2 * time.Second)
+	time.Sleep(5 * time.Second)
 
 	// schedule read -- pull script invocation result
 	readTaskId2 := pool2.NewReadTask().Schedule()
 
-	time.Sleep(12 * time.Second)
+	time.Sleep(5 * time.Second)
 
 	res, err := database.GetTaskMessages(context.TODO(), string(readTaskId1))
 	if err != nil {

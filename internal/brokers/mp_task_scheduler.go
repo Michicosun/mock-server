@@ -5,7 +5,6 @@ import (
 	"sync"
 
 	"mock-server/internal/configs"
-	"mock-server/internal/database"
 	"mock-server/internal/util"
 
 	zlog "github.com/rs/zerolog/log"
@@ -134,15 +133,6 @@ func qread(ctx context.Context, task qReadTask) error {
 		return err
 	}
 
-	for _, msg := range msgs {
-		if err = database.AddTaskMessage(context.TODO(), database.TaskMessage{
-			TaskId:  string(task.getTaskId()),
-			Message: msg,
-		}); err != nil {
-			return err
-		}
-	}
-
 	return nil
 }
 
@@ -156,7 +146,7 @@ func (mps *mpTaskScheduler) rWorkerRoutine() {
 		}
 		task := elem.Unwrap()
 		task_ctx, cancel := context.WithTimeout(mps.ctx, mps.cfg.Read_timeout)
-		if err := qread(task_ctx, task); err != nil {
+		if err := qread(task_ctx, task); err != nil && err != context.Canceled && err != context.DeadlineExceeded {
 			mps.submitError(task.getTaskId(), err)
 		}
 		cancel()
@@ -175,15 +165,6 @@ func qwrite(ctx context.Context, task qWriteTask) error {
 		return err
 	}
 
-	for _, msg := range task.messages() {
-		if err := database.AddTaskMessage(context.TODO(), database.TaskMessage{
-			TaskId:  string(task.getTaskId()),
-			Message: msg,
-		}); err != nil {
-			return err
-		}
-	}
-
 	zlog.Info().Str("task", string(task.getTaskId())).Err(ctx.Err()).Msg("finished")
 	return nil
 }
@@ -198,7 +179,7 @@ func (mps *mpTaskScheduler) wWorkerRoutine() {
 		}
 		task := elem.Unwrap()
 		task_ctx, cancel := context.WithTimeout(mps.ctx, mps.cfg.Write_timeout)
-		if err := qwrite(task_ctx, task); err != nil {
+		if err := qwrite(task_ctx, task); err != nil && err != context.Canceled && err != context.DeadlineExceeded {
 			mps.submitError(task.getTaskId(), err)
 		}
 		cancel()
