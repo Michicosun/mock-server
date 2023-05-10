@@ -45,13 +45,13 @@ func (s *server) Init(cfg *configs.ServerConfig) {
 		s.fs = fs
 	}
 
-	s.router = gin.New()
-
 	if cfg.DeployProduction {
 		gin.SetMode(gin.ReleaseMode)
 	} else {
 		gin.SetMode(gin.DebugMode)
 	}
+
+	s.router = gin.New()
 
 	s.router.Use(logger.GinLogger()) // use custom logger (zerolog)
 	s.router.Use(gin.Recovery())     // recovery from all panics
