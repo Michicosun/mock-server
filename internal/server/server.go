@@ -1,6 +1,7 @@
 package server
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -12,11 +13,14 @@ import (
 	"mock-server/internal/server/protocol"
 	"mock-server/internal/util"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 	"time"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	reuseport "github.com/kavu/go_reuseport"
+	"github.com/rs/zerolog"
 	zlog "github.com/rs/zerolog/log"
 )
 
@@ -40,13 +44,13 @@ func (s *server) Init(cfg *configs.ServerConfig) {
 		s.fs = fs
 	}
 
-	s.router = gin.New()
-
 	if cfg.DeployProduction {
 		gin.SetMode(gin.ReleaseMode)
 	} else {
 		gin.SetMode(gin.DebugMode)
 	}
+
+	s.router = gin.New()
 
 	s.router.Use(logger.GinLogger()) // use custom logger (zerolog)
 	s.router.Use(gin.Recovery())     // recovery from all panics
@@ -116,6 +120,7 @@ func (s *server) initMainRoutes() {
 
 	s.initRoutesApiStatic(routes)
 	s.initRoutesApiDynamic(routes)
+	s.initRoutesApiProxy(routes)
 
 	// route all query to handle dynamically
 	// created user mock endpoints
@@ -137,6 +142,33 @@ func (s *server) initRoutesApiStatic(routes *gin.RouterGroup) {
 		}
 
 		c.JSON(http.StatusOK, gin.H{"endpoints": endpoints})
+	})
+
+	routes.GET(staticRoutesEndpoint+"/expected_response", func(c *gin.Context) {
+		path := c.Query("path")
+		if path == "" {
+			zlog.Error().Msg("Path param not specified")
+			c.JSON(http.StatusBadRequest, gin.H{"error": "specify path param"})
+			return
+		}
+
+		zlog.Info().Str("path", path).Msg("Received get proxy url proxy request")
+
+		expectedResponse, err := database.GetStaticEndpointResponse(c, path)
+		switch err {
+		case nil:
+			zlog.Info().Str("expected response ", expectedResponse).Msg("Got url")
+		case database.ErrNoSuchPath, database.ErrBadRouteType:
+			zlog.Error().Msg("Request for unexisting static route")
+			c.JSON(http.StatusNotFound, gin.H{"error": "Received path was not created before"})
+			return
+		default:
+			zlog.Error().Err(err).Msg("Failed to query expected response")
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusOK, expectedResponse)
 	})
 
 	routes.POST(staticRoutesEndpoint, func(c *gin.Context) {
@@ -207,6 +239,140 @@ func (s *server) initRoutesApiStatic(routes *gin.RouterGroup) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Received path was not created before"})
 		default:
 			zlog.Error().Err(err).Msg("Failed to remove static endpoint")
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		}
+	})
+}
+
+// proxy routes (proxies to predefined url)
+func (s *server) initRoutesApiProxy(routes *gin.RouterGroup) {
+	proxyRoutesEndpoint := "/proxy"
+
+	routes.GET(proxyRoutesEndpoint, func(c *gin.Context) {
+		zlog.Info().Msg("Get all routes proxy request")
+		endpoints, err := database.ListAllProxyEndpointPaths(c)
+
+		if err != nil {
+			zlog.Error().Err(err).Msg("Failed to list all proxy endpoints paths")
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"endpoints": endpoints})
+	})
+
+	routes.GET(proxyRoutesEndpoint+"/proxy_url", func(c *gin.Context) {
+		path := c.Query("path")
+		if path == "" {
+			zlog.Error().Msg("Path param not specified")
+			c.JSON(http.StatusBadRequest, gin.H{"error": "specify path param"})
+			return
+		}
+
+		zlog.Info().Str("path", path).Msg("Received get proxy url proxy request")
+
+		proxyUrl, err := database.GetProxyEndpointProxyUrl(c, path)
+		switch err {
+		case nil:
+			zlog.Info().Str("proxy url ", proxyUrl).Msg("Got url")
+		case database.ErrNoSuchPath, database.ErrBadRouteType:
+			zlog.Error().Msg("Request for unexisting proxy route")
+			c.JSON(http.StatusNotFound, gin.H{"error": "Received path was not created before"})
+			return
+		default:
+			zlog.Error().Err(err).Msg("Failed to query proxy url")
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusOK, proxyUrl)
+	})
+
+	routes.POST(proxyRoutesEndpoint, func(c *gin.Context) {
+		var proxyEndpoint protocol.ProxyEndpoint
+		if err := c.Bind(&proxyEndpoint); err != nil {
+			zlog.Error().Err(err).Msg("Failed to bind request")
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		zlog.Info().
+			Str("path", proxyEndpoint.Path).
+			Str("proxy url", proxyEndpoint.ProxyUrl).
+			Msg("Received create proxy request")
+
+		if _, err := url.ParseRequestURI(proxyEndpoint.ProxyUrl); err != nil {
+			zlog.Error().Err(err).Msg("Failed to parse incoming proxy url")
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		err := database.AddProxyEndpoint(c, proxyEndpoint.Path, proxyEndpoint.ProxyUrl)
+
+		switch err {
+		case nil:
+			zlog.Info().Str("path", proxyEndpoint.Path).Msg("Proxy endpoint created")
+			c.JSON(http.StatusOK, "Proxy endpoint successfully added!")
+		case database.ErrDuplicateKey:
+			zlog.Error().Str("path", proxyEndpoint.Path).Msg("Endpoint with this path already exists")
+			c.JSON(http.StatusConflict, gin.H{"error": "The same endpoint already exists"})
+		default:
+			zlog.Error().Err(err).Msg("Failed to add proxy endpoint")
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		}
+	})
+
+	routes.PUT(proxyRoutesEndpoint, func(c *gin.Context) {
+		var proxyEndpoint protocol.ProxyEndpoint
+		if err := c.Bind(&proxyEndpoint); err != nil {
+			zlog.Error().Err(err).Msg("Failed to bind request")
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		if _, err := url.ParseRequestURI(proxyEndpoint.ProxyUrl); err != nil {
+			zlog.Error().Err(err).Msg("Failed to parse incoming proxy url")
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		zlog.Info().Str("path", proxyEndpoint.Path).Msg("Received update proxy request")
+
+		err := database.UpdateProxyEndpoint(c, proxyEndpoint.Path, proxyEndpoint.ProxyUrl)
+		switch err {
+		case nil:
+			zlog.Info().Str("path", proxyEndpoint.Path).Msg("Proxy endpoint updated")
+			c.JSON(http.StatusNoContent, "Proxy endpoint successfully updated!")
+		case database.ErrNoSuchPath:
+			zlog.Error().Msg("Update on unexisting path")
+			c.JSON(http.StatusNotFound, gin.H{"error": "Received path was not created before"})
+		default:
+			zlog.Error().Err(err).Msg("Failed to add proxy endpoint")
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		}
+	})
+
+	routes.DELETE(proxyRoutesEndpoint, func(c *gin.Context) {
+		path := c.Query("path")
+		if path == "" {
+			zlog.Error().Msg("Path param not specified")
+			c.JSON(http.StatusBadRequest, gin.H{"error": "specify path param"})
+			return
+		}
+
+		zlog.Info().Str("path", path).Msg("Received delete proxy request")
+
+		err := database.RemoveProxyEndpoint(c, path)
+
+		switch err {
+		case nil:
+			zlog.Info().Str("path", path).Msg("Proxy endpoint removed")
+			c.JSON(http.StatusNoContent, "Proxy endpoint successfully removed!")
+		case database.ErrNoSuchPath:
+			zlog.Error().Msg("Delete on unexisting path")
+			c.JSON(http.StatusNotFound, gin.H{"error": "Received path was not created before"})
+		default:
+			zlog.Error().Err(err).Msg("Failed to remove proxy endpoint")
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		}
 	})
@@ -359,12 +525,75 @@ func (s *server) initRoutesApiDynamic(routes *gin.RouterGroup) {
 	})
 }
 
-func (s *server) handleStaticRouteRequest(c *gin.Context, route database.Route) {
+func (s *server) handleStaticRouteRequest(c *gin.Context, route *database.Route) {
 	c.JSON(http.StatusOK, route.Response)
 }
 
-func (s *server) handleDynamicRouteRequest(c *gin.Context, route database.Route) {
+func (s *server) handleProxyRouteRequest(c *gin.Context, route *database.Route) {
+	target, err := url.ParseRequestURI(route.ProxyURL)
+	if err != nil {
+		zlog.Fatal().
+			Err(err).
+			Str("proxy url", route.ProxyURL).
+			Msg("Failed to parse url on route request!")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
 
+	proxy := httputil.NewSingleHostReverseProxy(target)
+	proxy.Director = func(req *http.Request) {
+		req.Header = c.Request.Header
+		req.Method = c.Request.Method
+
+		req.Host = target.Host
+		req.URL = target
+		if c.Request.URL.RawQuery == "" || target.RawQuery == "" {
+			req.URL.RawQuery = c.Request.URL.RawQuery + target.RawQuery
+		} else {
+			req.URL.RawQuery = c.Request.URL.RawQuery + "&" + target.RawQuery
+		}
+		req.RequestURI = target.RequestURI()
+		zlog.Debug().
+			Str("host", req.Host).
+			Str("path", req.URL.Path).
+			Str("uri", req.RequestURI).
+			Str("raw query", req.URL.RawQuery).
+			Msg("Request")
+
+		switch req.Method {
+		case http.MethodGet, http.MethodHead:
+			zlog.Info().Str("method", req.Method).Msg("Skipping body copying because of request method")
+		default:
+			zlog.Info().Msg("Copying request body")
+			var body bytes.Buffer
+			{
+				defer c.Request.Body.Close()
+				if _, err := io.Copy(&body, c.Request.Body); err != nil {
+					zlog.Error().Err(err).Msg("Failed to copy request body")
+					c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+					return
+				}
+			}
+
+			req.Body = io.NopCloser(bytes.NewBuffer(body.Bytes()))
+		}
+
+		{
+			if zlog.Logger.GetLevel() == zerolog.DebugLevel {
+				prettyRequest, err := httputil.DumpRequest(req, true)
+				if err != nil {
+					zlog.Error().Err(err).Msg("Failed to dump request")
+					c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				}
+				zlog.Debug().Str("req", string(prettyRequest)).Msg("Rewritten request")
+			}
+		}
+	}
+
+	proxy.ServeHTTP(c.Writer, c.Request)
+}
+
+func (s *server) handleDynamicRouteRequest(c *gin.Context, route *database.Route) {
 	worker, err := coderun.WorkerWatcher.BorrowWorker()
 	if err != nil {
 		zlog.Error().Err(err).Msg("Failed to borrow worker")
@@ -418,13 +647,17 @@ func (s *server) initNoRoute() {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
+		zlog.Debug().Interface("route", route).Msg("Queried")
 
 		switch route.Type {
 		case database.STATIC_ENDPOINT_TYPE:
-			s.handleStaticRouteRequest(c, route)
+			s.handleStaticRouteRequest(c, &route)
+
+		case database.PROXY_ENDPOINT_TYPE:
+			s.handleProxyRouteRequest(c, &route)
 
 		case database.DYNAMIC_ENDPOINT_TYPE:
-			s.handleDynamicRouteRequest(c, route)
+			s.handleDynamicRouteRequest(c, &route)
 
 		default:
 			zlog.Fatal().Msg(fmt.Sprintf("Can't resolve route type: %s", route.Type))

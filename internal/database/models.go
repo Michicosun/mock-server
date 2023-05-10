@@ -16,6 +16,7 @@ const (
 	MESSAGE_POOL_CONFIG      = "config"
 
 	STATIC_ENDPOINT_TYPE  = "static_endpoint"
+	PROXY_ENDPOINT_TYPE   = "proxy_endpoint"
 	DYNAMIC_ENDPOINT_TYPE = "dynamic_endpoint"
 )
 
@@ -24,6 +25,7 @@ type Route struct {
 	Type       string `bson:"type"`
 	ScriptName string `bson:"script_name,omitempty"`
 	Response   string `bson:"response,omitempty"`
+	ProxyURL   string `bson:"proxy_url"`
 }
 
 type TaskMessage struct {

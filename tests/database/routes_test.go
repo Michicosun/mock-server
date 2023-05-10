@@ -46,21 +46,33 @@ func TestRoutes(t *testing.T) {
 				{Path: "/three", Type: database.STATIC_ENDPOINT_TYPE, Response: "three"},
 			}
 
+			proxyRoutes := []database.Route{
+				{Path: "/four", Type: database.PROXY_ENDPOINT_TYPE, ProxyURL: "four"},
+				{Path: "/five", Type: database.PROXY_ENDPOINT_TYPE, ProxyURL: "five"},
+				{Path: "/six", Type: database.PROXY_ENDPOINT_TYPE, ProxyURL: "six"},
+			}
+
 			dynamicRoutes := []database.Route{
-				{Path: "/four", Type: database.DYNAMIC_ENDPOINT_TYPE, ScriptName: "four"},
-				{Path: "/five", Type: database.DYNAMIC_ENDPOINT_TYPE, ScriptName: "five"},
-				{Path: "/six", Type: database.DYNAMIC_ENDPOINT_TYPE, ScriptName: "six"},
+				{Path: "/seven", Type: database.DYNAMIC_ENDPOINT_TYPE, ScriptName: "sever"},
+				{Path: "/eight", Type: database.DYNAMIC_ENDPOINT_TYPE, ScriptName: "eight"},
+				{Path: "/nine", Type: database.DYNAMIC_ENDPOINT_TYPE, ScriptName: "nine"},
 			}
 
 			for _, route := range staticRoutes {
 				if err := database.AddStaticEndpoint(context.TODO(), route.Path, route.Response); err != nil {
-					t.Errorf("AddRoute return err: %s", err.Error())
+					t.Errorf("AddRoute returned err: %s", err.Error())
+				}
+			}
+
+			for _, route := range proxyRoutes {
+				if err := database.AddProxyEndpoint(context.TODO(), route.Path, route.ProxyURL); err != nil {
+					t.Errorf("AddRoute returned err: %s", err.Error())
 				}
 			}
 
 			for _, route := range dynamicRoutes {
 				if err := database.AddDynamicEndpoint(context.TODO(), route.Path, route.ScriptName); err != nil {
-					t.Errorf("AddRoute return err: %s", err.Error())
+					t.Errorf("AddRoute returned err: %s", err.Error())
 				}
 			}
 
@@ -70,6 +82,21 @@ func TestRoutes(t *testing.T) {
 					if err := database.AddStaticEndpoint(context.TODO(), route.Path, route.Response); err != database.ErrDuplicateKey {
 						t.Errorf("AddRoute should return ErrDuplicateKey")
 					}
+					if err := database.AddProxyEndpoint(context.TODO(), route.Path, route.ProxyURL); err != database.ErrDuplicateKey {
+						t.Errorf("AddRoute should return ErrDuplicateKey")
+					}
+					if err := database.AddDynamicEndpoint(context.TODO(), route.Path, route.ScriptName); err != database.ErrDuplicateKey {
+						t.Errorf("AddRoute should return ErrDuplicateKey")
+					}
+				}
+
+				for _, route := range proxyRoutes {
+					if err := database.AddStaticEndpoint(context.TODO(), route.Path, route.Response); err != database.ErrDuplicateKey {
+						t.Errorf("AddRoute should return ErrDuplicateKey")
+					}
+					if err := database.AddProxyEndpoint(context.TODO(), route.Path, route.ProxyURL); err != database.ErrDuplicateKey {
+						t.Errorf("AddRoute should return ErrDuplicateKey")
+					}
 					if err := database.AddDynamicEndpoint(context.TODO(), route.Path, route.ScriptName); err != database.ErrDuplicateKey {
 						t.Errorf("AddRoute should return ErrDuplicateKey")
 					}
@@ -77,6 +104,9 @@ func TestRoutes(t *testing.T) {
 
 				for _, route := range dynamicRoutes {
 					if err := database.AddStaticEndpoint(context.TODO(), route.Path, route.Response); err != database.ErrDuplicateKey {
+						t.Errorf("AddRoute should return ErrDuplicateKey")
+					}
+					if err := database.AddProxyEndpoint(context.TODO(), route.Path, route.ProxyURL); err != database.ErrDuplicateKey {
 						t.Errorf("AddRoute should return ErrDuplicateKey")
 					}
 					if err := database.AddDynamicEndpoint(context.TODO(), route.Path, route.ScriptName); err != database.ErrDuplicateKey {
@@ -93,6 +123,17 @@ func TestRoutes(t *testing.T) {
 
 				if !compareRoutesPaths(res, staticRoutes) {
 					t.Errorf("res != expected: %s != %s", res, staticRoutes)
+				}
+			}
+
+			{
+				res, err := database.ListAllProxyEndpointPaths(context.TODO())
+				if err != nil {
+					t.Error(err)
+				}
+
+				if !compareRoutesPaths(res, proxyRoutes) {
+					t.Errorf("res != expected: %s != %s", res, proxyRoutes)
 				}
 			}
 
@@ -117,6 +158,15 @@ func TestRoutes(t *testing.T) {
 						t.Errorf("res != expected: %s != %s", res, route.Response)
 					}
 				}
+				for _, route := range proxyRoutes {
+					res, err := database.GetProxyEndpointProxyUrl(context.TODO(), route.Path)
+					if err != nil {
+						t.Error(err)
+					}
+					if res != route.ProxyURL {
+						t.Errorf("res != expected: %s != %s", res, route.ProxyURL)
+					}
+				}
 				for _, route := range dynamicRoutes {
 					res, err := database.GetDynamicEndpointScriptName(context.TODO(), route.Path)
 					if err != nil {
@@ -129,13 +179,27 @@ func TestRoutes(t *testing.T) {
 			}
 
 			{
+				for _, route := range staticRoutes {
+					if _, err := database.GetProxyEndpointProxyUrl(context.TODO(), route.Path); err != database.ErrBadRouteType {
+						t.Errorf("Expected ErrBadRouteType")
+					}
+					if _, err := database.GetDynamicEndpointScriptName(context.TODO(), route.Path); err != database.ErrBadRouteType {
+						t.Errorf("Expected ErrBadRouteType")
+					}
+				}
+				for _, route := range proxyRoutes {
+					if _, err := database.GetStaticEndpointResponse(context.TODO(), route.Path); err != database.ErrBadRouteType {
+						t.Errorf("Expected ErrBadRouteType")
+					}
+					if _, err := database.GetDynamicEndpointScriptName(context.TODO(), route.Path); err != database.ErrBadRouteType {
+						t.Errorf("Expected ErrBadRouteType")
+					}
+				}
 				for _, route := range dynamicRoutes {
 					if _, err := database.GetStaticEndpointResponse(context.TODO(), route.Path); err != database.ErrBadRouteType {
 						t.Errorf("Expected ErrBadRouteType")
 					}
-				}
-				for _, route := range staticRoutes {
-					if _, err := database.GetDynamicEndpointScriptName(context.TODO(), route.Path); err != database.ErrBadRouteType {
+					if _, err := database.GetProxyEndpointProxyUrl(context.TODO(), route.Path); err != database.ErrBadRouteType {
 						t.Errorf("Expected ErrBadRouteType")
 					}
 				}
@@ -161,6 +225,23 @@ func TestRoutes(t *testing.T) {
 			{
 				for i := 0; i < 3; i++ {
 					id := rand.Int() % (3 - i)
+					if err := database.RemoveProxyEndpoint(context.TODO(), proxyRoutes[id].Path); err != nil {
+						t.Errorf("RemoveRoute return err: %s", err.Error())
+					}
+					proxyRoutes = append(proxyRoutes[:id], proxyRoutes[id+1:]...)
+					res, err := database.ListAllProxyEndpointPaths(context.TODO())
+					if err != nil {
+						t.Errorf("ListAllRoutes return err: %s", err.Error())
+					}
+					if !compareRoutesPaths(res, proxyRoutes) {
+						t.Errorf("res != expected: %+q != %+q", res, proxyRoutes)
+					}
+				}
+			}
+
+			{
+				for i := 0; i < 3; i++ {
+					id := rand.Int() % (3 - i)
 					if err := database.RemoveDynamicEndpoint(context.TODO(), dynamicRoutes[id].Path); err != nil {
 						t.Errorf("RemoveRoute return err: %s", err.Error())
 					}
@@ -179,10 +260,13 @@ func TestRoutes(t *testing.T) {
 				if err := database.AddStaticEndpoint(context.TODO(), "/path", "one"); err != nil {
 					t.Errorf("AddRoute return err: %s", err.Error())
 				}
-				if err := database.AddDynamicEndpoint(context.TODO(), "/path", "two"); err != database.ErrDuplicateKey {
+				if err := database.AddStaticEndpoint(context.TODO(), "/path", "two"); err != database.ErrDuplicateKey {
 					t.Errorf("AddRoute should return ErrDuplicateKey")
 				}
-				if err := database.AddStaticEndpoint(context.TODO(), "/path", "two"); err != database.ErrDuplicateKey {
+				if err := database.AddProxyEndpoint(context.TODO(), "/path", "two"); err != database.ErrDuplicateKey {
+					t.Errorf("AddRoute should return ErrDuplicateKey")
+				}
+				if err := database.AddDynamicEndpoint(context.TODO(), "/path", "three"); err != database.ErrDuplicateKey {
 					t.Errorf("AddRoute should return ErrDuplicateKey")
 				}
 				response, err := database.GetStaticEndpointResponse(context.TODO(), "/path")
@@ -197,6 +281,9 @@ func TestRoutes(t *testing.T) {
 			{
 				if err := database.UpdateDynamicEndpoint(context.TODO(), "/path", "two"); err != database.ErrNoSuchPath {
 					t.Errorf("UpdateDynamicEndpoint should return ErrNoSuchPath, but returns %s", err)
+				}
+				if err := database.UpdateProxyEndpoint(context.TODO(), "/path", "two"); err != database.ErrNoSuchPath {
+					t.Errorf("UpdateProxyEndpoint should return ErrNoSuchPath, but returns %s", err)
 				}
 				if err := database.UpdateStaticEndpoint(context.TODO(), "/path", "two"); err != nil {
 					t.Error(err)
