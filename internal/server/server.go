@@ -131,7 +131,6 @@ func (s *server) initMainRoutes() {
 	brokersApi := api.Group("brokers")
 
 	s.initBrokersApiPool(brokersApi)
-	s.initBrokersApiScheduler(brokersApi)
 	s.initBrokersApiEsb(brokersApi)
 }
 
@@ -682,14 +681,19 @@ func (s *server) initBrokersApiPool(brokersApi *gin.RouterGroup) {
 
 	// list all read and write tasks
 	{
-		tasks := brokersApi.Group("tasks")
+		pool := brokersApi.Group(poolBrokersEndpoint)
 
-		// list all read tasks by pool name
-		tasks.GET("/read", func(c *gin.Context) {
-		})
+		// list all read messages by pool name
+		pool.GET("/read", func(c *gin.Context) {})
 
-		// list all write tasks by pool name
-		tasks.GET("/write", func(c *gin.Context) {})
+		// list all write messages by pool name
+		pool.GET("/write", func(c *gin.Context) {})
+
+		// start read task in given pool
+		pool.POST("/read", func(c *gin.Context) {})
+
+		// start write task in given pool with given messages
+		pool.POST("/write", func(c *gin.Context) {})
 	}
 
 	brokersApi.POST(poolBrokersEndpoint, func(c *gin.Context) {
@@ -742,21 +746,6 @@ func (s *server) initBrokersApiPool(brokersApi *gin.RouterGroup) {
 	})
 
 	brokersApi.DELETE(poolBrokersEndpoint, func(c *gin.Context) {
-	})
-}
-
-func (s *server) initBrokersApiScheduler(brokersApi *gin.RouterGroup) {
-	schedulerBrokersEndpoint := "/scheduler"
-
-	// load task messages by task id
-	brokersApi.GET(schedulerBrokersEndpoint, func(c *gin.Context) {})
-
-	// schedule read task
-	brokersApi.POST(schedulerBrokersEndpoint+"/read", func(c *gin.Context) {
-	})
-
-	// schedule write task from protocol.BrokerTask
-	brokersApi.POST(schedulerBrokersEndpoint+"/write", func(c *gin.Context) {
 	})
 }
 
