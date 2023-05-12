@@ -33,6 +33,7 @@ func AddMessagePool(pool MessagePool) (MessagePool, error) {
 	}
 	err = database.AddMessagePool(context.TODO(), database.MessagePool{
 		Name:   pool.GetName(),
+		Queue:  pool.GetQueue(),
 		Broker: pool.GetBroker(),
 		Config: jsonConfig,
 	})
