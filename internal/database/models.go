@@ -41,6 +41,7 @@ type ESBRecord struct {
 
 type MessagePool struct {
 	Name   string `bson:"name"`
+	Queue  string `bson:"queue"`
 	Broker string `bson:"broker"`
 	Config []byte `bson:"config"`
 }
