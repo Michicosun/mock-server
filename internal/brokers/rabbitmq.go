@@ -50,15 +50,19 @@ type RabbitMQMessagePool struct {
 	wcfg  *RabbitMQWriteConfig
 }
 
-func (mp *RabbitMQMessagePool) getName() string {
+func (mp *RabbitMQMessagePool) GetName() string {
 	return mp.name
 }
 
-func (mp *RabbitMQMessagePool) getBroker() string {
+func (mp *RabbitMQMessagePool) GetQueue() string {
+	return mp.queue
+}
+
+func (mp *RabbitMQMessagePool) GetBroker() string {
 	return "rabbitmq"
 }
 
-func (mp *RabbitMQMessagePool) getJSONConfig() ([]byte, error) {
+func (mp *RabbitMQMessagePool) GetJSONConfig() ([]byte, error) {
 	config := RabbitMQPoolConfig{
 		Queue: mp.queue,
 		Qcfg:  *mp.qcfg,
@@ -81,7 +85,7 @@ func (t *rabbitMQTask) getMessagePool() MessagePool {
 }
 
 func (t *rabbitMQTask) getTaskId() TaskId {
-	return TaskId(fmt.Sprintf("rabbitmq:%s:%s", t.pool.getName(), t.pool.queue))
+	return TaskId(fmt.Sprintf("rabbitmq:%s:%s", t.pool.GetName(), t.pool.queue))
 }
 
 func (t *rabbitMQTask) getConnectionString(s *configs.RabbitMQConnectionConfig) string {

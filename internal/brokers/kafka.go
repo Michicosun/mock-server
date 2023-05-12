@@ -41,15 +41,19 @@ type KafkaMessagePool struct {
 	wcfg  *KafkaWriteConfig
 }
 
-func (mp *KafkaMessagePool) getName() string {
+func (mp *KafkaMessagePool) GetName() string {
 	return mp.name
 }
 
-func (mp *KafkaMessagePool) getBroker() string {
+func (mp *KafkaMessagePool) GetQueue() string {
+	return mp.topic
+}
+
+func (mp *KafkaMessagePool) GetBroker() string {
 	return "kafka"
 }
 
-func (mp *KafkaMessagePool) getJSONConfig() ([]byte, error) {
+func (mp *KafkaMessagePool) GetJSONConfig() ([]byte, error) {
 	config := KafkaMessagePoolConfig{
 		Topic: mp.topic,
 		Tcfg:  *mp.tcfg,

@@ -2,33 +2,38 @@ package brokers
 
 import (
 	"context"
+	"errors"
 	"mock-server/internal/database"
 )
 
 type MessagePool interface {
-	getName() string
-	getBroker() string
-	getJSONConfig() ([]byte, error)
+	GetName() string
+	GetQueue() string
+	GetBroker() string
+	GetJSONConfig() ([]byte, error)
 	NewReadTask() qReadTask
 	NewWriteTask(data []string) qWriteTask
 }
 
 func createFromDatabase(pool database.MessagePool) (MessagePool, error) {
-	if pool.Broker == "rabbitmq" {
+	switch pool.Broker {
+	case "rabbitmq":
 		return createRabbitMQPoolFromDatabase(pool)
-	} else {
+	case "kafka":
 		return createKafkaPoolFromDatabase(pool)
+	default:
+		return nil, errors.New("invalid message pool type")
 	}
 }
 
 func AddMessagePool(pool MessagePool) (MessagePool, error) {
-	jsonConfig, err := pool.getJSONConfig()
+	jsonConfig, err := pool.GetJSONConfig()
 	if err != nil {
 		return nil, err
 	}
 	err = database.AddMessagePool(context.TODO(), database.MessagePool{
-		Name:   pool.getName(),
-		Broker: pool.getBroker(),
+		Name:   pool.GetName(),
+		Broker: pool.GetBroker(),
 		Config: jsonConfig,
 	})
 
