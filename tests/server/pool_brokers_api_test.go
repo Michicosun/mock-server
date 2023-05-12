@@ -916,7 +916,7 @@ type testMessages struct {
 
 func compareRequestMessagesResponse(expected []string, actualBody []byte) error {
 	var actualDeserialized testMessages
-	json.Unmarshal(actualBody, &actualDeserialized)
+	_ = json.Unmarshal(actualBody, &actualDeserialized)
 	actual := actualDeserialized.Messages
 
 	if len(expected) != len(actual) {

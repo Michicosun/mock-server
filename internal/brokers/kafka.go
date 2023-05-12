@@ -223,11 +223,10 @@ func (t *kafkaWriteTask) write(ctx context.Context) error {
 		"client.id":         t.pool.tcfg.ClientId,
 		"acks":              t.pool.wcfg.Acks,
 	})
-	defer producer.Close()
-
 	if err != nil {
 		return err
 	}
+	defer producer.Close()
 
 	delivery_chan := make(chan kafka.Event, len(t.msgs))
 
