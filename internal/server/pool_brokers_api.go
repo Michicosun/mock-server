@@ -28,13 +28,15 @@ func (s *server) initBrokersApiPool(brokersApi *gin.RouterGroup) {
 			switch pool.Broker {
 			case "rabbitmq":
 				respPools = append(respPools, protocol.MessagePool{
-					PoolName: pool.Name,
-					Broker:   "rabbitmq",
+					PoolName:  pool.Name,
+					QueueName: pool.Queue,
+					Broker:    "rabbitmq",
 				})
 			case "kafka":
 				respPools = append(respPools, protocol.MessagePool{
-					PoolName: pool.Name,
-					Broker:   "kafka",
+					PoolName:  pool.Name,
+					TopicName: pool.Queue,
+					Broker:    "kafka",
 				})
 
 			default:
@@ -51,16 +53,134 @@ func (s *server) initBrokersApiPool(brokersApi *gin.RouterGroup) {
 		pool := brokersApi.Group(poolBrokersEndpoint)
 
 		// list all read messages by pool name
-		pool.GET("/read", func(c *gin.Context) {})
+		pool.GET("/read", func(c *gin.Context) {
+			poolName := c.Query("pool")
+			if poolName == "" {
+				zlog.Error().Msg("Pool param not specified")
+				c.JSON(http.StatusBadRequest, gin.H{"error": "specify pool param"})
+				return
+			}
+
+			zlog.Info().Str("pool", poolName).Msg("Received pool read tasks list request")
+
+			pool, err := database.GetMessagePool(c, poolName)
+			switch err {
+			case nil:
+				zlog.Info().Str("pool", poolName).Msg("Queried pool")
+			case database.ErrNoSuchPath:
+				zlog.Error().Str("pool", poolName).Msg("No such pool")
+				c.JSON(http.StatusNotFound, gin.H{"error": "No such pool"})
+				return
+			default:
+				zlog.Error().Err(err).Msg("Failed to get pool")
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+
+			messages, err := database.GetMessagePoolReadMessages(c, pool)
+			if err != nil {
+				zlog.Error().Err(err).Msg("Failed to get pool read messages")
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+
+			zlog.Debug().Interface("messages", messages).Msg("Queried messages")
+			c.JSON(http.StatusOK, gin.H{"messages": messages})
+		})
 
 		// list all write messages by pool name
-		pool.GET("/write", func(c *gin.Context) {})
+		pool.GET("/write", func(c *gin.Context) {
+			poolName := c.Query("pool")
+			if poolName == "" {
+				zlog.Error().Msg("Pool param not specified")
+				c.JSON(http.StatusBadRequest, gin.H{"error": "specify pool param"})
+				return
+			}
+
+			zlog.Info().Str("pool", poolName).Msg("Received pool write tasks list request")
+
+			pool, err := database.GetMessagePool(c, poolName)
+			switch err {
+			case nil:
+				zlog.Info().Str("pool", poolName).Msg("Queried pool")
+			case database.ErrNoSuchPath:
+				zlog.Error().Str("pool", poolName).Msg("No such pool")
+				c.JSON(http.StatusNotFound, gin.H{"error": "No such pool"})
+				return
+			default:
+				zlog.Error().Err(err).Msg("Failed to get pool")
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+
+			messages, err := database.GetMessagePoolWriteMessages(c, pool)
+			if err != nil {
+				zlog.Error().Err(err).Msg("Failed to get pool write messages")
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+
+			zlog.Debug().Interface("messages", messages).Msg("Queried messages")
+			c.JSON(http.StatusOK, gin.H{"messages": messages})
+		})
 
 		// start read task in given pool
-		pool.POST("/read", func(c *gin.Context) {})
+		pool.POST("/read", func(c *gin.Context) {
+			poolName := c.Query("pool")
+			if poolName == "" {
+				zlog.Error().Msg("Pool param not specified")
+				c.JSON(http.StatusBadRequest, gin.H{"error": "specify pool param"})
+				return
+			}
+
+			zlog.Info().Str("pool", poolName).Msg("Received pool read task")
+
+			pool, err := brokers.GetMessagePool(poolName)
+			switch err {
+			case nil:
+				zlog.Info().Str("pool", pool.GetName()).Msg("Queried pool")
+			case database.ErrNoSuchPath:
+				zlog.Error().Str("pool", pool.GetName()).Msg("No such pool")
+				c.JSON(http.StatusNotFound, gin.H{"error": "No such pool"})
+				return
+			default:
+				zlog.Error().Err(err).Msg("Failed to get pool")
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+
+			zlog.Debug().Str("pool", pool.GetName()).Msg("Scheduling new read task")
+			pool.NewReadTask().Schedule()
+		})
 
 		// start write task in given pool with given messages
-		pool.POST("/write", func(c *gin.Context) {})
+		pool.POST("/write", func(c *gin.Context) {
+			var brokerTask protocol.BrokerTask
+			if err := c.Bind(&brokerTask); err != nil {
+				zlog.Error().Err(err).Msg("Failed to bind request")
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
+
+			zlog.Info().Str("pool", brokerTask.PoolName).Msg("Received pool write task")
+
+			pool, err := brokers.GetMessagePool(brokerTask.PoolName)
+			switch err {
+			case nil:
+				zlog.Info().Str("pool", pool.GetName()).Msg("Queried pool")
+			case database.ErrNoSuchPath:
+				zlog.Error().Str("pool", pool.GetName()).Msg("No such pool")
+				c.JSON(http.StatusNotFound, gin.H{"error": "No such pool"})
+				return
+			default:
+				zlog.Error().Err(err).Msg("Failed to get pool")
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+
+			zlog.Debug().Str("pool", pool.GetName()).Msg("Schedulting new write task")
+			pool.NewWriteTask(brokerTask.Messages).Schedule()
+		})
 	}
 
 	brokersApi.POST(poolBrokersEndpoint, func(c *gin.Context) {
@@ -127,5 +247,19 @@ func (s *server) initBrokersApiPool(brokersApi *gin.RouterGroup) {
 	})
 
 	brokersApi.DELETE(poolBrokersEndpoint, func(c *gin.Context) {
+		poolName := c.Query("pool")
+		if poolName == "" {
+			zlog.Error().Msg("Pool param not specified")
+			c.JSON(http.StatusBadRequest, gin.H{"error": "specify pool param"})
+			return
+		}
+
+		if err := brokers.RemoveMessagePool(poolName); err != nil {
+			zlog.Error().Err(err).Msg("Failed to remove pool")
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusNoContent, "Message pool successfully removed")
 	})
 }

@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"fmt"
 	"mock-server/internal/configs"
 
 	"go.mongodb.org/mongo-driver/mongo"
@@ -190,4 +191,16 @@ func GetMessagePool(ctx context.Context, name string) (MessagePool, error) {
 
 func ListMessagePools(ctx context.Context) ([]MessagePool, error) {
 	return db.messagePools.listMessagePools(ctx)
+}
+
+func GetMessagePoolReadMessages(ctx context.Context, messagePool MessagePool) ([]string, error) {
+	poolTasksId := fmt.Sprintf("%s:%s:%s:read", messagePool.Broker, messagePool.Name, messagePool.Queue)
+
+	return GetTaskMessages(ctx, poolTasksId)
+}
+
+func GetMessagePoolWriteMessages(ctx context.Context, messagePool MessagePool) ([]string, error) {
+	poolTasksId := fmt.Sprintf("%s:%s:%s:write", messagePool.Broker, messagePool.Name, messagePool.Queue)
+
+	return GetTaskMessages(ctx, poolTasksId)
 }
