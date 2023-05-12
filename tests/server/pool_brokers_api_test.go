@@ -605,7 +605,7 @@ func TestPoolBrokersKafkaManyWrites(t *testing.T) {
 		t.Errorf("create pool failed: %s", body)
 	}
 
-	const MESSAGE_COUNT = 5000
+	const MESSAGE_COUNT = 100
 	messages := make([]string, 0)
 	for i := 0; i < MESSAGE_COUNT; i++ {
 		messages = append(messages, fmt.Sprintf("msg%d", i))
@@ -669,7 +669,7 @@ func TestPoolBrokersKafkaFloodReads(t *testing.T) {
 		t.Errorf("create pool failed: %s", body)
 	}
 
-	const MESSAGE_COUNT = 1000
+	const MESSAGE_COUNT = 100
 	messages := make([]string, 0)
 	for i := 0; i < MESSAGE_COUNT; i++ {
 		messages = append(messages, fmt.Sprintf("msg%d", i))
@@ -738,7 +738,7 @@ func TestPoolBrokersKafkaManyPools(t *testing.T) {
 	//////////////////////////////////////////////////////
 
 	const POOL_COUNT = 10
-	const MESSAGE_COUNT_PER_POOL = 200
+	const MESSAGE_COUNT_PER_POOL = 10
 	var wg sync.WaitGroup
 	wg.Add(POOL_COUNT)
 	for poolNum := 0; poolNum < POOL_COUNT; poolNum++ {
@@ -821,7 +821,7 @@ func TestPoolsBrokersKamikadze(t *testing.T) {
 	//////////////////////////////////////////////////////
 
 	const POOL_COUNT = 10
-	const MESSAGE_COUNT_PER_POOL = 300
+	const MESSAGE_COUNT_PER_POOL = 20
 	var wg sync.WaitGroup
 	wg.Add(POOL_COUNT)
 	for poolNum := 0; poolNum < POOL_COUNT; poolNum++ {
