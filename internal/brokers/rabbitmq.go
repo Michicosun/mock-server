@@ -61,15 +61,17 @@ func (mp *RabbitMQMessagePool) GetQueue() string {
 func (mp *RabbitMQMessagePool) GetBroker() string {
 	return "rabbitmq"
 }
-
-func (mp *RabbitMQMessagePool) GetJSONConfig() ([]byte, error) {
-	config := RabbitMQPoolConfig{
+func (mp *RabbitMQMessagePool) GetConfig() interface{} {
+	return &RabbitMQPoolConfig{
 		Queue: mp.queue,
 		Qcfg:  *mp.qcfg,
 		Rcfg:  *mp.rcfg,
 		Wcfg:  *mp.wcfg,
 	}
-	return json.Marshal(config)
+}
+
+func (mp *RabbitMQMessagePool) GetJSONConfig() ([]byte, error) {
+	return json.Marshal(mp.GetConfig())
 }
 
 // RabbitMQ base task

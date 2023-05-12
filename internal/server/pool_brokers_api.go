@@ -70,12 +70,7 @@ func (s *server) initBrokersApiPool(brokersApi *gin.RouterGroup) {
 			return
 		}
 
-		config, err := pool.GetJSONConfig()
-		if err != nil {
-			zlog.Error().Err(err).Msg("Failed to get pool config")
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
+		config := pool.GetConfig()
 
 		zlog.Debug().Interface("config", config).Msg("Parsed config")
 		c.JSON(http.StatusOK, config)

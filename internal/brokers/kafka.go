@@ -53,14 +53,17 @@ func (mp *KafkaMessagePool) GetBroker() string {
 	return "kafka"
 }
 
-func (mp *KafkaMessagePool) GetJSONConfig() ([]byte, error) {
-	config := KafkaMessagePoolConfig{
+func (mp *KafkaMessagePool) GetConfig() interface{} {
+	return &KafkaMessagePoolConfig{
 		Topic: mp.topic,
 		Tcfg:  *mp.tcfg,
 		Rcfg:  *mp.rcfg,
 		Wcfg:  *mp.wcfg,
 	}
-	return json.Marshal(config)
+}
+
+func (mp *KafkaMessagePool) GetJSONConfig() ([]byte, error) {
+	return json.Marshal(mp.GetConfig())
 }
 
 // Kafka base task

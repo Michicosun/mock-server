@@ -10,6 +10,7 @@ type MessagePool interface {
 	GetName() string
 	GetQueue() string
 	GetBroker() string
+	GetConfig() interface{}
 	GetJSONConfig() ([]byte, error)
 	NewReadTask() qReadTask
 	NewWriteTask(data []string) qWriteTask
