@@ -23,7 +23,7 @@ func (s *server) initBrokersApiPool(brokersApi *gin.RouterGroup) {
 			return
 		}
 
-		respPools := make([]protocol.MessagePool, len(pools))
+		respPools := make([]protocol.MessagePool, 0)
 		for _, pool := range pools {
 			switch pool.Broker {
 			case "rabbitmq":
