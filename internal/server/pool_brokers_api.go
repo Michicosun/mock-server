@@ -184,6 +184,8 @@ func (s *server) initBrokersApiPool(brokersApi *gin.RouterGroup) {
 
 			zlog.Debug().Str("pool", pool.GetName()).Msg("Scheduling new read task")
 			pool.NewReadTask().Schedule()
+
+			c.JSON(http.StatusNoContent, "Read tasks successfully scheduled")
 		})
 
 		// start write task in given pool with given messages
@@ -213,6 +215,8 @@ func (s *server) initBrokersApiPool(brokersApi *gin.RouterGroup) {
 
 			zlog.Debug().Str("pool", pool.GetName()).Msg("Schedulting new write task")
 			pool.NewWriteTask(brokerTask.Messages).Schedule()
+
+			c.JSON(http.StatusNoContent, "Write tasks successfully scheduled")
 		})
 	}
 
