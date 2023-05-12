@@ -76,7 +76,7 @@ func (t *kafkaTask) getConnectionString(s *configs.KafkaConnectionConfig) string
 	return fmt.Sprintf("%s:%d", s.Host, s.Port)
 }
 
-func (t *kafkaTask) connectAndPrepare() error {
+func (t *kafkaTask) connectAndPrepare(ctx context.Context) error {
 	zlog.Info().Str("task", string(t.getTaskId())).Msg("configuring connection to kafka")
 
 	cfg, err := configs.GetKafkaConnectionConfig()
@@ -89,6 +89,28 @@ func (t *kafkaTask) connectAndPrepare() error {
 	t.pool.tcfg.GroupId = cfg.GroupId
 
 	zlog.Info().Str("addr", t.pool.tcfg.Addr).Msg("using addr for kafka connection")
+
+	admin, err := kafka.NewAdminClient(&kafka.ConfigMap{"bootstrap.servers": t.pool.tcfg.Addr})
+	if err != nil {
+		return err
+	}
+
+	defer admin.Close()
+
+	results, err := admin.CreateTopics(
+		ctx,
+		[]kafka.TopicSpecification{{
+			Topic:         t.pool.topic,
+			NumPartitions: 1,
+		}},
+	)
+	if err != nil {
+		return err
+	}
+
+	for _, topic_result := range results {
+		zlog.Info().Str("topic", topic_result.Topic).Msg("using topic")
+	}
 
 	return err
 }

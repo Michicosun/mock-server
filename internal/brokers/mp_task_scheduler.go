@@ -19,7 +19,7 @@ const (
 type TaskId string
 
 type qTask interface {
-	connectAndPrepare() error
+	connectAndPrepare(ctx context.Context) error
 	getTaskId() TaskId
 	getMessagePool() MessagePool
 	close()
@@ -112,7 +112,7 @@ func (mps *mpTaskScheduler) submitError(id TaskId, err error) {
 
 func qread(ctx context.Context, task qReadTask) error {
 	zlog.Info().Str("task", string(task.getTaskId())).Msg("started")
-	if err := task.connectAndPrepare(); err != nil {
+	if err := task.connectAndPrepare(ctx); err != nil {
 		return err
 	}
 
@@ -155,7 +155,7 @@ func (mps *mpTaskScheduler) rWorkerRoutine() {
 
 func qwrite(ctx context.Context, task qWriteTask) error {
 	zlog.Info().Str("task", string(task.getTaskId())).Msg("started")
-	if err := task.connectAndPrepare(); err != nil {
+	if err := task.connectAndPrepare(ctx); err != nil {
 		return err
 	}
 

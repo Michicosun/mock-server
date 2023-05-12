@@ -88,7 +88,7 @@ func (t *rabbitMQTask) getConnectionString(s *configs.RabbitMQConnectionConfig) 
 	return fmt.Sprintf("amqp://%s:%s@%s:%d/", s.Username, s.Password, s.Host, s.Port)
 }
 
-func (t *rabbitMQTask) connectAndPrepare() error {
+func (t *rabbitMQTask) connectAndPrepare(context.Context) error {
 	zlog.Info().Str("task", string(t.getTaskId())).Msg("setting up connection to rabbitmq")
 
 	s, err := configs.GetRabbitMQConnectionConfig()
