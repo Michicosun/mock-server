@@ -226,6 +226,7 @@ func (s *server) initBrokersApiPool(brokersApi *gin.RouterGroup) {
 		switch messagePool.Broker {
 		case "rabbitmq":
 			if messagePool.QueueName == "" {
+				zlog.Error().Msg("Received rabbitmq create request with empty queue name")
 				c.JSON(http.StatusBadRequest, gin.H{"error": "queue_name field required for rabbitmq pool"})
 				return
 			}
@@ -236,6 +237,7 @@ func (s *server) initBrokersApiPool(brokersApi *gin.RouterGroup) {
 				Msg("Received create pool request")
 		case "kafka":
 			if messagePool.TopicName == "" {
+				zlog.Error().Msg("Received kafka create request with empty topic name")
 				c.JSON(http.StatusBadRequest, gin.H{"error": "topic_name field required for kafka pool"})
 				return
 			}
