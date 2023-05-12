@@ -60,7 +60,7 @@ func (s *server) initBrokersApiPool(brokersApi *gin.RouterGroup) {
 		switch err {
 		case nil:
 			zlog.Info().Str("pool", poolName).Msg("Queried pool")
-		case database.ErrNoSuchPath:
+		case database.ErrNoSuchPool:
 			zlog.Error().Str("pool", poolName).Msg("No such pool")
 			c.JSON(http.StatusNotFound, gin.H{"error": "No such pool"})
 			return
@@ -100,7 +100,7 @@ func (s *server) initBrokersApiPool(brokersApi *gin.RouterGroup) {
 			switch err {
 			case nil:
 				zlog.Info().Str("pool", poolName).Msg("Queried pool")
-			case database.ErrNoSuchPath:
+			case database.ErrNoSuchPool:
 				zlog.Error().Str("pool", poolName).Msg("No such pool")
 				c.JSON(http.StatusNotFound, gin.H{"error": "No such pool"})
 				return
@@ -136,7 +136,7 @@ func (s *server) initBrokersApiPool(brokersApi *gin.RouterGroup) {
 			switch err {
 			case nil:
 				zlog.Info().Str("pool", poolName).Msg("Queried pool")
-			case database.ErrNoSuchPath:
+			case database.ErrNoSuchPool:
 				zlog.Error().Str("pool", poolName).Msg("No such pool")
 				c.JSON(http.StatusNotFound, gin.H{"error": "No such pool"})
 				return
@@ -172,7 +172,7 @@ func (s *server) initBrokersApiPool(brokersApi *gin.RouterGroup) {
 			switch err {
 			case nil:
 				zlog.Info().Str("pool", pool.GetName()).Msg("Queried pool")
-			case database.ErrNoSuchPath:
+			case database.ErrNoSuchPool:
 				zlog.Error().Str("pool", pool.GetName()).Msg("No such pool")
 				c.JSON(http.StatusNotFound, gin.H{"error": "No such pool"})
 				return
@@ -203,7 +203,7 @@ func (s *server) initBrokersApiPool(brokersApi *gin.RouterGroup) {
 			switch err {
 			case nil:
 				zlog.Info().Str("pool", pool.GetName()).Msg("Queried pool")
-			case database.ErrNoSuchPath:
+			case database.ErrNoSuchPool:
 				zlog.Error().Str("pool", pool.GetName()).Msg("No such pool")
 				c.JSON(http.StatusNotFound, gin.H{"error": "No such pool"})
 				return
