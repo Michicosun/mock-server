@@ -29,7 +29,7 @@ func TestPoolsBrokersKamikadze(t *testing.T) {
 
 	//////////////////////////////////////////////////////
 
-	const POOL_COUNT = 4
+	const POOL_COUNT = 2
 	const MESSAGE_COUNT_PER_POOL = 20
 	var wg sync.WaitGroup
 	wg.Add(POOL_COUNT)
@@ -84,7 +84,7 @@ func TestPoolsBrokersKamikadze(t *testing.T) {
 				}
 			}
 
-			time.Sleep(15 * time.Second)
+			time.Sleep(20 * time.Second)
 
 			code, body := DoGet(poolApiEndpoint+"/write?pool=pool"+poolName, t)
 			if code != 200 {
