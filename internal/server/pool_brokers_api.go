@@ -72,10 +72,24 @@ func (s *server) initBrokersApiPool(brokersApi *gin.RouterGroup) {
 		}
 
 		switch messagePool.Broker {
-		case "rabbitmq", "kafka":
+		case "rabbitmq":
+			if messagePool.QueueName == "" {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "queue_name field required for rabbitmq pool"})
+				return
+			}
 			zlog.Info().
 				Str("broker", messagePool.Broker).
 				Str("queue name", messagePool.QueueName).
+				Str("pool name", messagePool.PoolName).
+				Msg("Received create pool request")
+		case "kafka":
+			if messagePool.TopicName == "" {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "topic_name field required for kafka pool"})
+				return
+			}
+			zlog.Info().
+				Str("broker", messagePool.Broker).
+				Str("topic name", messagePool.TopicName).
 				Str("pool name", messagePool.PoolName).
 				Msg("Received create pool request")
 
@@ -88,11 +102,11 @@ func (s *server) initBrokersApiPool(brokersApi *gin.RouterGroup) {
 		}
 
 		var pool brokers.MessagePool
-		switch messagePool.PoolName {
+		switch messagePool.Broker {
 		case "rabbitmq":
 			pool = brokers.NewRabbitMQMessagePool(messagePool.PoolName, messagePool.QueueName)
 		case "kafka":
-			pool = brokers.NewKafkaMessagePool(messagePool.PoolName, messagePool.QueueName)
+			pool = brokers.NewKafkaMessagePool(messagePool.PoolName, messagePool.TopicName)
 		}
 
 		_, err := brokers.AddMessagePool(pool)
