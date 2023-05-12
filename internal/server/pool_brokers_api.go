@@ -14,6 +14,36 @@ func (s *server) initBrokersApiPool(brokersApi *gin.RouterGroup) {
 	poolBrokersEndpoint := "/pool"
 
 	brokersApi.GET(poolBrokersEndpoint, func(c *gin.Context) {
+		zlog.Info().Msg("Get all broker pools request")
+
+		pools, err := database.ListMessagePools(c)
+		if err != nil {
+			zlog.Error().Err(err).Msg("Failed to list all broker pools")
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		respPools := make([]protocol.MessagePool, len(pools))
+		for _, pool := range pools {
+			switch pool.Broker {
+			case "rabbitmq":
+				respPools = append(respPools, protocol.MessagePool{
+					PoolName: pool.Name,
+					Broker:   "rabbitmq",
+				})
+			case "kafka":
+				respPools = append(respPools, protocol.MessagePool{
+					PoolName: pool.Name,
+					Broker:   "kafka",
+				})
+
+			default:
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Database inconsistency found"})
+			}
+		}
+
+		zlog.Debug().Interface("pools", respPools).Msg("Successfully queried all pools")
+		c.JSON(http.StatusOK, respPools)
 	})
 
 	// list all read and write tasks
