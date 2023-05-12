@@ -261,7 +261,7 @@ func TestPoolBrokersRabbitmqTaskSchedulingSimple(t *testing.T) {
 
 	code, body = DoGet(poolApiEndpoint+"/read?pool=pool", t)
 	if code != 200 {
-		t.Errorf("Failed to query write tasks: %s", body)
+		t.Errorf("Failed to query read tasks: %s", body)
 	}
 	if err := compareRequestMessagesResponse(messages, body); err != nil {
 		t.Errorf("Expected completed read task after some time: %s", err.Error())
@@ -310,7 +310,7 @@ func TestPoolBrokersRabbitmqManyWrites(t *testing.T) {
 	// schedule read task
 	code, body := DoPost(poolApiEndpoint+"/read?pool=pool", []byte{}, t)
 	if code != 204 {
-		t.Errorf("schedule write task failed: %s", body)
+		t.Errorf("schedule read task failed: %s", body)
 	}
 
 	time.Sleep(2 * time.Second)
@@ -325,7 +325,7 @@ func TestPoolBrokersRabbitmqManyWrites(t *testing.T) {
 
 	code, body = DoGet(poolApiEndpoint+"/read?pool=pool", t)
 	if code != 200 {
-		t.Errorf("Failed to query write tasks: %s", body)
+		t.Errorf("Failed to query read tasks: %s", body)
 	}
 	if err := compareRequestMessagesResponse(messages, body); err != nil {
 		t.Errorf("Expected completed read task after some time: %s", err.Error())
@@ -399,7 +399,7 @@ func TestPoolBrokersRabbitmqFloodReads(t *testing.T) {
 
 	code, body = DoGet(poolApiEndpoint+"/read?pool=pool", t)
 	if code != 200 {
-		t.Errorf("Failed to query write tasks: %s", body)
+		t.Errorf("Failed to query read tasks: %s", body)
 	}
 	if err := compareRequestMessagesResponse(messages, body); err != nil {
 		t.Errorf("Expected completed read task after some time: %s", err.Error())
@@ -476,7 +476,7 @@ func TestPoolBrokersRabbitmqManyPools(t *testing.T) {
 
 			code, body = DoGet(poolApiEndpoint+"/read?pool=pool"+poolName, t)
 			if code != 200 {
-				t.Errorf("Failed to query write tasks: %s", body)
+				t.Errorf("Failed to query read tasks: %s", body)
 			}
 			if err := compareRequestMessagesResponse(messages, body); err != nil {
 				t.Errorf("Expected completed read task after some time: %s", err.Error())
@@ -523,7 +523,7 @@ func TestPoolBrokersKafkaTaskSchedulingSimple(t *testing.T) {
 	}
 	code, body = DoPost(poolApiEndpoint+"/read?pool=pool", []byte{}, t)
 	if code != 204 {
-		t.Errorf("schedule write task failed: %s", body)
+		t.Errorf("schedule read task failed: %s", body)
 	}
 
 	time.Sleep(10 * time.Second)
@@ -540,7 +540,7 @@ func TestPoolBrokersKafkaTaskSchedulingSimple(t *testing.T) {
 
 	code, body = DoGet(poolApiEndpoint+"/read?pool=pool", t)
 	if code != 200 {
-		t.Errorf("Failed to query write tasks: %s", body)
+		t.Errorf("Failed to query read tasks: %s", body)
 	}
 	if err := compareRequestMessagesResponse(messages, body); err != nil {
 		t.Errorf("Expected completed read task after some time: %s", err.Error())
@@ -552,14 +552,14 @@ func TestPoolBrokersKafkaTaskSchedulingSimple(t *testing.T) {
 	writeTask = createWriteTaskBody("pool", moreMessages)
 	code, body = DoPost(poolApiEndpoint+"/read?pool=pool", []byte{}, t)
 	if code != 204 {
-		t.Errorf("schedule write task failed: %s", body)
+		t.Errorf("schedule read task failed: %s", body)
 	}
 	code, body = DoPost(poolApiEndpoint+"/write", writeTask, t)
 	if code != 204 {
 		t.Errorf("schedule write task failed: %s", body)
 	}
 
-	time.Sleep(1 * time.Second)
+	time.Sleep(10 * time.Second)
 
 	code, body = DoGet(poolApiEndpoint+"/write?pool=pool", t)
 	if code != 200 {
@@ -573,7 +573,7 @@ func TestPoolBrokersKafkaTaskSchedulingSimple(t *testing.T) {
 
 	code, body = DoGet(poolApiEndpoint+"/read?pool=pool", t)
 	if code != 200 {
-		t.Errorf("Failed to query write tasks: %s", body)
+		t.Errorf("Failed to query read tasks: %s", body)
 	}
 	if err := compareRequestMessagesResponse(messages, body); err != nil {
 		t.Errorf("Expected completed read task after some time: %s", err.Error())
@@ -625,7 +625,7 @@ func TestPoolBrokersKafkaManyWrites(t *testing.T) {
 		t.Errorf("schedule write task failed: %s", body)
 	}
 
-	time.Sleep(5 * time.Second)
+	time.Sleep(10 * time.Second)
 
 	code, body = DoGet(poolApiEndpoint+"/write?pool=pool", t)
 	if code != 200 {
@@ -637,7 +637,7 @@ func TestPoolBrokersKafkaManyWrites(t *testing.T) {
 
 	code, body = DoGet(poolApiEndpoint+"/read?pool=pool", t)
 	if code != 200 {
-		t.Errorf("Failed to query write tasks: %s", body)
+		t.Errorf("Failed to query read tasks: %s", body)
 	}
 	if err := compareRequestMessagesResponse(messages, body); err != nil {
 		t.Errorf("Expected completed read task after some time: %s", err.Error())
@@ -700,7 +700,7 @@ func TestPoolBrokersKafkaFloodReads(t *testing.T) {
 		}
 	}
 
-	time.Sleep(5 * time.Second)
+	time.Sleep(20 * time.Second)
 
 	code, body = DoGet(poolApiEndpoint+"/write?pool=pool", t)
 	if code != 200 {
@@ -712,7 +712,7 @@ func TestPoolBrokersKafkaFloodReads(t *testing.T) {
 
 	code, body = DoGet(poolApiEndpoint+"/read?pool=pool", t)
 	if code != 200 {
-		t.Errorf("Failed to query write tasks: %s", body)
+		t.Errorf("Failed to query read tasks: %s", body)
 	}
 	if err := compareRequestMessagesResponse(messages, body); err != nil {
 		t.Errorf("Expected completed read task after some time: %s", err.Error())
@@ -777,7 +777,7 @@ func TestPoolBrokersKafkaManyPools(t *testing.T) {
 				}
 			}
 
-			time.Sleep(20 * time.Second)
+			time.Sleep(30 * time.Second)
 
 			code, body = DoGet(poolApiEndpoint+"/write?pool=pool"+poolName, t)
 			if code != 200 {
@@ -789,7 +789,7 @@ func TestPoolBrokersKafkaManyPools(t *testing.T) {
 
 			code, body = DoGet(poolApiEndpoint+"/read?pool=pool"+poolName, t)
 			if code != 200 {
-				t.Errorf("Failed to query write tasks: %s", body)
+				t.Errorf("Failed to query read tasks: %s", body)
 			}
 			if err := compareRequestMessagesResponse(messages, body); err != nil {
 				t.Errorf("Expected completed read task after some time: %s", err.Error())
@@ -887,7 +887,7 @@ func TestPoolsBrokersKamikadze(t *testing.T) {
 
 			code, body = DoGet(poolApiEndpoint+"/read?pool=pool"+poolName, t)
 			if code != 200 {
-				t.Errorf("Failed to query write tasks: %s", body)
+				t.Errorf("Failed to query read tasks: %s", body)
 			}
 			if err := compareRequestMessagesResponse(messages, body); err != nil {
 				t.Errorf("Expected completed read task after some time: %s", err.Error())
