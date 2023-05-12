@@ -29,8 +29,6 @@ func TestRabbitMq(t *testing.T) {
 
 	readTaskId := handler.NewReadTask().Schedule()
 
-	time.Sleep(1 * time.Second)
-
 	handler, err = brokers.GetMessagePool("test-pool")
 	if err != nil {
 		t.Error(err)
