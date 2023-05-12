@@ -191,6 +191,7 @@ func (s *server) initBrokersApiPool(brokersApi *gin.RouterGroup) {
 				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 				return
 			}
+			zlog.Info().Interface("task", brokerTask).Msg("Received")
 
 			zlog.Info().Str("pool", brokerTask.PoolName).Msg("Received pool write task")
 
@@ -208,7 +209,7 @@ func (s *server) initBrokersApiPool(brokersApi *gin.RouterGroup) {
 				return
 			}
 
-			zlog.Debug().Str("pool", pool.GetName()).Msg("Schedulting new write task")
+			zlog.Debug().Str("pool", pool.GetName()).Msg("Scheduling new write task")
 			pool.NewWriteTask(brokerTask.Messages).Schedule()
 
 			c.JSON(http.StatusNoContent, "Write tasks successfully scheduled")
