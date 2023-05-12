@@ -27,16 +27,16 @@ func TestKafka(t *testing.T) {
 		t.Error(err)
 	}
 
-	writeTaskId := handler.NewWriteTask([]string{"40", "41", "42"}).Schedule()
+	readTaskId := handler.NewReadTask().Schedule()
 
-	time.Sleep(3 * time.Second)
+	time.Sleep(1 * time.Second)
 
 	handler, err = brokers.GetMessagePool("test-pool")
 	if err != nil {
 		t.Error(err)
 	}
 
-	readTaskId := handler.NewReadTask().Schedule()
+	writeTaskId := handler.NewWriteTask([]string{"40", "41", "42"}).Schedule()
 
 	time.Sleep(5 * time.Second)
 
