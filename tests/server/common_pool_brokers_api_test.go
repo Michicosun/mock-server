@@ -35,9 +35,9 @@ func TestPoolBrokersSimple(t *testing.T) {
 
 	// create rabbitmq pool
 	rabbitmqPool := []byte(`{"pool_name":"rabbitmq_pool","queue_name":"rabbitmq_queue","broker":"rabbitmq"}`)
-	code, _ = DoPost(poolApiEndpoint, rabbitmqPool, t)
+	code, body = DoPost(poolApiEndpoint, rabbitmqPool, t)
 	if code != 200 {
-		t.Errorf("create pool failed")
+		t.Errorf("create pool failed: %s", body)
 	}
 
 	// expects to get created pool
@@ -53,15 +53,15 @@ func TestPoolBrokersSimple(t *testing.T) {
 
 	// create kafka pool
 	kafkaPool := []byte(`{"pool_name":"kafka_pool","topic_name":"kafka_queue","broker":"kafka"}`)
-	code, _ = DoPost(poolApiEndpoint, kafkaPool, t)
+	code, body = DoPost(poolApiEndpoint, kafkaPool, t)
 	if code != 200 {
-		t.Errorf("create pool failed")
+		t.Errorf("create pool failed: %s", body)
 	}
 
 	// expects to get both created pools
 	code, body = DoGet(poolApiEndpoint, t)
 	if code != 200 {
-		t.Errorf("expected 200 code response on list all pools")
+		t.Errorf("expected 200 code response on list all pools: %s", body)
 	}
 
 	expectedPoolsList = fmt.Sprintf(`{"pools":[%s,%s]}`, rabbitmqPool, kafkaPool)
@@ -72,7 +72,7 @@ func TestPoolBrokersSimple(t *testing.T) {
 	// query first pool config
 	code, body = DoGet(poolApiEndpoint+"/config?pool=rabbitmq_pool", t)
 	if code != 200 {
-		t.Errorf("expected 200 code response on get pool config")
+		t.Errorf("expected 200 code response on get pool config: %s", body)
 	}
 	t.Logf("config: %s", body)
 
@@ -85,7 +85,7 @@ func TestPoolBrokersSimple(t *testing.T) {
 	// expects to get only first pool
 	code, body = DoGet(poolApiEndpoint, t)
 	if code != 200 {
-		t.Errorf("expected 200 code response on list all pools")
+		t.Errorf("expected 200 code response on list all pools: %s", body)
 	}
 
 	expectedPoolsList = fmt.Sprintf(`{"pools":[%s]}`, rabbitmqPool)
@@ -157,19 +157,19 @@ func TestPoolBrokersDoublePost(t *testing.T) {
 	rabbitmqPool := []byte(`{"pool_name":"pool","queue_name":"queue","broker":"rabbitmq"}`)
 	kafkaPool := []byte(`{"pool_name":"pool","topic_name":"queue","broker":"kafka"}`)
 
-	code, _ := DoPost(poolApiEndpoint, rabbitmqPool, t)
+	code, body := DoPost(poolApiEndpoint, rabbitmqPool, t)
 	if code != 200 {
-		t.Errorf("create pool failed")
+		t.Errorf("create pool failed: %s", body)
 	}
 
-	code, _ = DoPost(poolApiEndpoint, rabbitmqPool, t)
+	code, body = DoPost(poolApiEndpoint, rabbitmqPool, t)
 	if code != 409 {
-		t.Errorf("expected to be impossible to create pool with the same name")
+		t.Errorf("expected to be impossible to create pool with the same name: %s", body)
 	}
 
-	code, _ = DoPost(poolApiEndpoint, kafkaPool, t)
+	code, body = DoPost(poolApiEndpoint, kafkaPool, t)
 	if code != 409 {
-		t.Errorf("expected to be impossible to create pool with the same name even from another broker")
+		t.Errorf("expected to be impossible to create pool with the same name even from another broker: %s", body)
 	}
 }
 
