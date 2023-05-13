@@ -73,6 +73,8 @@ func TestPoolsBrokersKamikadze(t *testing.T) {
 				t.Errorf("schedule write task failed: %s", body)
 			}
 
+			time.Sleep(2 * time.Second)
+
 			// schedule read task
 			code, body = DoPost(poolApiEndpoint+"/read?pool=pool"+poolName, []byte{}, t)
 			if code != 204 {

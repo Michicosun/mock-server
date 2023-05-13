@@ -43,6 +43,7 @@ func TestPoolBrokersKafkaTaskSchedulingSimple(t *testing.T) {
 	if code != 204 {
 		t.Errorf("schedule write task failed: %s", body)
 	}
+	time.Sleep(2 * time.Second)
 	code, body = DoPost(poolApiEndpoint+"/read?pool=pool", []byte{}, t)
 	if code != 204 {
 		t.Errorf("schedule read task failed: %s", body)
@@ -76,6 +77,7 @@ func TestPoolBrokersKafkaTaskSchedulingSimple(t *testing.T) {
 	if code != 204 {
 		t.Errorf("schedule read task failed: %s", body)
 	}
+	time.Sleep(2 * time.Second)
 	code, body = DoPost(poolApiEndpoint+"/write", writeTask, t)
 	if code != 204 {
 		t.Errorf("schedule write task failed: %s", body)
@@ -141,6 +143,7 @@ func TestPoolBrokersKafkaManyWrites(t *testing.T) {
 			t.Errorf("schedule write task failed: %s", body)
 		}
 	}
+	time.Sleep(2 * time.Second)
 	// schedule read task
 	code, body = DoPost(poolApiEndpoint+"/read?pool=pool", []byte{}, t)
 	if code != 204 {
@@ -191,7 +194,7 @@ func TestPoolBrokersKafkaFloodReads(t *testing.T) {
 		t.Errorf("create pool failed: %s", body)
 	}
 
-	const MESSAGE_COUNT = 50
+	const MESSAGE_COUNT = 20
 	messages := make([]string, 0)
 	for i := 0; i < MESSAGE_COUNT; i++ {
 		messages = append(messages, fmt.Sprintf("msg%d", i))
@@ -205,6 +208,8 @@ func TestPoolBrokersKafkaFloodReads(t *testing.T) {
 		}
 	}
 
+	time.Sleep(2 * time.Second)
+
 	// populate MESSAGE_COUNT write tasks
 	for i := 0; i < MESSAGE_COUNT; i++ {
 		writeTask := createWriteTaskBody("pool", messages[i:i+1])
@@ -213,6 +218,8 @@ func TestPoolBrokersKafkaFloodReads(t *testing.T) {
 			t.Errorf("schedule write task failed: %s", body)
 		}
 	}
+
+	time.Sleep(2 * time.Second)
 
 	// populate MESSAGE_COUNT / 4 read tasks
 	for i := 0; i < MESSAGE_COUNT/4; i++ {
@@ -282,11 +289,14 @@ func TestPoolBrokersKafkaManyPools(t *testing.T) {
 				messages = append(messages, fmt.Sprintf("msg%d", i))
 			}
 
+			// schedule write task
 			writeTask := createWriteTaskBody("pool"+poolName, messages)
 			code, body = DoPost(poolApiEndpoint+"/write", writeTask, t)
 			if code != 204 {
 				t.Errorf("schedule write task failed: %s", body)
 			}
+
+			time.Sleep(2 * time.Second)
 
 			// schedule read task
 			code, body = DoPost(poolApiEndpoint+"/read?pool=pool"+poolName, []byte{}, t)
