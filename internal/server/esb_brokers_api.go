@@ -101,7 +101,7 @@ func (s *server) initBrokersApiEsb(brokersApi *gin.RouterGroup) {
 				c.JSON(http.StatusOK, "Esb record successfully added!")
 			case database.ErrDuplicateKey:
 				zlog.Error().Msg("Esb record with the same in-pool already exists")
-				c.JSON(http.StatusBadRequest, gin.H{"error": "Esb record with the same in-pool already exists"})
+				c.JSON(http.StatusConflict, gin.H{"error": "Esb record with the same in-pool already exists"})
 			default:
 				zlog.Error().Err(err).Msg("Failed to add esb record")
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
