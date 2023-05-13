@@ -149,6 +149,7 @@ func (t *kafkaReadTask) read(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	defer consumer.Close()
 
 	if err := consumer.SubscribeTopics([]string{t.pool.topic}, nil); err != nil {
 		return err
@@ -187,7 +188,6 @@ func (t *kafkaReadTask) read(ctx context.Context) error {
 	<-ctx.Done()
 
 	run.Store(false)
-	consumer.Close()
 	<-read_canceled
 
 	return err
