@@ -12,7 +12,7 @@ import (
 )
 
 func TestPoolBrokersSimple(t *testing.T) {
-	t.Setenv("CONFIG_PATH", "/configs/test_server_config.yaml")
+	t.Setenv("CONFIG_PATH", "/configs/test_server_pool_api_config.yaml")
 
 	control.Components.Start()
 	defer control.Components.Stop()
@@ -143,7 +143,7 @@ func TestPoolBrokersBadQueryBodies(t *testing.T) {
 }
 
 func TestPoolBrokersDoublePost(t *testing.T) {
-	t.Setenv("CONFIG_PATH", "/configs/test_server_config.yaml")
+	t.Setenv("CONFIG_PATH", "/configs/test_server_pool_api_config.yaml")
 
 	control.Components.Start()
 	defer control.Components.Stop()
