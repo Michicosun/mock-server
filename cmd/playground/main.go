@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -120,11 +121,11 @@ def func(msgs):
 		return
 	}
 
-	if err := brokers.AddEsbRecordWithMapper("test-pool-2", "test-pool-1", "test-mapper-basic.py"); err != nil {
+	if err := brokers.AddEsbRecordWithMapper(context.TODO(), "test-pool-2", "test-pool-1", "test-mapper-basic.py"); err != nil {
 		zlog.Error().Err(err).Msg("add esb record")
 		return
 	}
-	if err := brokers.AddEsbRecordWithMapper("test-pool-3", "test-pool-1", "test-mapper-hard.py"); err != nil {
+	if err := brokers.AddEsbRecordWithMapper(context.TODO(), "test-pool-3", "test-pool-1", "test-mapper-hard.py"); err != nil {
 		zlog.Error().Err(err).Msg("add esb record")
 		return
 	}
