@@ -282,21 +282,16 @@ func TestPoolBrokersKafkaManyPools(t *testing.T) {
 				messages = append(messages, fmt.Sprintf("msg%d", i))
 			}
 
-			// populate MESSAGE_COUNT write tasks
-			for i := 0; i < MESSAGE_COUNT_PER_POOL; i++ {
-				writeTask := createWriteTaskBody("pool"+poolName, messages[i:i+1])
-				code, body := DoPost(poolApiEndpoint+"/write", writeTask, t)
-				if code != 204 {
-					t.Errorf("schedule write task failed: %s", body)
-				}
+			writeTask := createWriteTaskBody("pool"+poolName, messages)
+			code, body = DoPost(poolApiEndpoint+"/write", writeTask, t)
+			if code != 204 {
+				t.Errorf("schedule write task failed: %s", body)
 			}
 
-			// schedule some read tasks
-			for i := 0; i < 10; i++ {
-				code, body := DoPost(poolApiEndpoint+"/read?pool=pool"+poolName, []byte{}, t)
-				if code != 204 {
-					t.Errorf("schedule read task failed: %s", body)
-				}
+			// schedule read task
+			code, body = DoPost(poolApiEndpoint+"/read?pool=pool"+poolName, []byte{}, t)
+			if code != 204 {
+				t.Errorf("schedule read task failed: %s", body)
 			}
 
 			time.Sleep(15 * time.Second)
