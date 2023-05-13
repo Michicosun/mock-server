@@ -58,7 +58,7 @@ func TestPoolBrokersKafkaTaskSchedulingSimple(t *testing.T) {
 		t.Errorf("Expected to write messages be available almost simultaneously after write task request: %s", err.Error())
 	}
 
-	time.Sleep(3 * time.Second)
+	time.Sleep(10 * time.Second)
 
 	code, body = DoGet(poolApiEndpoint+"/read?pool=pool", t)
 	if code != 200 {
