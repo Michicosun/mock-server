@@ -40,27 +40,36 @@ func TestServerSameNamespaceForEndpoints(t *testing.T) {
 	cfg := configs.GetServerConfig()
 	endpoint := fmt.Sprintf("http://%s", cfg.Addr)
 	staticApiEndpoint := endpoint + "/api/routes/static"
+	proxyApiEndpoint := endpoint + "/api/routes/proxy"
 	dynamicApiEndpoint := endpoint + "/api/routes/dynamic"
 
-	requestBody := []byte(`{
+	testBodyStatic := []byte(`{
 		"path": "/test_url",
 		"expected_response": "hello"
+	}`)
+	testBodyProxy := []byte(`{
+		"path": "/test_url",
+		"proxy_url": "https://ya.ru"
 	}`)
 	testBodyScript := []byte(`{
 		"path": "/test_url",
 		"code": "def func(A, B, C):\n    pass"
 	}`)
 
-	// post static endpoint than try to post same static and dynamic
-	code, _ := DoPost(staticApiEndpoint, requestBody, t)
+	// post static endpoint than try to post same static, proxy and dynamic
+	code, _ := DoPost(staticApiEndpoint, testBodyStatic, t)
 	if code != 200 {
 		t.Errorf("create route failed: expected 200 != %d", code)
 	}
-	code, _ = DoPost(dynamicApiEndpoint, testBodyScript, t)
+	code, _ = DoPost(staticApiEndpoint, testBodyStatic, t)
 	if code != 409 {
 		t.Errorf("expected to receive conflict: expected 409 != %d", code)
 	}
-	code, _ = DoPost(staticApiEndpoint, requestBody, t)
+	code, _ = DoPost(proxyApiEndpoint, testBodyProxy, t)
+	if code != 409 {
+		t.Errorf("expected to receive conflict: expected 409 != %d", code)
+	}
+	code, _ = DoPost(dynamicApiEndpoint, testBodyScript, t)
 	if code != 409 {
 		t.Errorf("expected to receive conflict: expected 409 != %d", code)
 	}
@@ -72,11 +81,39 @@ func TestServerSameNamespaceForEndpoints(t *testing.T) {
 	}
 
 	// same as first test but fisrt post dynamic
+	code, _ = DoPost(proxyApiEndpoint, testBodyProxy, t)
+	if code != 200 {
+		t.Errorf("create route failed: expected 200 != %d", code)
+	}
+	code, _ = DoPost(staticApiEndpoint, testBodyStatic, t)
+	if code != 409 {
+		t.Errorf("expected to receive conflict: expected 409 != %d", code)
+	}
+	code, _ = DoPost(proxyApiEndpoint, testBodyProxy, t)
+	if code != 409 {
+		t.Errorf("expected to receive conflict: expected 409 != %d", code)
+	}
+	code, _ = DoPost(dynamicApiEndpoint, testBodyScript, t)
+	if code != 409 {
+		t.Errorf("expected to receive conflict: expected 409 != %d", code)
+	}
+
+	// wipe
+	code = DoDelete(proxyApiEndpoint+"?path=/test_url", t)
+	if code != 204 {
+		t.Errorf("expected to be possible to delete existing endpoint")
+	}
+
+	// same as first test but fisrt post dynamic
 	code, _ = DoPost(dynamicApiEndpoint, testBodyScript, t)
 	if code != 200 {
 		t.Errorf("create route failed: expected 200 != %d", code)
 	}
-	code, _ = DoPost(staticApiEndpoint, requestBody, t)
+	code, _ = DoPost(staticApiEndpoint, testBodyStatic, t)
+	if code != 409 {
+		t.Errorf("expected to receive conflict: expected 409 != %d", code)
+	}
+	code, _ = DoPost(proxyApiEndpoint, testBodyProxy, t)
 	if code != 409 {
 		t.Errorf("expected to receive conflict: expected 409 != %d", code)
 	}

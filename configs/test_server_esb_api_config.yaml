@@ -1,0 +1,50 @@
+use_components:
+  server: true
+  brokers: true
+  coderun: true
+
+server:
+    addr: "127.0.0.1:1337"
+    accept_timeout: 20s
+    response_timeout: 20s
+    deploy_production: false
+
+brokers:
+    scheduler:
+        r_workers: 50
+        w_workers: 50
+        read_timeout: 10s
+        write_timeout: 10s
+
+    rabbitmq:
+        host: "localhost"
+        port: 5672
+        username: "guest"
+        password: "guest"
+
+    kafka:
+        host: "localhost"
+        port: 9092
+        client_id: "client"
+        group_id: "group"
+
+coderun:
+    worker_cnt: 1
+    worker:
+        handle_timeout: 10s
+        container:
+            cpu_limit: 0.5
+            memory_limit_mb: 200
+
+logs:
+    level: 0
+    consoleLoggingEnabled: true
+    fileLoggingEnabled: true
+    directory: "/tmp/mock-server-logs"
+    filename: "log-test"
+    maxSize: 500
+    maxBackups: 5
+    maxAge: 30
+
+database:
+    inmemory: true

@@ -18,7 +18,7 @@ var messagePoolsTests = []struct {
 }
 
 func comparePools(one *database.MessagePool, two *database.MessagePool) bool {
-	return one.Name == two.Name && one.Broker == two.Broker
+	return one.Name == two.Name && one.Queue == two.Queue && one.Broker == two.Broker
 }
 
 func TestMessagePools(t *testing.T) {
@@ -32,9 +32,9 @@ func TestMessagePools(t *testing.T) {
 			defer control.Components.Stop()
 
 			messagePools := []database.MessagePool{
-				{Name: "pool1", Broker: "broker1", Config: []byte("{}")},
-				{Name: "pool2", Broker: "broker2", Config: []byte("{}")},
-				{Name: "pool3", Broker: "broker3", Config: []byte("{}")},
+				{Name: "pool1", Queue: "queue1", Broker: "broker1", Config: []byte("{}")},
+				{Name: "pool2", Queue: "queue2", Broker: "broker2", Config: []byte("{}")},
+				{Name: "pool3", Queue: "queue3", Broker: "broker3", Config: []byte("{}")},
 			}
 
 			for _, messagePool := range messagePools {

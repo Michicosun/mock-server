@@ -13,7 +13,7 @@ import (
 
 var TEST_SCRIPT = util.WrapCodeForEsb(`
 def func(msgs):
-	print(msgs[::-1])
+	return msgs[::-1]
 `)
 var TEST_ARGS = []string{"msg1", "msg2", "msg3"}
 
@@ -49,7 +49,7 @@ func TestEsb(t *testing.T) {
 		t.Error(err)
 	}
 
-	err = brokers.AddEsbRecordWithMapper("test-pool-1", "test-pool-2", "test-mapper.py")
+	err = brokers.AddEsbRecordWithMapper(context.TODO(), "test-pool-1", "test-pool-2", "test-mapper.py")
 	if err != nil {
 		t.Error(err)
 	}

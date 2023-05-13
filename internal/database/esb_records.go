@@ -88,3 +88,19 @@ func (esb *esbRecords) getESBRecord(ctx context.Context, poolNameIn string) (ESB
 		return res.(ESBRecord), nil
 	})
 }
+
+func (esb *esbRecords) listESBRecords(ctx context.Context) ([]ESBRecord, error) {
+	return util.RunWithReadLock(&esb.mutex, func() ([]ESBRecord, error) {
+		opts := options.Find()
+		opts = opts.SetSort(bson.D{{Key: "timestamp", Value: 1}})
+		cursor, err := esb.coll.Find(ctx, bson.D{}, opts)
+		if err != nil {
+			return nil, err
+		}
+		var results = make([]ESBRecord, 0)
+		if err = cursor.All(ctx, &results); err != nil {
+			return nil, err
+		}
+		return results, nil
+	})
+}

@@ -41,22 +41,29 @@ type KafkaMessagePool struct {
 	wcfg  *KafkaWriteConfig
 }
 
-func (mp *KafkaMessagePool) getName() string {
+func (mp *KafkaMessagePool) GetName() string {
 	return mp.name
 }
 
-func (mp *KafkaMessagePool) getBroker() string {
+func (mp *KafkaMessagePool) GetQueue() string {
+	return mp.topic
+}
+
+func (mp *KafkaMessagePool) GetBroker() string {
 	return "kafka"
 }
 
-func (mp *KafkaMessagePool) getJSONConfig() ([]byte, error) {
-	config := KafkaMessagePoolConfig{
+func (mp *KafkaMessagePool) GetConfig() interface{} {
+	return &KafkaMessagePoolConfig{
 		Topic: mp.topic,
 		Tcfg:  *mp.tcfg,
 		Rcfg:  *mp.rcfg,
 		Wcfg:  *mp.wcfg,
 	}
-	return json.Marshal(config)
+}
+
+func (mp *KafkaMessagePool) GetJSONConfig() ([]byte, error) {
+	return json.Marshal(mp.GetConfig())
 }
 
 // Kafka base task
@@ -142,6 +149,7 @@ func (t *kafkaReadTask) read(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	defer consumer.Close()
 
 	if err := consumer.SubscribeTopics([]string{t.pool.topic}, nil); err != nil {
 		return err
@@ -180,7 +188,6 @@ func (t *kafkaReadTask) read(ctx context.Context) error {
 	<-ctx.Done()
 
 	run.Store(false)
-	consumer.Close()
 	<-read_canceled
 
 	return err
@@ -216,10 +223,10 @@ func (t *kafkaWriteTask) write(ctx context.Context) error {
 		"client.id":         t.pool.tcfg.ClientId,
 		"acks":              t.pool.wcfg.Acks,
 	})
-
 	if err != nil {
 		return err
 	}
+	defer producer.Close()
 
 	delivery_chan := make(chan kafka.Event, len(t.msgs))
 
