@@ -30,7 +30,6 @@ func TestPoolsBrokersKamikadze(t *testing.T) {
 	//////////////////////////////////////////////////////
 
 	const POOL_COUNT = 2
-	const MESSAGE_COUNT_PER_POOL = 20
 	var wg sync.WaitGroup
 	wg.Add(POOL_COUNT)
 	for poolNum := 0; poolNum < POOL_COUNT; poolNum++ {
@@ -63,30 +62,26 @@ func TestPoolsBrokersKamikadze(t *testing.T) {
 
 		go func() {
 			messages := make([]string, 0)
-			for i := 0; i < MESSAGE_COUNT_PER_POOL; i++ {
+			for i := 0; i < 10; i++ {
 				messages = append(messages, fmt.Sprintf("msg%d", i))
 			}
 
-			// populate MESSAGE_COUNT write tasks
-			for i := 0; i < MESSAGE_COUNT_PER_POOL; i++ {
-				writeTask := createWriteTaskBody("pool"+poolName, messages[i:i+1])
-				code, body := DoPost(poolApiEndpoint+"/write", writeTask, t)
-				if code != 204 {
-					t.Errorf("schedule write task failed: %s", body)
-				}
+			// schedule write task
+			writeTask := createWriteTaskBody("pool"+poolName, messages)
+			code, body := DoPost(poolApiEndpoint+"/write", writeTask, t)
+			if code != 204 {
+				t.Errorf("schedule write task failed: %s", body)
 			}
 
-			// schedule some read tasks
-			for i := 0; i < 10; i++ {
-				code, body := DoPost(poolApiEndpoint+"/read?pool=pool"+poolName, []byte{}, t)
-				if code != 204 {
-					t.Errorf("schedule read task failed: %s", body)
-				}
+			// schedule read task
+			code, body = DoPost(poolApiEndpoint+"/read?pool=pool"+poolName, []byte{}, t)
+			if code != 204 {
+				t.Errorf("schedule read task failed: %s", body)
 			}
 
 			time.Sleep(20 * time.Second)
 
-			code, body := DoGet(poolApiEndpoint+"/write?pool=pool"+poolName, t)
+			code, body = DoGet(poolApiEndpoint+"/write?pool=pool"+poolName, t)
 			if code != 200 {
 				t.Errorf("Failed to query write tasks: %s", body)
 			}

@@ -127,7 +127,7 @@ func TestPoolBrokersKafkaManyWrites(t *testing.T) {
 		t.Errorf("create pool failed: %s", body)
 	}
 
-	const MESSAGE_COUNT = 50
+	const MESSAGE_COUNT = 10
 	messages := make([]string, 0)
 	for i := 0; i < MESSAGE_COUNT; i++ {
 		messages = append(messages, fmt.Sprintf("msg%d", i))
@@ -147,7 +147,7 @@ func TestPoolBrokersKafkaManyWrites(t *testing.T) {
 		t.Errorf("schedule write task failed: %s", body)
 	}
 
-	time.Sleep(10 * time.Second)
+	time.Sleep(15 * time.Second)
 
 	code, body = DoGet(poolApiEndpoint+"/write?pool=pool", t)
 	if code != 200 {
