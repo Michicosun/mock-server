@@ -138,6 +138,41 @@ func (s *server) initBrokersApiEsb(brokersApi *gin.RouterGroup) {
 		}
 	})
 
+	// schedule read and write tasks in esb pair in-pool
+	brokersApi.POST(esbBrokersEndpoint+"/task", func(c *gin.Context) {
+		var brokerTask protocol.BrokerTask
+		if err := c.Bind(&brokerTask); err != nil {
+			zlog.Error().Err(err).Msg("Failed to bind request")
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		zlog.Info().Interface("task", brokerTask).Msg("Received")
+
+		zlog.Info().Str("pool", brokerTask.PoolName).Msg("Received pool write task")
+
+		pool, err := brokers.GetMessagePool(brokerTask.PoolName)
+		switch err {
+		case nil:
+			zlog.Info().Str("pool", pool.GetName()).Msg("Queried pool")
+		case database.ErrNoSuchPool:
+			zlog.Error().Str("pool", pool.GetName()).Msg("No such pool")
+			c.JSON(http.StatusNotFound, gin.H{"error": "No such pool"})
+			return
+		default:
+			zlog.Error().Err(err).Msg("Failed to get pool")
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		zlog.Debug().Str("pool", pool.GetName()).Msg("Scheduling new write task")
+		pool.NewWriteTask(brokerTask.Messages).Schedule()
+
+		zlog.Debug().Str("pool", pool.GetName()).Msg("Scheduling new read task")
+		pool.NewReadTask().Schedule()
+
+		c.JSON(http.StatusNoContent, "Task successfully submited to esb pair in-pool")
+	})
+
 	// create delete esb pair
 	brokersApi.DELETE(esbBrokersEndpoint, func(c *gin.Context) {
 		poolInName := c.Query("pool_in")
