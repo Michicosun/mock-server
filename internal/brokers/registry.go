@@ -12,8 +12,14 @@ type MessagePool interface {
 	GetBroker() string
 	GetConfig() interface{}
 	GetJSONConfig() ([]byte, error)
+
+	// task constructors
 	NewReadTask() qReadTask
 	NewWriteTask(data []string) qWriteTask
+
+	// broker raii
+	CreateBrokerEndpoint() error
+	RemoveBrokerEndpoint() error
 }
 
 func createFromDatabase(pool database.MessagePool) (MessagePool, error) {
@@ -28,6 +34,10 @@ func createFromDatabase(pool database.MessagePool) (MessagePool, error) {
 }
 
 func AddMessagePool(pool MessagePool) (MessagePool, error) {
+	if err := pool.CreateBrokerEndpoint(); err != nil {
+		return nil, err
+	}
+
 	jsonConfig, err := pool.GetJSONConfig()
 	if err != nil {
 		return nil, err
@@ -43,7 +53,16 @@ func AddMessagePool(pool MessagePool) (MessagePool, error) {
 }
 
 func RemoveMessagePool(poolName string) error {
-	err := database.RemoveMessagePool(context.TODO(), poolName)
+	pool, err := GetMessagePool(poolName)
+	if err != nil {
+		return err
+	}
+
+	if err := pool.RemoveBrokerEndpoint(); err != nil {
+		return err
+	}
+
+	err = database.RemoveMessagePool(context.TODO(), poolName)
 	return err
 }
 
