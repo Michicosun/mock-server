@@ -96,13 +96,13 @@ func play_esb() {
 
 	var SCRIPT_BASIC = util.WrapCodeForEsb(`
 def func(msgs):
-    print(["Helllo body"])
+    return ["Helllo body"]
 `)
 	var ARGS_BASIC = []string{}
 
 	var SCRIPT_HARD = util.WrapCodeForEsb(`
 def func(msgs):
-	print(msgs[::-1])
+	return msgs[::-1]
 `)
 	var ARGS_HARD = []string{"msg1", "msg2", "msg3"}
 

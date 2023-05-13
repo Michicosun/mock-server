@@ -13,7 +13,7 @@ import (
 
 var TEST_SCRIPT = util.WrapCodeForEsb(`
 def func(msgs):
-	print(msgs[::-1])
+	return msgs[::-1]
 `)
 var TEST_ARGS = []string{"msg1", "msg2", "msg3"}
 

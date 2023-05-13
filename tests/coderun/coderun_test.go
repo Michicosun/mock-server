@@ -72,7 +72,7 @@ func TestCoderunForDynHandle(t *testing.T) {
 
 var TEST_SCRIPT_ESB = util.WrapCodeForEsb(`
 def func(msgs):
-	print(msgs[::-1])
+	return msgs[::-1]
 `)
 var TEST_ARGS_ESB = coderun.NewMapperArgs([]string{"msg1", "msg2", "msg3"})
 var EXPECTED_OUTPUT_ESB = `["msg3", "msg2", "msg1"]`
