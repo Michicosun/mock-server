@@ -17,7 +17,8 @@ import (
 var Server = &server{}
 
 const FS_ROOT_DIR = "coderun"
-const FS_CODE_DIR = "dyn_handle"
+const FS_DYN_HANDLE_DIR = "dyn_handle"
+const FS_ESB_DIR = "mapper"
 
 type server struct {
 	server_instance *http.Server

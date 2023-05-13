@@ -51,7 +51,7 @@ func (s *server) initRoutesApiDynamic(routes *gin.RouterGroup) {
 			return
 		}
 
-		code, err := s.fs.Read(FS_CODE_DIR, scriptName)
+		code, err := s.fs.Read(FS_DYN_HANDLE_DIR, scriptName)
 		if err != nil {
 			zlog.Error().Err(err).Str("script name", scriptName).Msg("Failed to read script code")
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -74,7 +74,7 @@ func (s *server) initRoutesApiDynamic(routes *gin.RouterGroup) {
 		scriptName := util.GenUniqueFilename("py")
 		zlog.Info().Str("filename", scriptName).Msg("Generated script name")
 
-		if err := s.fs.Write(FS_CODE_DIR, scriptName, util.WrapCodeForDynHandle(dynamicEndpoint.Code)); err != nil {
+		if err := s.fs.Write(FS_DYN_HANDLE_DIR, scriptName, util.WrapCodeForDynHandle(dynamicEndpoint.Code)); err != nil {
 			zlog.Error().Err(err).Msg("Failed to write code to file")
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -129,7 +129,7 @@ func (s *server) initRoutesApiDynamic(routes *gin.RouterGroup) {
 
 		zlog.Info().Str("filename", scriptName).Msg("Script name")
 
-		if err := s.fs.Write(FS_CODE_DIR, scriptName, util.WrapCodeForDynHandle(dynamicEndpoint.Code)); err != nil {
+		if err := s.fs.Write(FS_DYN_HANDLE_DIR, scriptName, util.WrapCodeForDynHandle(dynamicEndpoint.Code)); err != nil {
 			zlog.Error().Err(err).Msg("Failed to write code to file")
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return

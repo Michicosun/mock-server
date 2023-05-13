@@ -32,6 +32,12 @@ func WrapCodeForEsb(code string) []byte {
 	return []byte(fmt.Sprintf("%s\n%s\n%s", LOAD_ARGS, code, INVOKE_ESB))
 }
 
+func UnwrapCodeForEsb(code string) string {
+	splitted := strings.Split(code, "\n")
+	splitted = splitted[4 : len(splitted)-1]
+	return strings.Join(splitted, "\n")
+}
+
 // Example:
 //
 //		headers: json.Marshal(map[string][]string{

@@ -49,7 +49,7 @@ func TestEsb(t *testing.T) {
 		t.Error(err)
 	}
 
-	err = brokers.AddEsbRecordWithMapper("test-pool-1", "test-pool-2", "test-mapper.py")
+	err = brokers.AddEsbRecordWithMapper(context.TODO(), "test-pool-1", "test-pool-2", "test-mapper.py")
 	if err != nil {
 		t.Error(err)
 	}

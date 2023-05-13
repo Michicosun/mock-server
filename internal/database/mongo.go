@@ -177,6 +177,10 @@ func GetESBRecord(ctx context.Context, poolNameIn string) (ESBRecord, error) {
 	return db.esbRecords.getESBRecord(ctx, poolNameIn)
 }
 
+func ListESBRecords(ctx context.Context) ([]ESBRecord, error) {
+	return db.esbRecords.listESBRecords(ctx)
+}
+
 func AddMessagePool(ctx context.Context, messagePool MessagePool) error {
 	return db.messagePools.addMessagePool(ctx, messagePool)
 }

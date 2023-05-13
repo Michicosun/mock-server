@@ -144,7 +144,7 @@ func (s *server) handleDynamicRouteRequest(c *gin.Context, route *database.Route
 	}
 	defer c.Request.Body.Close()
 
-	output, err := worker.RunScript(FS_CODE_DIR, route.ScriptName, coderun.NewDynHandleArgs(headersBytes, bodyBytes))
+	output, err := worker.RunScript(FS_DYN_HANDLE_DIR, route.ScriptName, coderun.NewDynHandleArgs(headersBytes, bodyBytes))
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, string(output))

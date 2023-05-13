@@ -62,28 +62,30 @@ func submitToESB(pool_name_in string, msgs []string) error {
 	return nil
 }
 
-func addEsbRecord(record database.ESBRecord) error {
-	err := database.AddESBRecord(context.TODO(), record)
-	return err
+func addEsbRecord(ctx context.Context, record database.ESBRecord) error {
+	return database.AddESBRecord(ctx, record)
 }
 
-func AddEsbRecord(pool_name_in string, pool_name_out string) error {
-	return addEsbRecord(database.ESBRecord{
+func AddEsbRecord(ctx context.Context, pool_name_in string, pool_name_out string) error {
+	return addEsbRecord(ctx, database.ESBRecord{
 		PoolNameIn:       pool_name_in,
 		PoolNameOut:      pool_name_out,
 		MapperScriptName: EMPTY_MAPPER,
 	})
 }
 
-func AddEsbRecordWithMapper(pool_name_in string, pool_name_out string, mapperScriptName string) error {
-	return addEsbRecord(database.ESBRecord{
+func AddEsbRecordWithMapper(ctx context.Context, pool_name_in string, pool_name_out string, mapperScriptName string) error {
+	return addEsbRecord(ctx, database.ESBRecord{
 		PoolNameIn:       pool_name_in,
 		PoolNameOut:      pool_name_out,
 		MapperScriptName: mapperScriptName,
 	})
 }
 
-func RemoveEsbRecord(pool_name_in string) error {
-	err := database.RemoveESBRecord(context.TODO(), pool_name_in)
-	return err
+func RemoveEsbRecord(ctx context.Context, pool_name_in string) error {
+	return database.RemoveESBRecord(ctx, pool_name_in)
+}
+
+func GetEsbRecord(ctx context.Context, pool_name_in string) (database.ESBRecord, error) {
+	return database.GetESBRecord(ctx, pool_name_in)
 }
