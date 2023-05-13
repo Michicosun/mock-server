@@ -15,8 +15,7 @@ with open("data.json") as data:
 const INVOKE_DYN_HANDLE = `
 print(func(**args))`
 const INVOKE_ESB = `
-print(func(args["msgs"]))
-`
+print(func(args["msgs"]))`
 
 func WrapCodeForDynHandle(code string) []byte {
 	return []byte(fmt.Sprintf("%s\n%s\n%s", LOAD_ARGS, code, INVOKE_DYN_HANDLE))
