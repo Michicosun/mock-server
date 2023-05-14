@@ -7,6 +7,7 @@ import (
 	"mock-server/internal/configs"
 	"mock-server/internal/database"
 	"sync/atomic"
+	"time"
 
 	kafka "github.com/confluentinc/confluent-kafka-go/kafka"
 	zlog "github.com/rs/zerolog/log"
@@ -79,47 +80,9 @@ func (t *kafkaTask) getTaskId() TaskId {
 	return TaskId(fmt.Sprintf("kafka:%s:%s", t.pool.name, t.pool.topic))
 }
 
-func (t *kafkaTask) getConnectionString(s *configs.KafkaConnectionConfig) string {
-	return fmt.Sprintf("%s:%d", s.Host, s.Port)
-}
-
 func (t *kafkaTask) connectAndPrepare(ctx context.Context) error {
-	zlog.Info().Str("task", string(t.getTaskId())).Msg("configuring connection to kafka")
-
-	cfg, err := configs.GetKafkaConnectionConfig()
-	if err != nil {
-		return err
-	}
-
-	t.pool.tcfg.Addr = t.getConnectionString(cfg)
-	t.pool.tcfg.ClientId = cfg.ClientId
-	t.pool.tcfg.GroupId = cfg.GroupId
-
 	zlog.Info().Str("addr", t.pool.tcfg.Addr).Msg("using addr for kafka connection")
-
-	admin, err := kafka.NewAdminClient(&kafka.ConfigMap{"bootstrap.servers": t.pool.tcfg.Addr})
-	if err != nil {
-		return err
-	}
-
-	defer admin.Close()
-
-	results, err := admin.CreateTopics(
-		ctx,
-		[]kafka.TopicSpecification{{
-			Topic:         t.pool.topic,
-			NumPartitions: 1,
-		}},
-	)
-	if err != nil {
-		return err
-	}
-
-	for _, topic_result := range results {
-		zlog.Info().Str("topic", topic_result.Topic).Msg("using topic")
-	}
-
-	return err
+	return nil
 }
 
 func (t *kafkaTask) close() {
@@ -334,4 +297,73 @@ func (mp *KafkaMessagePool) NewWriteTask(data []string) qWriteTask {
 		kafkaTask: newKafkaBaseTask(mp),
 		msgs:      data,
 	}
+}
+
+func getKafkaConnectionString(s *configs.KafkaConnectionConfig) string {
+	return fmt.Sprintf("%s:%d", s.Host, s.Port)
+}
+
+func (mp *KafkaMessagePool) CreateBrokerEndpoint() error {
+	zlog.Info().Str("pool", mp.name).Str("broker", mp.GetBroker()).Msg("preparing to create pool")
+
+	cfg, err := configs.GetKafkaConnectionConfig()
+	if err != nil {
+		return err
+	}
+
+	mp.tcfg.Addr = getKafkaConnectionString(cfg)
+	mp.tcfg.ClientId = cfg.ClientId
+	mp.tcfg.GroupId = cfg.GroupId
+
+	admin, err := kafka.NewAdminClient(&kafka.ConfigMap{"bootstrap.servers": mp.tcfg.Addr})
+	if err != nil {
+		return err
+	}
+
+	defer admin.Close()
+
+	results, err := admin.CreateTopics(
+		context.TODO(),
+		[]kafka.TopicSpecification{{
+			Topic:         mp.topic,
+			NumPartitions: 1,
+		}},
+		kafka.SetAdminOperationTimeout(time.Second*60),
+	)
+	if err != nil {
+		return err
+	}
+
+	for _, result := range results {
+		zlog.Info().Str("topic", result.Topic).Msg("create topic")
+	}
+
+	zlog.Info().Str("pool", mp.name).Str("broker", mp.GetBroker()).Msg("pool was created")
+
+	return err
+
+}
+
+func (mp *KafkaMessagePool) RemoveBrokerEndpoint() error {
+	zlog.Info().Str("pool", mp.name).Str("broker", mp.GetBroker()).Msg("preparing to remove pool")
+
+	admin, err := kafka.NewAdminClient(&kafka.ConfigMap{"bootstrap.servers": mp.tcfg.Addr})
+	if err != nil {
+		return err
+	}
+
+	defer admin.Close()
+
+	results, err := admin.DeleteTopics(context.TODO(), []string{mp.topic}, kafka.SetAdminOperationTimeout(time.Second*60))
+	if err != nil {
+		return err
+	}
+
+	for _, result := range results {
+		zlog.Info().Str("topic", result.Topic).Msg("delete topic")
+	}
+
+	zlog.Info().Str("pool", mp.name).Str("broker", mp.GetBroker()).Msg("pool was deleted")
+
+	return nil
 }

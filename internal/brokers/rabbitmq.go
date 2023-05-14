@@ -90,10 +90,6 @@ func (t *rabbitMQTask) getTaskId() TaskId {
 	return TaskId(fmt.Sprintf("rabbitmq:%s:%s", t.pool.GetName(), t.pool.queue))
 }
 
-func (t *rabbitMQTask) getConnectionString(s *configs.RabbitMQConnectionConfig) string {
-	return fmt.Sprintf("amqp://%s:%s@%s:%d/", s.Username, s.Password, s.Host, s.Port)
-}
-
 func (t *rabbitMQTask) connectAndPrepare(context.Context) error {
 	zlog.Info().Str("task", string(t.getTaskId())).Msg("setting up connection to rabbitmq")
 
@@ -102,7 +98,7 @@ func (t *rabbitMQTask) connectAndPrepare(context.Context) error {
 		return err
 	}
 
-	conn, err := amqp.Dial(t.getConnectionString(s))
+	conn, err := amqp.Dial(getRabbitMqConnectionString(s))
 	if err != nil {
 		return err
 	}
@@ -312,4 +308,49 @@ func (mp *RabbitMQMessagePool) NewWriteTask(data []string) qWriteTask {
 		rabbitMQTask: newRabbitMQBaseTask(mp),
 		msgs:         data,
 	}
+}
+
+func getRabbitMqConnectionString(s *configs.RabbitMQConnectionConfig) string {
+	return fmt.Sprintf("amqp://%s:%s@%s:%d/", s.Username, s.Password, s.Host, s.Port)
+}
+
+func (mp *RabbitMQMessagePool) CreateBrokerEndpoint() error {
+	zlog.Info().Str("pool", mp.name).Str("broker", mp.GetBroker()).Msg("pool was created")
+	return nil // creates automatically in prepare phase
+}
+
+func (mp *RabbitMQMessagePool) RemoveBrokerEndpoint() error {
+	zlog.Info().Str("pool", mp.name).Str("broker", mp.GetBroker()).Msg("preparing to remove pool")
+
+	s, err := configs.GetRabbitMQConnectionConfig()
+	if err != nil {
+		return err
+	}
+
+	conn, err := amqp.Dial(getRabbitMqConnectionString(s))
+	if err != nil {
+		return err
+	}
+
+	defer conn.Close()
+
+	ch, err := conn.Channel()
+	if err != nil {
+		return err
+	}
+
+	defer ch.Close()
+
+	remaining_msgs, err := ch.QueueDelete(mp.queue, false, false, false)
+	if err != nil {
+		return err
+	}
+
+	zlog.Info().
+		Str("pool", mp.name).
+		Str("broker", mp.GetBroker()).
+		Int("remaining_msgs", remaining_msgs).
+		Msg("pool was deleted")
+
+	return nil
 }
