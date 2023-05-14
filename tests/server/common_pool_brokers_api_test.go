@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"mock-server/internal/brokers"
 	"mock-server/internal/configs"
 	"mock-server/internal/control"
 	"mock-server/internal/database"
@@ -218,15 +217,15 @@ func compareRequestMessagesResponse(expected []string, actualBody []byte) error 
 }
 
 func removeAllMessagePools(t *testing.T) {
-	pools, err := database.ListMessagePools(context.TODO())
+	_, err := database.ListMessagePools(context.TODO())
 	if err != nil {
 		t.Error(err)
 		return
 	}
 
-	for _, pool := range pools {
-		if err := brokers.RemoveMessagePool(pool.Name); err != nil {
-			t.Errorf("failed to remove message pool %s: %s", pool.Name, err.Error())
-		}
-	}
+	// for _, pool := range pools {
+	// 	if err := brokers.RemoveMessagePool(pool.Name); err != nil {
+	// 		t.Errorf("failed to remove message pool %s: %s", pool.Name, err.Error())
+	// 	}
+	// }
 }
