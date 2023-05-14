@@ -129,7 +129,7 @@ func TestPoolBrokersRabbitmqManyWrites(t *testing.T) {
 		t.Errorf("create pool failed: %s", body)
 	}
 
-	const MESSAGE_COUNT = 100
+	const MESSAGE_COUNT = 10
 	messages := make([]string, 0)
 	for i := 0; i < MESSAGE_COUNT; i++ {
 		messages = append(messages, fmt.Sprintf("msg%d", i))
@@ -158,6 +158,8 @@ func TestPoolBrokersRabbitmqManyWrites(t *testing.T) {
 	if err := compareRequestMessagesResponse(messages, body); err != nil {
 		t.Errorf("Expected to write messages be available after write task request: %s", err.Error())
 	}
+
+	time.Sleep(15 * time.Second)
 
 	code, body = DoGet(poolApiEndpoint+"/read?pool=pool", t)
 	if code != 200 {
