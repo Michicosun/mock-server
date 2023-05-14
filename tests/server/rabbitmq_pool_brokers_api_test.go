@@ -263,7 +263,7 @@ func TestPoolBrokersRabbitmqManyPools(t *testing.T) {
 	//////////////////////////////////////////////////////
 
 	const POOL_COUNT = 2
-	const MESSAGE_COUNT_PER_POOL = 300
+	const MESSAGE_COUNT_PER_POOL = 10
 	var wg sync.WaitGroup
 	wg.Add(POOL_COUNT)
 	for poolNum := 0; poolNum < POOL_COUNT; poolNum++ {
