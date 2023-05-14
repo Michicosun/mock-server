@@ -166,9 +166,9 @@ func (s *server) initBrokersApiPool(brokersApi *gin.RouterGroup) {
 			pool, err := brokers.GetMessagePool(poolName)
 			switch err {
 			case nil:
-				zlog.Info().Str("pool", pool.GetName()).Msg("Queried pool")
+				zlog.Info().Str("pool", poolName).Msg("Queried pool")
 			case database.ErrNoSuchPool:
-				zlog.Error().Str("pool", pool.GetName()).Msg("No such pool")
+				zlog.Error().Str("pool", poolName).Msg("No such pool")
 				c.JSON(http.StatusNotFound, gin.H{"error": "No such pool"})
 				return
 			default:
@@ -198,9 +198,9 @@ func (s *server) initBrokersApiPool(brokersApi *gin.RouterGroup) {
 			pool, err := brokers.GetMessagePool(brokerTask.PoolName)
 			switch err {
 			case nil:
-				zlog.Info().Str("pool", pool.GetName()).Msg("Queried pool")
+				zlog.Info().Str("pool", brokerTask.PoolName).Msg("Queried pool")
 			case database.ErrNoSuchPool:
-				zlog.Error().Str("pool", pool.GetName()).Msg("No such pool")
+				zlog.Error().Str("pool", brokerTask.PoolName).Msg("No such pool")
 				c.JSON(http.StatusNotFound, gin.H{"error": "No such pool"})
 				return
 			default:

@@ -13,6 +13,7 @@ func TestEsbBrokersSimple(t *testing.T) {
 
 	control.Components.Start()
 	defer control.Components.Stop()
+	defer removeAllMessagePools(t)
 
 	cfg := configs.GetServerConfig()
 	endpoint := fmt.Sprintf("http://%s", cfg.Addr)
@@ -104,6 +105,7 @@ func TestEsbBrokersDoublePost(t *testing.T) {
 
 	control.Components.Start()
 	defer control.Components.Stop()
+	defer removeAllMessagePools(t)
 
 	cfg := configs.GetServerConfig()
 	endpoint := fmt.Sprintf("http://%s", cfg.Addr)

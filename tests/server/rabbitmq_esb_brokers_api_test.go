@@ -14,6 +14,7 @@ func TestEsbBrokersRabbitmqScheduling(t *testing.T) {
 
 	control.Components.Start()
 	defer control.Components.Stop()
+	defer removeAllMessagePools(t)
 
 	go func() {
 		for err := range brokers.MPTaskScheduler.Errors() {
@@ -31,7 +32,7 @@ func TestEsbBrokersRabbitmqScheduling(t *testing.T) {
 	// create rabbitmq pool
 	rabbitmqPoolIn := []byte(`{
 		"pool_name": "rabbitmq_pool_in",
-		"queue_name": "rabbitmq_queue_in",
+		"queue_name": "rabbitmq_queue_in_scheduling",
 		"broker": "rabbitmq"
 	}`)
 	code, body := DoPost(poolApiEndpoint, rabbitmqPoolIn, t)
@@ -41,7 +42,7 @@ func TestEsbBrokersRabbitmqScheduling(t *testing.T) {
 
 	rabbitmqPoolOut := []byte(`{
 		"pool_name": "rabbitmq_pool_out",
-		"queue_name": "rabbitmq_queue_out",
+		"queue_name": "rabbitmq_queue_out_scheduling",
 		"broker": "rabbitmq"
 	}`)
 	code, body = DoPost(poolApiEndpoint, rabbitmqPoolOut, t)
@@ -91,6 +92,7 @@ func TestEsbBrokersRabbitmqSchedulingWithMapper(t *testing.T) {
 
 	control.Components.Start()
 	defer control.Components.Stop()
+	defer removeAllMessagePools(t)
 
 	go func() {
 		for err := range brokers.MPTaskScheduler.Errors() {
@@ -108,7 +110,7 @@ func TestEsbBrokersRabbitmqSchedulingWithMapper(t *testing.T) {
 	// create rabbitmq pool
 	rabbitmqPoolIn := []byte(`{
 		"pool_name": "rabbitmq_pool_in",
-		"queue_name": "rabbitmq_queue_in",
+		"queue_name": "rabbitmq_queue_in_with_mapper",
 		"broker": "rabbitmq"
 	}`)
 	code, body := DoPost(poolApiEndpoint, rabbitmqPoolIn, t)
@@ -118,7 +120,7 @@ func TestEsbBrokersRabbitmqSchedulingWithMapper(t *testing.T) {
 
 	rabbitmqPoolOut := []byte(`{
 		"pool_name": "rabbitmq_pool_out",
-		"queue_name": "rabbitmq_queue_out",
+		"queue_name": "rabbitmq_queue_out_with_mapper",
 		"broker": "rabbitmq"
 	}`)
 	code, body = DoPost(poolApiEndpoint, rabbitmqPoolOut, t)

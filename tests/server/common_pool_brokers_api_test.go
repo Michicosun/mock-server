@@ -2,10 +2,13 @@ package server_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
+	"mock-server/internal/brokers"
 	"mock-server/internal/configs"
 	"mock-server/internal/control"
+	"mock-server/internal/database"
 	"mock-server/internal/server/protocol"
 	"sort"
 	"testing"
@@ -16,6 +19,7 @@ func TestPoolBrokersSimple(t *testing.T) {
 
 	control.Components.Start()
 	defer control.Components.Stop()
+	defer removeAllMessagePools(t)
 
 	cfg := configs.GetServerConfig()
 	endpoint := fmt.Sprintf("http://%s", cfg.Addr)
@@ -147,6 +151,7 @@ func TestPoolBrokersDoublePost(t *testing.T) {
 
 	control.Components.Start()
 	defer control.Components.Stop()
+	defer removeAllMessagePools(t)
 
 	cfg := configs.GetServerConfig()
 	endpoint := fmt.Sprintf("http://%s", cfg.Addr)
@@ -210,4 +215,18 @@ func compareRequestMessagesResponse(expected []string, actualBody []byte) error 
 	}
 
 	return nil
+}
+
+func removeAllMessagePools(t *testing.T) {
+	pools, err := database.ListMessagePools(context.TODO())
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	for _, pool := range pools {
+		if err := brokers.RemoveMessagePool(pool.Name); err != nil {
+			t.Errorf("failed to remove message pool %s: %s", pool.Name, err.Error())
+		}
+	}
 }

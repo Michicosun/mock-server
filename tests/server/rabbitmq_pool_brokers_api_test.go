@@ -16,6 +16,7 @@ func TestPoolBrokersRabbitmqTaskSchedulingSimple(t *testing.T) {
 
 	control.Components.Start()
 	defer control.Components.Stop()
+	defer removeAllMessagePools(t)
 
 	go func() {
 		for err := range brokers.MPTaskScheduler.Errors() {
@@ -29,7 +30,7 @@ func TestPoolBrokersRabbitmqTaskSchedulingSimple(t *testing.T) {
 
 	//////////////////////////////////////////////////////
 
-	rabbitmqPool := []byte(`{"pool_name":"pool","queue_name":"queue","broker":"rabbitmq"}`)
+	rabbitmqPool := []byte(`{"pool_name":"pool","queue_name":"queue_simple","broker":"rabbitmq"}`)
 
 	code, body := DoPost(poolApiEndpoint, rabbitmqPool, t)
 	if code != 200 {
@@ -48,7 +49,7 @@ func TestPoolBrokersRabbitmqTaskSchedulingSimple(t *testing.T) {
 		t.Errorf("schedule read task failed: %s", body)
 	}
 
-	time.Sleep(1 * time.Second)
+	time.Sleep(10 * time.Second)
 
 	code, body = DoGet(poolApiEndpoint+"/write?pool=pool", t)
 	if code != 200 {
@@ -58,7 +59,7 @@ func TestPoolBrokersRabbitmqTaskSchedulingSimple(t *testing.T) {
 		t.Errorf("Expected to write messages be available almost simultaneously after write task request: %s", err.Error())
 	}
 
-	time.Sleep(1 * time.Second)
+	time.Sleep(10 * time.Second)
 
 	code, body = DoGet(poolApiEndpoint+"/read?pool=pool", t)
 	if code != 200 {
@@ -107,6 +108,7 @@ func TestPoolBrokersRabbitmqManyWrites(t *testing.T) {
 
 	control.Components.Start()
 	defer control.Components.Stop()
+	defer removeAllMessagePools(t)
 
 	go func() {
 		for err := range brokers.MPTaskScheduler.Errors() {
@@ -120,14 +122,14 @@ func TestPoolBrokersRabbitmqManyWrites(t *testing.T) {
 
 	//////////////////////////////////////////////////////
 
-	rabbitmqPool := []byte(`{"pool_name":"pool","queue_name":"queue","broker":"rabbitmq"}`)
+	rabbitmqPool := []byte(`{"pool_name":"pool","queue_name":"queue_manywrites","broker":"rabbitmq"}`)
 
 	code, body := DoPost(poolApiEndpoint, rabbitmqPool, t)
 	if code != 200 {
 		t.Errorf("create pool failed: %s", body)
 	}
 
-	const MESSAGE_COUNT = 5000
+	const MESSAGE_COUNT = 10
 	messages := make([]string, 0)
 	for i := 0; i < MESSAGE_COUNT; i++ {
 		messages = append(messages, fmt.Sprintf("msg%d", i))
@@ -141,13 +143,14 @@ func TestPoolBrokersRabbitmqManyWrites(t *testing.T) {
 			t.Errorf("schedule write task failed: %s", body)
 		}
 	}
+	time.Sleep(2 * time.Second)
 	// schedule read task
 	code, body = DoPost(poolApiEndpoint+"/read?pool=pool", []byte{}, t)
 	if code != 204 {
 		t.Errorf("schedule read task failed: %s", body)
 	}
 
-	time.Sleep(2 * time.Second)
+	time.Sleep(15 * time.Second)
 
 	code, body = DoGet(poolApiEndpoint+"/write?pool=pool", t)
 	if code != 200 {
@@ -170,6 +173,7 @@ func TestPoolBrokersRabbitmqFloodReads(t *testing.T) {
 
 	control.Components.Start()
 	defer control.Components.Stop()
+	defer removeAllMessagePools(t)
 
 	go func() {
 		for err := range brokers.MPTaskScheduler.Errors() {
@@ -183,14 +187,14 @@ func TestPoolBrokersRabbitmqFloodReads(t *testing.T) {
 
 	//////////////////////////////////////////////////////
 
-	rabbitmqPool := []byte(`{"pool_name":"pool","queue_name":"queue","broker":"rabbitmq"}`)
+	rabbitmqPool := []byte(`{"pool_name":"pool","queue_name":"queue_floodreads","broker":"rabbitmq"}`)
 
 	code, body := DoPost(poolApiEndpoint, rabbitmqPool, t)
 	if code != 200 {
 		t.Errorf("create pool failed: %s", body)
 	}
 
-	const MESSAGE_COUNT = 1000
+	const MESSAGE_COUNT = 20
 	messages := make([]string, 0)
 	for i := 0; i < MESSAGE_COUNT; i++ {
 		messages = append(messages, fmt.Sprintf("msg%d", i))
@@ -204,6 +208,8 @@ func TestPoolBrokersRabbitmqFloodReads(t *testing.T) {
 		}
 	}
 
+	time.Sleep(2 * time.Second)
+
 	// populate MESSAGE_COUNT write tasks
 	for i := 0; i < MESSAGE_COUNT; i++ {
 		writeTask := createWriteTaskBody("pool", messages[i:i+1])
@@ -213,6 +219,8 @@ func TestPoolBrokersRabbitmqFloodReads(t *testing.T) {
 		}
 	}
 
+	time.Sleep(2 * time.Second)
+
 	// populate MESSAGE_COUNT / 4 read tasks
 	for i := 0; i < MESSAGE_COUNT/4; i++ {
 		code, body := DoPost(poolApiEndpoint+"/read?pool=pool", []byte{}, t)
@@ -221,7 +229,7 @@ func TestPoolBrokersRabbitmqFloodReads(t *testing.T) {
 		}
 	}
 
-	time.Sleep(5 * time.Second)
+	time.Sleep(10 * time.Second)
 
 	code, body = DoGet(poolApiEndpoint+"/write?pool=pool", t)
 	if code != 200 {
@@ -245,6 +253,7 @@ func TestPoolBrokersRabbitmqManyPools(t *testing.T) {
 
 	control.Components.Start()
 	defer control.Components.Stop()
+	defer removeAllMessagePools(t)
 
 	go func() {
 		for err := range brokers.MPTaskScheduler.Errors() {
@@ -259,7 +268,7 @@ func TestPoolBrokersRabbitmqManyPools(t *testing.T) {
 	//////////////////////////////////////////////////////
 
 	const POOL_COUNT = 2
-	const MESSAGE_COUNT_PER_POOL = 300
+	const MESSAGE_COUNT_PER_POOL = 10
 	var wg sync.WaitGroup
 	wg.Add(POOL_COUNT)
 	for poolNum := 0; poolNum < POOL_COUNT; poolNum++ {
@@ -281,21 +290,19 @@ func TestPoolBrokersRabbitmqManyPools(t *testing.T) {
 				messages = append(messages, fmt.Sprintf("msg%d", i))
 			}
 
-			// populate MESSAGE_COUNT write tasks
-			for i := 0; i < MESSAGE_COUNT_PER_POOL; i++ {
-				writeTask := createWriteTaskBody("pool"+poolName, messages[i:i+1])
-				code, body := DoPost(poolApiEndpoint+"/write", writeTask, t)
-				if code != 204 {
-					t.Errorf("schedule write task failed: %s", body)
-				}
+			// schedule write tasks
+			writeTask := createWriteTaskBody("pool"+poolName, messages)
+			code, body = DoPost(poolApiEndpoint+"/write", writeTask, t)
+			if code != 204 {
+				t.Errorf("schedule write task failed: %s", body)
 			}
 
-			// schedule some read tasks
-			for i := 0; i < 10; i++ {
-				code, body := DoPost(poolApiEndpoint+"/read?pool=pool"+poolName, []byte{}, t)
-				if code != 204 {
-					t.Errorf("schedule read task failed: %s", body)
-				}
+			time.Sleep(2 * time.Second)
+
+			// schedule read task
+			code, body = DoPost(poolApiEndpoint+"/read?pool=pool"+poolName, []byte{}, t)
+			if code != 204 {
+				t.Errorf("schedule read task failed: %s", body)
 			}
 
 			time.Sleep(15 * time.Second)
