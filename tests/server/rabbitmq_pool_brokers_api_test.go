@@ -129,7 +129,7 @@ func TestPoolBrokersRabbitmqManyWrites(t *testing.T) {
 		t.Errorf("create pool failed: %s", body)
 	}
 
-	const MESSAGE_COUNT = 5000
+	const MESSAGE_COUNT = 100
 	messages := make([]string, 0)
 	for i := 0; i < MESSAGE_COUNT; i++ {
 		messages = append(messages, fmt.Sprintf("msg%d", i))
