@@ -11,6 +11,7 @@ import (
 
 func TestEsbBrokersKafkaScheduling(t *testing.T) {
 	t.Setenv("CONFIG_PATH", "/configs/test_server_pool_api_config.yaml")
+	defer removeAllMessagePools(t)
 
 	control.Components.Start()
 	defer control.Components.Stop()
@@ -88,6 +89,7 @@ func TestEsbBrokersKafkaScheduling(t *testing.T) {
 
 func TestEsbBrokersKafkaSchedulingWithMapper(t *testing.T) {
 	t.Setenv("CONFIG_PATH", "/configs/test_server_esb_api_config.yaml")
+	defer removeAllMessagePools(t)
 
 	control.Components.Start()
 	defer control.Components.Stop()

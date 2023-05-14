@@ -13,6 +13,7 @@ import (
 
 func TestPoolBrokersRabbitmqTaskSchedulingSimple(t *testing.T) {
 	t.Setenv("CONFIG_PATH", "/configs/test_server_pool_api_config.yaml")
+	defer removeAllMessagePools(t)
 
 	control.Components.Start()
 	defer control.Components.Stop()
@@ -104,6 +105,7 @@ func TestPoolBrokersRabbitmqTaskSchedulingSimple(t *testing.T) {
 
 func TestPoolBrokersRabbitmqManyWrites(t *testing.T) {
 	t.Setenv("CONFIG_PATH", "/configs/test_server_pool_api_config.yaml")
+	defer removeAllMessagePools(t)
 
 	control.Components.Start()
 	defer control.Components.Stop()
@@ -167,6 +169,7 @@ func TestPoolBrokersRabbitmqManyWrites(t *testing.T) {
 }
 func TestPoolBrokersRabbitmqFloodReads(t *testing.T) {
 	t.Setenv("CONFIG_PATH", "/configs/test_server_pool_api_config.yaml")
+	defer removeAllMessagePools(t)
 
 	control.Components.Start()
 	defer control.Components.Stop()
@@ -242,6 +245,7 @@ func TestPoolBrokersRabbitmqFloodReads(t *testing.T) {
 
 func TestPoolBrokersRabbitmqManyPools(t *testing.T) {
 	t.Setenv("CONFIG_PATH", "/configs/test_server_pool_api_config.yaml")
+	defer removeAllMessagePools(t)
 
 	control.Components.Start()
 	defer control.Components.Stop()

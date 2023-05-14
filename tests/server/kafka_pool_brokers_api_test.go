@@ -13,6 +13,7 @@ import (
 
 func TestPoolBrokersKafkaTaskSchedulingSimple(t *testing.T) {
 	t.Setenv("CONFIG_PATH", "/configs/test_server_pool_api_config.yaml")
+	defer removeAllMessagePools(t)
 
 	control.Components.Start()
 	defer control.Components.Stop()
@@ -106,6 +107,7 @@ func TestPoolBrokersKafkaTaskSchedulingSimple(t *testing.T) {
 
 func TestPoolBrokersKafkaManyWrites(t *testing.T) {
 	t.Setenv("CONFIG_PATH", "/configs/test_server_pool_api_config.yaml")
+	defer removeAllMessagePools(t)
 
 	control.Components.Start()
 	defer control.Components.Stop()
@@ -171,6 +173,7 @@ func TestPoolBrokersKafkaManyWrites(t *testing.T) {
 
 func TestPoolBrokersKafkaFloodReads(t *testing.T) {
 	t.Setenv("CONFIG_PATH", "/configs/test_server_pool_api_config.yaml")
+	defer removeAllMessagePools(t)
 
 	control.Components.Start()
 	defer control.Components.Stop()
@@ -250,6 +253,7 @@ func TestPoolBrokersKafkaFloodReads(t *testing.T) {
 
 func TestPoolBrokersKafkaManyPools(t *testing.T) {
 	t.Setenv("CONFIG_PATH", "/configs/test_server_pool_api_config.yaml")
+	defer removeAllMessagePools(t)
 
 	control.Components.Start()
 	defer control.Components.Stop()
