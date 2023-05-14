@@ -10,10 +10,10 @@ import (
 
 func TestEsbBrokersSimple(t *testing.T) {
 	t.Setenv("CONFIG_PATH", "/configs/test_server_config.yaml")
-	defer removeAllMessagePools(t)
 
 	control.Components.Start()
 	defer control.Components.Stop()
+	defer removeAllMessagePools(t)
 
 	cfg := configs.GetServerConfig()
 	endpoint := fmt.Sprintf("http://%s", cfg.Addr)
@@ -102,10 +102,10 @@ func TestEsbBrokersSimple(t *testing.T) {
 }
 func TestEsbBrokersDoublePost(t *testing.T) {
 	t.Setenv("CONFIG_PATH", "/configs/test_server_config.yaml")
-	defer removeAllMessagePools(t)
 
 	control.Components.Start()
 	defer control.Components.Stop()
+	defer removeAllMessagePools(t)
 
 	cfg := configs.GetServerConfig()
 	endpoint := fmt.Sprintf("http://%s", cfg.Addr)

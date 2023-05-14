@@ -13,10 +13,10 @@ import (
 
 func TestPoolBrokersRabbitmqTaskSchedulingSimple(t *testing.T) {
 	t.Setenv("CONFIG_PATH", "/configs/test_server_pool_api_config.yaml")
-	defer removeAllMessagePools(t)
 
 	control.Components.Start()
 	defer control.Components.Stop()
+	defer removeAllMessagePools(t)
 
 	go func() {
 		for err := range brokers.MPTaskScheduler.Errors() {
@@ -105,10 +105,10 @@ func TestPoolBrokersRabbitmqTaskSchedulingSimple(t *testing.T) {
 
 func TestPoolBrokersRabbitmqManyWrites(t *testing.T) {
 	t.Setenv("CONFIG_PATH", "/configs/test_server_pool_api_config.yaml")
-	defer removeAllMessagePools(t)
 
 	control.Components.Start()
 	defer control.Components.Stop()
+	defer removeAllMessagePools(t)
 
 	go func() {
 		for err := range brokers.MPTaskScheduler.Errors() {
@@ -169,10 +169,10 @@ func TestPoolBrokersRabbitmqManyWrites(t *testing.T) {
 }
 func TestPoolBrokersRabbitmqFloodReads(t *testing.T) {
 	t.Setenv("CONFIG_PATH", "/configs/test_server_pool_api_config.yaml")
-	defer removeAllMessagePools(t)
 
 	control.Components.Start()
 	defer control.Components.Stop()
+	defer removeAllMessagePools(t)
 
 	go func() {
 		for err := range brokers.MPTaskScheduler.Errors() {
@@ -245,10 +245,10 @@ func TestPoolBrokersRabbitmqFloodReads(t *testing.T) {
 
 func TestPoolBrokersRabbitmqManyPools(t *testing.T) {
 	t.Setenv("CONFIG_PATH", "/configs/test_server_pool_api_config.yaml")
-	defer removeAllMessagePools(t)
 
 	control.Components.Start()
 	defer control.Components.Stop()
+	defer removeAllMessagePools(t)
 
 	go func() {
 		for err := range brokers.MPTaskScheduler.Errors() {

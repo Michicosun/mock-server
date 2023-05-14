@@ -11,10 +11,10 @@ import (
 
 func TestEsbBrokersRabbitmqScheduling(t *testing.T) {
 	t.Setenv("CONFIG_PATH", "/configs/test_server_pool_api_config.yaml")
-	defer removeAllMessagePools(t)
 
 	control.Components.Start()
 	defer control.Components.Stop()
+	defer removeAllMessagePools(t)
 
 	go func() {
 		for err := range brokers.MPTaskScheduler.Errors() {
@@ -89,10 +89,10 @@ func TestEsbBrokersRabbitmqScheduling(t *testing.T) {
 
 func TestEsbBrokersRabbitmqSchedulingWithMapper(t *testing.T) {
 	t.Setenv("CONFIG_PATH", "/configs/test_server_esb_api_config.yaml")
-	defer removeAllMessagePools(t)
 
 	control.Components.Start()
 	defer control.Components.Stop()
+	defer removeAllMessagePools(t)
 
 	go func() {
 		for err := range brokers.MPTaskScheduler.Errors() {
