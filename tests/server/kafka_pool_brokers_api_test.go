@@ -232,7 +232,7 @@ func TestPoolBrokersKafkaFloodReads(t *testing.T) {
 		}
 	}
 
-	time.Sleep(10 * time.Second)
+	time.Sleep(12 * time.Second)
 
 	code, body = DoGet(poolApiEndpoint+"/write?pool=pool", t)
 	if code != 200 {
