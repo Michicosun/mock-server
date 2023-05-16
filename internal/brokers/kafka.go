@@ -91,7 +91,7 @@ func (t *kafkaTask) close() {
 
 type kafkaReadTask struct {
 	kafkaTask
-	msgs []*kafka.Message
+	msgs []string
 }
 
 func (t *kafkaReadTask) getTaskId() TaskId {
@@ -118,6 +118,14 @@ func (t *kafkaReadTask) read(ctx context.Context) error {
 		return err
 	}
 
+	has_esb_record := true
+	esb_record, err := database.GetESBRecord(ctx, t.pool.name)
+	if err == database.ErrNoSuchRecord {
+		has_esb_record = false
+	} else if err != nil {
+		return err
+	}
+
 	err = nil
 	run := atomic.Bool{}
 	run.Store(true)
@@ -125,11 +133,11 @@ func (t *kafkaReadTask) read(ctx context.Context) error {
 
 	go func() {
 		for run.Load() {
-			ev := consumer.Poll(100)
+			ev := consumer.Poll(500)
 			switch e := ev.(type) {
 			case *kafka.Message:
 				zlog.Info().Str("task", string(t.getTaskId())).Str("msg", string(e.Value)).Msg("get message")
-				t.msgs = append(t.msgs, e)
+				t.msgs = append(t.msgs, string(e.Value))
 				if databaseErr := database.AddTaskMessage(context.TODO(), database.TaskMessage{
 					TaskId:  string(t.getTaskId()),
 					Message: string(e.Value),
@@ -141,6 +149,11 @@ func (t *kafkaReadTask) read(ctx context.Context) error {
 			case kafka.Error:
 				err = e
 				run.Store(false)
+			default:
+				if has_esb_record && len(t.msgs) > 0 {
+					submitToESB(esb_record, t.msgs)
+					t.msgs = make([]string, 0)
+				}
 			}
 		}
 		zlog.Info().Str("task", string(t.getTaskId())).Msg("read canceled")
@@ -154,16 +167,6 @@ func (t *kafkaReadTask) read(ctx context.Context) error {
 	<-read_canceled
 
 	return err
-}
-
-func (t *kafkaReadTask) messages() ([]string, error) {
-	msgs := make([]string, 0)
-
-	for _, msg := range t.msgs {
-		msgs = append(msgs, string(msg.Value))
-	}
-
-	return msgs, nil
 }
 
 // Kafka write task
@@ -237,10 +240,6 @@ func (t *kafkaWriteTask) write(ctx context.Context) error {
 	close(delivery_chan)
 
 	return nil
-}
-
-func (t *kafkaWriteTask) messages() []string {
-	return t.msgs
 }
 
 func NewKafkaMessagePool(name string, topic string) *KafkaMessagePool {

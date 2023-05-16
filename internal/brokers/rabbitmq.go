@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"mock-server/internal/configs"
 	"mock-server/internal/database"
+	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 	zlog "github.com/rs/zerolog/log"
@@ -135,7 +136,7 @@ func (t *rabbitMQTask) close() {
 // RabbitMQ read task
 type rabbitMQReadTask struct {
 	rabbitMQTask
-	msgs []amqp.Delivery
+	msgs []string
 }
 
 func (t *rabbitMQReadTask) getTaskId() TaskId {
@@ -160,13 +161,25 @@ func (t *rabbitMQReadTask) read(ctx context.Context) error {
 		return err
 	}
 
+	ticker := time.NewTicker(500 * time.Millisecond)
+	defer ticker.Stop()
+
+	has_esb_record := true
+	esb_record, err := database.GetESBRecord(ctx, t.pool.name)
+	if err == database.ErrNoSuchRecord {
+		has_esb_record = false
+	} else if err != nil {
+		zlog.Error().Err(err).Msg("esb find")
+		return err
+	}
+
 	for {
 		select {
 		case <-ctx.Done():
 			return nil
 		case msg := <-msgs:
 			zlog.Debug().Str("task", string(t.getTaskId())).Bytes("msg", msg.Body).Msg("read msg")
-			t.msgs = append(t.msgs, msg)
+			t.msgs = append(t.msgs, string(msg.Body))
 
 			if err = database.AddTaskMessage(context.TODO(), database.TaskMessage{
 				TaskId:  string(t.getTaskId()),
@@ -175,18 +188,13 @@ func (t *rabbitMQReadTask) read(ctx context.Context) error {
 				zlog.Err(err).Msg(fmt.Sprintf("Failed to upload message for task: %s", t.getTaskId()))
 				return err
 			}
+		case <-ticker.C:
+			if has_esb_record && len(t.msgs) > 0 {
+				submitToESB(esb_record, t.msgs)
+				t.msgs = make([]string, 0)
+			}
 		}
 	}
-}
-
-func (t *rabbitMQReadTask) messages() ([]string, error) {
-	msgs := make([]string, 0)
-
-	for _, msg := range t.msgs {
-		msgs = append(msgs, string(msg.Body))
-	}
-
-	return msgs, nil
 }
 
 // RabbitMQ write task
@@ -229,10 +237,6 @@ func (t *rabbitMQWriteTask) write(ctx context.Context) error {
 	}
 
 	return nil
-}
-
-func (t *rabbitMQWriteTask) messages() []string {
-	return t.msgs
 }
 
 func NewRabbitMQMessagePool(name string, queue string) *RabbitMQMessagePool {
