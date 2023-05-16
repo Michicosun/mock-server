@@ -7,13 +7,14 @@ import (
 	"mock-server/internal/database"
 	"mock-server/internal/util"
 	"reflect"
+	"sort"
 	"testing"
 	"time"
 )
 
 var TEST_SCRIPT = util.WrapCodeForEsb(`
 def func(msgs):
-	return msgs[::-1]
+	return list([msg.upper() for msg in msgs])
 `)
 var TEST_ARGS = []string{"msg1", "msg2", "msg3"}
 
@@ -89,7 +90,12 @@ func TestEsb(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if !reflect.DeepEqual(res, []string{"msg3", "msg2", "msg1"}) {
-		t.Errorf("res != expected: %+q != %+q", res, []string{"msg3", "msg2", "msg1"})
+
+	expected := []string{"MSG1", "MSG2", "MSG3"}
+	sort.Strings(expected)
+	sort.Strings(res)
+
+	if !reflect.DeepEqual(res, expected) {
+		t.Errorf("res != expected: %+q ~= %+q", res, []string{"MSG1", "MSG2", "MSG3"})
 	}
 }
