@@ -151,7 +151,11 @@ func (t *kafkaReadTask) read(ctx context.Context) error {
 				run.Store(false)
 			default:
 				if has_esb_record && len(t.msgs) > 0 {
-					submitToESB(esb_record, t.msgs)
+					if esb_err := submitToESB(esb_record, t.msgs); esb_err != nil {
+						err = esb_err
+						run.Store(false)
+					}
+
 					t.msgs = make([]string, 0)
 				}
 			}

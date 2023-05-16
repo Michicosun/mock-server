@@ -190,7 +190,9 @@ func (t *rabbitMQReadTask) read(ctx context.Context) error {
 			}
 		case <-ticker.C:
 			if has_esb_record && len(t.msgs) > 0 {
-				submitToESB(esb_record, t.msgs)
+				if err := submitToESB(esb_record, t.msgs); err != nil {
+					return err
+				}
 				t.msgs = make([]string, 0)
 			}
 		}
