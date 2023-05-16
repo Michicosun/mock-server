@@ -34,16 +34,8 @@ func runMapper(mapper_name string, msgs []string) ([]string, error) {
 	return mappedMsgs, nil
 }
 
-func submitToESB(pool_name_in string, msgs []string) error {
-	record, err := database.GetESBRecord(context.TODO(), pool_name_in)
-	if err == database.ErrNoSuchRecord {
-		zlog.Warn().Str("pool_in", pool_name_in).Msg("no registered esb records, skipping")
-		return nil
-	} else if err != nil {
-		return err
-	}
-
-	zlog.Info().Str("pool_in", pool_name_in).Str("pool_out", record.PoolNameOut).Msg("found esb record")
+func submitToESB(record database.ESBRecord, msgs []string) error {
+	zlog.Info().Str("pool_in", record.PoolNameIn).Str("pool_out", record.PoolNameOut).Msg("using esb record")
 
 	handler, err := GetMessagePool(record.PoolNameOut)
 	if err != nil {

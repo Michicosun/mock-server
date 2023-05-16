@@ -29,14 +29,12 @@ type qReadTask interface {
 	qTask
 	Schedule() TaskId
 	read(ctx context.Context) error
-	messages() ([]string, error)
 }
 
 type qWriteTask interface {
 	qTask
 	Schedule() TaskId
 	write(ctx context.Context) error
-	messages() []string
 }
 
 type TaskError struct {
@@ -123,16 +121,6 @@ func qread(ctx context.Context, task qReadTask) error {
 	}
 
 	zlog.Info().Str("task", string(task.getTaskId())).Err(ctx.Err()).Msg("finished")
-
-	msgs, err := task.messages()
-	if err != nil {
-		return err
-	}
-
-	if err = submitToESB(task.getMessagePool().GetName(), msgs); err != nil {
-		return err
-	}
-
 	return nil
 }
 
