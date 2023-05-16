@@ -17,7 +17,7 @@ brokers:
     scheduler:
         r_workers: 50
         w_workers: 50
-        read_timeout: 60s
+        read_timeout: 100s
         write_timeout: 10s
 
     rabbitmq:
