@@ -12,6 +12,7 @@ import (
 	"mock-server/internal/server/protocol"
 	"sort"
 	"testing"
+	"time"
 )
 
 func TestPoolBrokersSimple(t *testing.T) {
@@ -218,6 +219,8 @@ func compareRequestMessagesResponse(expected []string, actualBody []byte) error 
 }
 
 func removeAllMessagePools(t *testing.T) {
+	time.Sleep(2 * time.Second) // need, because task can read ReadTimeout + TickerTimeout
+
 	pools, err := database.ListMessagePools(context.TODO())
 	if err != nil {
 		t.Error(err)
