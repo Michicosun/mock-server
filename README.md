@@ -42,6 +42,8 @@ Deploy script uses the `systemd` Linux service manager and Linux command line co
 To configure the service components (e.g. adjust the broker's configuration or change the default service port) you can modify the [service config](https://github.com/Michicosun/mock-server/blob/main/configs/config.yaml)
 
 ## Service architecture
+Architecture overview:
+![arch](images/architecture_overview.png)
 - All configs are locating in [configs/](https://github.com/Michicosun/mock-server/blob/main/configs/) dir. Adjust them for your needs
 - Executable files lay in [cmd/](https://github.com/Michicosun/mock-server/blob/main/cmd/)
 - [deploy/](https://github.com/Michicosun/mock-server/blob/main/deploy/) dir consists of deploy scripts and systemd, docker and nginx config files
