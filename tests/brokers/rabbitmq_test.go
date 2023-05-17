@@ -27,6 +27,15 @@ func TestRabbitMq(t *testing.T) {
 		t.Error(err)
 	}
 
+	handler.NewReadTask().Schedule()
+	handler.NewReadTask().Schedule()
+	handler.NewReadTask().Schedule()
+	handler.NewReadTask().Schedule()
+	handler.NewReadTask().Schedule()
+	handler.NewReadTask().Schedule()
+
+	time.Sleep(11 * time.Second)
+
 	readTaskId := handler.NewReadTask().Schedule()
 
 	time.Sleep(1 * time.Second)
