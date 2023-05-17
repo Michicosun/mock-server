@@ -3,10 +3,10 @@ Simple server for REST API and message queue mocks
 
 ## Usage scope
 With our service you can
-- Create REST API mocks - set up route with either of three handler:
-  - __Static mocks__: request on route will response with the predefined body
+- Create REST API mocks - set up route with either of three handlers:
+  - __Static mocks__: request on route will respond with the predefined body
   - __Proxy mocks__: request on route will be proxied to the external service forwarding all request headers and body
-  - __Dynamic mocks__: request on route will launched the predefined python script accepting request headers and body as its arguments
+  - __Dynamic mocks__: request on route will launch the predefined python script accepting request headers and body as its arguments
 - Create messages queues mocks - set up broker queue mock or link two queues in an ESB pair:
   - __Rabbitmq mocks__: you can send messages to the writing end of the mocked queue and read messages from the reading one
   - __Kafka mocks__: same as previous but instead of Rabbitmq queues you are mocking the Kafka topics
@@ -23,7 +23,7 @@ You need to install and run [docker-daemon](https://www.docker.com/) on your com
 In Linux machine the only thing you should do is to run the [deploy.sh](https://github.com/Michicosun/mock-server/blob/main/deploy/deploy.sh) script
 ```bash
 $ git clone git@github.com:Michicosun/mock-server.git
-$ cd deploy
+$ cd mock-server/deploy
 $ chmod +x deploy.sh
 $ ./deploy.sh
 ```
