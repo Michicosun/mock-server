@@ -43,18 +43,20 @@ type TaskError struct {
 }
 
 type mpTaskScheduler struct {
-	cfg         *configs.MPTaskSchedulerConfig
-	read_tasks  util.BlockingQueue[qReadTask]
-	write_tasks util.BlockingQueue[qWriteTask]
-	errors      chan TaskError
-	ctx         context.Context
-	wg          sync.WaitGroup
+	cfg                *configs.MPTaskSchedulerConfig
+	read_tasks         util.BlockingQueue[qReadTask]
+	write_tasks        util.BlockingQueue[qWriteTask]
+	running_read_tasks util.SyncSet[TaskId]
+	errors             chan TaskError
+	ctx                context.Context
+	wg                 sync.WaitGroup
 }
 
 func (mps *mpTaskScheduler) Init(ctx context.Context, cfg *configs.MPTaskSchedulerConfig) {
 	mps.cfg = cfg
 	mps.read_tasks = util.NewUnboundedBlockingQueue[qReadTask]()
 	mps.write_tasks = util.NewUnboundedBlockingQueue[qWriteTask]()
+	mps.running_read_tasks = util.NewSyncSet[TaskId]()
 	mps.errors = make(chan TaskError, MAX_ERRORS)
 	mps.ctx = ctx
 }
@@ -85,7 +87,9 @@ func (mps *mpTaskScheduler) Errors() <-chan TaskError {
 }
 
 func (mps *mpTaskScheduler) submitReadTask(task qReadTask) TaskId {
-	mps.read_tasks.Put(task)
+	if mps.running_read_tasks.Insert(task.getTaskId()) {
+		mps.read_tasks.Put(task)
+	}
 	return task.getTaskId()
 }
 
@@ -137,6 +141,7 @@ func (mps *mpTaskScheduler) rWorkerRoutine() {
 		if err := qread(task_ctx, task); err != nil && err != context.Canceled && err != context.DeadlineExceeded {
 			mps.submitError(task.getTaskId(), err)
 		}
+		mps.running_read_tasks.Remove(task.getTaskId())
 		cancel()
 	}
 }
