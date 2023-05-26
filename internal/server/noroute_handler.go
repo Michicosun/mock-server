@@ -18,7 +18,7 @@ import (
 
 func (s *server) initNoRoute() {
 	s.router.NoRoute(func(c *gin.Context) {
-		path := c.Request.URL.Path
+		path := c.Request.RequestURI
 		zlog.Info().Str("path", path).Msg("Received path")
 
 		route, err := database.GetRoute(c, path)
